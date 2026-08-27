@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "trickydungeon",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["devserver.py", "8842"],
+      "port": 8842
+    }
+  ]
+}
