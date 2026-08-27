@@ -1,0 +1,30 @@
+# --- OS ---
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- Python (dev server / asset scripts) ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- Node (only if a toolchain ever gets added) ---
+node_modules/
+dist/
+.vercel/
+
+# --- Editors ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Claude Code local overrides (keep launch.json shared) ---
+.claude/settings.local.json
+
+# --- Art working files: commit exported PNGs, not the raw ComfyUI output ---
+art/_raw/
+art/**/*.psd
+art/**/*.xcf
+*.safetensors
+*.ckpt
