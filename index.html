@@ -5,15 +5,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
 <meta name="color-scheme" content="dark"/>
 <title>БАМ-БАМ: КАСКАД — карточные бои</title>
+<!-- Telegram Mini App SDK. Единственная внешняя зависимость и она
+     необязательная: если скрипт не загрузился (обычный браузер, offline,
+     открытие файла напрямую), игра работает как обычная веб-страница —
+     вся интеграция идёт через PF, который в этом случае no-op. -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{
   --bg:#0a0a0f; --panel:#101017; --ink:#f2f2f6; --dim:#8d8da0; --line:#262633;
   --yel:#ffd52e; --mag:#ff4fd8; --cyn:#35f0ff; --red:#ff3355; --grn:#3dff8a;
   --disp:'Arial Black',Impact,'Segoe UI',sans-serif;
   --mono:ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;
+  /* Реальная высота вьюпорта. В webview Telegram 100vh врёт (шапка/клавиатура),
+     поэтому PF.syncHeight() держит здесь фактическое значение. Фолбэк на 100vh
+     нужен на случай, если JS ещё не выполнился. */
+  --app-h:100vh;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
+html,body{height:var(--app-h)}
 body{background:var(--bg);color:var(--ink);font-family:'Segoe UI',Helvetica,Arial,sans-serif;
   overflow:hidden;user-select:none;-webkit-user-select:none;
   background-image:radial-gradient(ellipse 90% 50% at 50% -10%,rgba(255,213,46,.07),transparent 70%)}
@@ -683,11 +692,75 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const svgWrap=p=>`<svg viewBox="0 0 24 24">${p}</svg>`;
 
+/* ================= платформа: Telegram Mini App / обычный веб =================
+   Игра НИКОГДА не обращается к Telegram напрямую — только через PF.
+   Вне Telegram (GitHub Pages, Vercel, локальный файл) всё это молча
+   превращается в no-op, и игра работает как обычная веб-страница. */
+const PF=(()=>{
+  const tg=(typeof window!=='undefined'&&window.Telegram&&window.Telegram.WebApp)||null;
+  /* Скрипт Telegram отдаёт объект WebApp даже в обычном браузере, поэтому
+     наличие объекта ничего не доказывает. Реальный признак TMA — непустой
+     initData либо известная платформа. */
+  const isTMA=!!(tg&&((tg.initData&&tg.initData.length)||(tg.platform&&tg.platform!=='unknown')));
+  /* Доступность метода зависит от версии клиента Telegram, поэтому каждый
+     вызов заворачиваем: отсутствующий метод не должен ронять игру. */
+  const call=(name,...a)=>{if(!isTMA||!tg||typeof tg[name]!=='function')return undefined;
+    try{return tg[name](...a)}catch(e){return undefined}};
+
+  const HAPTIC={light:'light',medium:'medium',heavy:'heavy',rigid:'rigid',soft:'soft'};
+  return {
+    isTMA,tg,
+    /* Тактильная отдача. Вне TMA — тишина. */
+    hit(style){if(!isTMA||!tg||!tg.HapticFeedback)return;
+      try{tg.HapticFeedback.impactOccurred(HAPTIC[style]||'medium')}catch(e){}},
+    notify(type){if(!isTMA||!tg||!tg.HapticFeedback)return;
+      try{tg.HapticFeedback.notificationOccurred(type)}catch(e){}},
+    /* Нативная кнопка «Назад» в шапке Telegram. */
+    back(show,cb){if(!isTMA||!tg||!tg.BackButton)return;
+      try{if(cb)tg.BackButton.onClick(cb);show?tg.BackButton.show():tg.BackButton.hide()}catch(e){}},
+    /* Спросить подтверждение при закрытии — чтобы не потерять бой свайпом. */
+    guardClose(on){call(on?'enableClosingConfirmation':'disableClosingConfirmation')},
+    /* Высота вьюпорта: в webview Telegram 100vh врёт. Держим реальную высоту
+       в CSS-переменной --app-h, на неё завязана вёрстка. */
+    syncHeight(){
+      const h=(isTMA&&tg&&(tg.viewportStableHeight||tg.viewportHeight))||window.innerHeight||0;
+      /* В свёрнутой вкладке или фоновом webview innerHeight бывает 0. Записать
+         такое значение — схлопнуть вёрстку в ноль, поэтому нули игнорируем:
+         остаётся CSS-фолбэк 100vh. */
+      if(h>0)document.documentElement.style.setProperty('--app-h',h+'px');
+    },
+    /* CloudStorage синхронит сейв между устройствами пользователя. API
+       асинхронный, а игровой load/save синхронный — поэтому облако работает
+       как зеркало поверх localStorage, а не как источник истины. */
+    cloudGet(key,cb){
+      if(!isTMA||!tg||!tg.CloudStorage)return cb(null);
+      try{tg.CloudStorage.getItem(key,(err,val)=>cb(err?null:(val||null)))}catch(e){cb(null)}
+    },
+    cloudSet(key,val){
+      if(!isTMA||!tg||!tg.CloudStorage)return;
+      try{tg.CloudStorage.setItem(key,val,()=>{})}catch(e){}
+    },
+    init(){
+      this.syncHeight();
+      window.addEventListener('resize',()=>this.syncHeight());
+      if(!isTMA)return;
+      call('ready');call('expand');
+      /* Критично: свайп-вниз-закрыть в Telegram дерётся с нашими драгами
+         (тянем карту на поле, срываем этикетку пака). */
+      call('disableVerticalSwipes');
+      /* Хром Telegram под нашу палитру, чтобы не было светлой рамки. */
+      call('setHeaderColor','#0a0a0f');call('setBackgroundColor','#0a0a0f');
+      if(tg.onEvent)try{tg.onEvent('viewportChanged',()=>this.syncHeight())}catch(e){}
+    }
+  };
+})();
+
 /* ================= хранилище ================= */
 const store=(()=>{try{const k='__bbt';localStorage.setItem(k,'1');localStorage.removeItem(k);
   return{get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},
-         set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},ok:true}}
-  catch(e){const m={};return{get:k=>(k in m?m[k]:null),set:(k,v)=>{m[k]=v},ok:false}}})();
+         set:(k,v)=>{try{localStorage.setItem(k,v);PF.cloudSet(k,v)}catch(e){}},ok:true}}
+  catch(e){const m={};return{get:k=>(k in m?m[k]:null),
+                             set:(k,v)=>{m[k]=v;PF.cloudSet(k,v)},ok:false}}})();
 
 /* ================= эмблемы ================= */
 const EMB={
@@ -986,6 +1059,10 @@ function go(id){
   $$('.screen').forEach(s=>s.classList.remove('on'));
   $('#scr-'+id).classList.add('on');CUR=id;
   document.body.classList.toggle('menuOn',id==='menu');
+  /* В TMA: нативная кнопка «Назад» вместо экранной на всех экранах кроме меню,
+     и подтверждение закрытия во время боя, чтобы не потерять рейд. */
+  PF.back(id!=='menu',()=>{if(CUR!=='menu')go('menu')});
+  PF.guardClose(id==='battle');
   if(id==='menu')renderMenu();
   if(id==='gacha')renderGacha();
   if(id==='deck')renderDeck();
@@ -1144,7 +1221,7 @@ function wirePack(){
       const dx=e.clientX-sx,dy=e.clientY-sy,d=Math.hypot(dx,dy),k=Math.min(1,d/130);
       tear.style.transition='none';
       tear.style.transform=`translate(${dx*.45}px,${dy*.45-8*k}px) rotate(${k*80}deg)`;
-      if(d>70&&!tab._rip){tab._rip=1;sfx.rip()}
+      if(d>70&&!tab._rip){tab._rip=1;sfx.rip();PF.hit('light')}
       if(d>150){down=false;try{tab.releasePointerCapture(e.pointerId)}catch(_){}
         tab._rip=0;tearOff(false)}});
     const fin=e=>{if(!down)return;down=false;tab._rip=0;
@@ -1162,7 +1239,7 @@ function tearOff(){
   if(S.sparks<PACK){toast('Не хватает искр!',1);return}
   S.sparks-=PACK;S.gacha.packs++;S.stats.packs++;
   $('#gTok').textContent=fmtN(S.sparks);
-  sfx.tear();noise(.18,{f:150,q:.6,v:.22});
+  sfx.tear();noise(.18,{f:150,q:.6,v:.22});PF.hit('heavy');
   const r=pk.getBoundingClientRect(),mx=r.left+r.width/2,my=r.top+20;
   burst(mx,my,['#ffd52e','#fff','#ffe063'],26,1.1);
   const mouth=pk.querySelector('.pMouth');if(mouth)mouth.classList.add('on');
@@ -1213,6 +1290,7 @@ function tearOff(){
         if(w.classList.contains('open')){w.querySelector('.cFlip').style.transform='rotateY(0deg)';
           w.classList.remove('open');sfx.ui();return}
         w.classList.add('open');
+        PF.hit(c.t>=3?'heavy':c.t>=2?'medium':'light');
         const c=items[i];
         tone(220+i*90,.1,{v:.06});
         sfx.play(c.t);
@@ -1367,6 +1445,8 @@ function damageHero(who,v){
   const P=B[who];P.hp=Math.max(0,P.hp-v);
   popDmg(who==='p'?$('#pHp'):$('#eHp'),v,false);
   sfx.hit();
+  /* По своему герою бьёт ощутимее, чем по вражескому. */
+  PF.hit(who==='p'?'heavy':'light');
   const ic=who==='p'?$('#pHp'):$('#eHp');
   const r=ic.getBoundingClientRect();
   burst(r.left+r.width/2,r.top+10,['#ff3355','#fff'],8,.9);
@@ -1559,7 +1639,7 @@ async function dealDamage(side,u,v){
   sfx.hit();
   await sleep(120);
   if(u.hp<=0){
-    sfx.die();
+    sfx.die();PF.hit('rigid');
     if(el){el.classList.add('dying');
       const r=el.getBoundingClientRect();
       burst(r.left+r.width/2,r.top+r.height/2,fxCols(u.card.t),12,1);
@@ -1886,12 +1966,12 @@ function finish(win){
     if(!S.done[B.si]){S.done[B.si]=1;gained=Math.round(gained*1.5);
       if(B.si+1>S.stage)S.stage=B.si+1;
       toast('Провал зачищен! Бонус первой зачистки ×1,5')}
-    sfx.win();
+    sfx.win();PF.notify('success');
     burst(innerWidth/2,innerHeight/2,['#ffd52e','#fff','#ff4fd8','#35f0ff'],70,1.8);
     bang('ПОБЕДА!!',50,30);
   }else{
     gained=Math.round(B.st.reward*.15);
-    sfx.lose();
+    sfx.lose();PF.notify('error');
     bang('ОБЛОМ…',50,30);
   }
   S.sparks+=gained;save();
@@ -2115,6 +2195,7 @@ function bindParallax(el){
 }
 
 /* ================= запуск ================= */
+PF.init();
 renderMenu();
 document.body.classList.add('menuOn');
 document.querySelector('#mbSilL .mbSil').innerHTML=SIL.diesel;
@@ -2123,6 +2204,30 @@ sprinkleCrystals($('#mbCry'),9,['#ffd52e','#35f0ff','#ff4fd8']);
 bindParallax($('#scr-menu'));
 bindParallax($('#scr-battle'));
 document.addEventListener('pointerdown',()=>{const c=ac();if(c&&c.state==='suspended')c.resume()},{once:true});
+
+/* Подтянуть облачный сейв. Локальный уже загружен и игра работает — облако
+   лишь догоняет, если на другом устройстве прогресс дальше. Сравниваем по
+   числу зачищенных рейдов, чтобы случайно не откатить игрока назад.
+   Нормализация та же, что в load(): merge на клон DEF, иначе fixS падает
+   на отсутствующих полях. */
+if(PF.isTMA){
+  PF.cloudGet('bbduel',raw=>{
+    if(!raw)return;
+    try{
+      const d=JSON.parse(raw);
+      if(typeof d!=='object'||!d)return;
+      const cloud=Object.assign(clone(DEF),d);
+      cloud.gacha=Object.assign({pity:0,packs:0},d.gacha||{});
+      cloud.stats=Object.assign({},DEF.stats,d.stats||{});
+      const mine=Object.keys(S.done||{}).length,theirs=Object.keys(cloud.done||{}).length;
+      if(theirs>mine){
+        S=fixS(cloud);save();
+        if(CUR==='menu')renderMenu();
+        toast('Прогресс подтянут из облака');
+      }
+    }catch(e){}
+  });
+}
 </script>
 </body>
 </html>
