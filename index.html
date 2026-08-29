@@ -597,6 +597,23 @@ body.menuOn .infoF{display:grid}
   background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
   background-size:34px 34px;animation:gridDrift 16s linear infinite}
 @keyframes gridDrift{to{background-position:34px 34px}}
+/* Кадр героя вместо процедурного фона. Приглушён сильно и намеренно: это
+   задник, а не картинка — поверх него читаются карты, цифры и подсветки, и
+   любой лишний контраст тут работает против игры. Отсюда затемнение,
+   обесцвечивание и лёгкое размытие, плюс тёмная вуаль сверху и снизу под
+   панели врага и игрока. */
+.bBg{position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-position:center 28%;background-size:cover;background-repeat:no-repeat;
+  filter:brightness(.20) saturate(.35) blur(3px);
+  transform:scale(1.06) translate(calc(var(--mx,0)*-8px),calc(var(--my,0)*-5px));
+  transition:transform .35s ease-out}
+.bBg::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(10,10,15,.86) 0,rgba(10,10,15,.55) 26%,
+             rgba(10,10,15,.62) 50%,rgba(10,10,15,.55) 74%,rgba(10,10,15,.88) 100%)}
+/* С фотографическим задником силуэты становятся мусором: игрок и так виден в
+   своей панели, а врага называет верхняя. */
+.bField.hasBg .bSilO{display:none}
+.bField.hasBg .bStripes i{opacity:.35}
 .bSilO{position:absolute;pointer-events:none;z-index:0;transition:transform .3s ease-out}
 .bSilO.p{left:-18px;bottom:-12px;height:100%;transform:translate(calc(var(--mx,0)*10px),calc(var(--my,0)*6px))}
 .bSilO.e{right:-18px;top:-8px;height:92%;transform:translate(calc(var(--mx,0)*-14px),calc(var(--my,0)*-8px))}
@@ -1191,6 +1208,7 @@ body.menuOn .infoF{display:grid}
     </div>
     <div class="bHint" id="bHint"></div>
     <div class="bField" id="bField">
+      <div class="bBg" id="bBg"></div>
       <div class="bStripes"><i></i><i></i></div>
       <div class="bSilO p"><div class="bSil" id="silP"></div></div>
       <div class="bSilO e" id="silEO"><div class="bSil" id="silE"></div></div>
@@ -2799,7 +2817,18 @@ function askGiveUp(){
   box.querySelector('#guNo').onclick=()=>{sfx.ui();box.remove()};
   box.querySelector('#guYes').onclick=()=>{box.remove();finish(false,true)};
 }
+/* Задник боя по герою. Только для боёв первого акта: у тренировки свой
+   учебный вид, и подменять его сценой из сюжета незачем. */
+const BATTLE_BG={f:'art/story/scene1.webp',m:'art/story/boy4.webp'};
+function setBattleBg(si){
+  const bg=$('#bBg'),field=$('#bField');
+  if(!bg||!field)return;
+  const src=(si>0)&&BATTLE_BG[S.hero];
+  if(src){bg.style.backgroundImage=`url(${src})`;field.classList.add('hasBg')}
+  else{bg.style.backgroundImage='';field.classList.remove('hasBg')}
+}
 function dressBattle(st){
+  setBattleBg(B?B.si:0);
   $('#eName').textContent=st.n.toUpperCase();
   $('#eIc').innerHTML=svgWrap(EMB[st.ic]||EMB.skull);
   $('#eIc').style.borderColor=st.boss?'#ff3355':'#2c2c38';
