@@ -400,6 +400,29 @@ body.menuOn .infoF{display:grid}
 .dDust .dDustT{font-family:var(--mono);font-size:9px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--dim)}
 .dCard .dCnt.extra{background:var(--grn);color:#06110a}
+
+/* ================= превью карты при наведении =================
+   Только для мыши. Карта не увеличивается на месте: .dColl — контейнер с
+   overflow-y, и он обрезал бы всё, что вылезло за его край, тем сильнее чем
+   крупнее зум. Поэтому превью — отдельный слой position:fixed, он не знает
+   про обрезку и встаёт ровно по центру экрана. */
+.dPrev{position:fixed;left:50%;top:50%;z-index:80;pointer-events:none;
+  /* Ограничение и по высоте: у карты соотношение 5:7, и на низком экране
+     ширина в 400px дала бы 560px высоты — вылезло бы за край. 56vh держит её
+     внутри при любой высоте окна. */
+  width:min(400px,50vw,56vh);transform:translate(-50%,-50%) scale(.68);opacity:0;
+  transition:transform .22s cubic-bezier(.2,1.1,.3,1),opacity .18s;
+  filter:drop-shadow(0 24px 46px rgba(0,0,0,.85)) drop-shadow(0 0 40px rgba(255,213,46,.16))}
+.dPrev.on{transform:translate(-50%,-50%) scale(1);opacity:1}
+.dPrev .cWrap{pointer-events:none;animation:none}
+/* Затемнение под превью, чтобы крупная карта не спорила с сеткой позади. */
+.dPrevBd{position:fixed;inset:0;z-index:79;pointer-events:none;background:rgba(5,5,9,.55);
+  opacity:0;transition:opacity .18s}
+.dPrevBd.on{opacity:1}
+/* Тач-устройствам это не нужно и вредно: там наведения нет, а палец по сетке
+   вызывал бы вспышки превью. */
+@media (hover:none),(pointer:coarse){.dPrev,.dPrevBd{display:none}}
+@media (prefers-reduced-motion:reduce){.dPrev{transition:opacity .18s}}
 .dSideB{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .dCount{font-family:var(--disp);font-size:13px;text-align:center;color:#fff}
 .dCount b{color:var(--yel)}
@@ -1760,6 +1783,7 @@ function go(id){
   sfx.ui();
   /* Игрок сам ушёл с боя — значит рейд брошен осознанно. Снимок держим
      только для аварийных случаев (свернули приложение, упал webview). */
+  if(CUR==='deck'&&id!=='deck')dPrevHide();
   if(CUR==='battle'&&id!=='battle'){
     dropBattleSnap();
     /* И обязательно снять обучение. Иначе оно продолжает жить на другом
@@ -2542,7 +2566,14 @@ function renderDeck(){
       ${inDeck?`<span class="dIn">${inDeck}</span>`:''}
       ${cardHTML(c,{open:1,noAnim:1})}
     </div>`}).join('');
-  $$('#dGrid .dCard').forEach(el=>el.onclick=()=>toggleDeck(el.dataset.id));
+  $$('#dGrid .dCard').forEach(el=>{
+    el.onclick=()=>toggleDeck(el.dataset.id);
+    /* Наведение показывает карту крупно по центру. Клик по-прежнему кладёт её
+       в набор — превью не должно отнимать основное действие и превращать
+       сборку колоды в два клика вместо одного. */
+    el.onmouseenter=()=>dPrevShow(el.dataset.id);
+    el.onmouseleave=dPrevHide;
+  });
   renderDeckSide();
 }
 /* Лишние копии — всё сверх двух: третью в колоду всё равно не положить,
@@ -2563,6 +2594,35 @@ function dustSurplus(){
   toast(`Распылено ${s.cards} карт: +${fmtN(s.sparks)} искр`);
   renderDeck();
 }
+/* Превью карты при наведении. Один переиспользуемый слой, а не узел на карту:
+   в коллекции их под сорок, и держать сорок скрытых копий разметки незачем. */
+let dPrevEl=null,dPrevBd=null,dPrevId=null;
+function dPrevOk(){
+  try{return matchMedia('(hover:hover) and (pointer:fine)').matches}catch(e){return false}
+}
+function dPrevShow(id){
+  if(!dPrevOk())return;
+  const c=byId(id);if(!c)return;
+  if(!dPrevEl){
+    dPrevBd=document.createElement('div');dPrevBd.className='dPrevBd';
+    dPrevEl=document.createElement('div');dPrevEl.className='dPrev';
+    document.body.append(dPrevBd,dPrevEl);
+  }
+  if(dPrevId!==id){dPrevId=id;dPrevEl.innerHTML=cardHTML(c,{open:1,noAnim:1})}
+  /* Ставим класс следующим кадром: иначе переход не запустится, элемент только
+     что появился и браузер применит конечное состояние сразу. */
+  requestAnimationFrame(()=>{
+    if(dPrevId!==id)return;
+    dPrevEl.classList.add('on');dPrevBd.classList.add('on');
+  });
+}
+function dPrevHide(){
+  if(!dPrevEl)return;
+  dPrevId=null;
+  dPrevEl.classList.remove('on');dPrevBd.classList.remove('on');
+}
+/* Уход с экрана коллекции обязан гасить превью: без этого оно оставалось бы
+   висеть поверх боя, если увести мышь с карты уже после смены экрана. */
 function toggleDeck(id){
   const have=S.inv[id]||0;if(!have){toast('Нет такой карты — крути паки!',1);return}
   const inDeck=deckCount(id);
