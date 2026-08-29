@@ -2235,10 +2235,25 @@ function renderStages(){
    Сброс к покою по таймеру, а не по следующему событию: иначе после единичного
    удара лицо так и застыло бы удивлённым до конца боя. */
 const MOOD={calm:'calm',joy:'joy',surp:'surp',angry:'angry',sad:'calm'};
-let moodTimer=null;
+/* Старшинство настроений. В бою события идут пачкой: юнита выбили и тут же
+   прилетело по герою — и злость жила 0.3 секунды, пока её не затирало
+   удивление. Со стороны это выглядит как «эмоция не сработала», хотя вызов
+   был. Теперь слабое настроение не перебивает сильное, пока то показывается. */
+const MOOD_RANK={calm:0,surp:1,angry:2,joy:3,sad:3};
+/* 1.6с не хватало: удар это 340мс замаха, 120мс паузы, 340мс гибели плюс
+   сон 560мс — лицо успевало вернуться в покой раньше, чем игрок переведёт
+   взгляд в угол. */
+const MOOD_HOLD=2300;
+let moodTimer=null,moodCur='calm',moodUntil=0;
 function moodEl(){return $('.bBottom .heroIc.me')}
 function setMood(kind,hold){
   const el=moodEl();if(!el||!S.hero)return;
+  const now=performance.now();
+  if(kind==='calm'){moodCur='calm';moodUntil=0}
+  else{
+    if(now<moodUntil&&(MOOD_RANK[kind]||0)<(MOOD_RANK[moodCur]||0))return;
+    moodCur=kind;moodUntil=now+(hold||MOOD_HOLD);
+  }
   const file=MOOD[kind]||'calm';
   el.classList.add('face');
   const img=el.querySelector('img');
@@ -2249,7 +2264,7 @@ function setMood(kind,hold){
     el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
   }
   clearTimeout(moodTimer);
-  if(kind!=='calm')moodTimer=setTimeout(()=>setMood('calm'),hold||1600);
+  if(kind!=='calm')moodTimer=setTimeout(()=>setMood('calm'),hold||MOOD_HOLD);
 }
 
 /* ================= БОЙ ================= */
