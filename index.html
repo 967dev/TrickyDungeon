@@ -458,6 +458,51 @@ body.menuOn .infoF{display:grid}
 .pBoardC{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--dim);margin-top:6px}
 .pBoardC b{color:var(--yel)}
 .pBoardC.full b{color:var(--red)}
+
+/* ================= панель игрока =================
+   Отдельный блок интерфейса, а не строка иконок: рамка, срезанный угол,
+   лента опасности по верхнему краю и плоская комикс-тень — тот же язык, что
+   у кнопок и карт. Всё увеличение живёт в ветке от 761px: на телефоне низ
+   экрана делят панель, рука и «конец хода», и там раскладка настроена
+   отдельно — трогать её нельзя. */
+@media (min-width:761px){
+  .bBottom .hero{
+    position:relative;align-items:stretch;gap:14px;
+    padding:13px 16px 12px;
+    border:3px solid #000;
+    background:linear-gradient(160deg,rgba(30,28,18,.96),rgba(14,14,20,.96));
+    box-shadow:7px 8px 0 rgba(0,0,0,.55),0 0 0 2px rgba(255,213,46,.22) inset;
+    clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%);
+  }
+  /* Лента опасности по верхней кромке — «шапка» панели. */
+  .bBottom .hero::before{content:'';position:absolute;left:0;right:18px;top:0;height:5px;
+    background:repeating-linear-gradient(-45deg,var(--yel) 0 9px,#0a0a0e 9px 18px);
+    opacity:.85}
+  .bBottom .heroIc.me{
+    width:104px;height:104px;transform:none;border-width:3px;align-self:center;
+    box-shadow:4px 4px 0 rgba(0,0,0,.5),0 0 18px rgba(255,213,46,.18)}
+  .bBottom .pStats{
+    padding:0;border:0;background:none;display:flex;flex-direction:column;justify-content:center;
+    min-width:172px}
+  .bBottom .heroName{font-size:15px;letter-spacing:.02em;text-shadow:2px 2px 0 #000;
+    margin-bottom:4px;color:var(--yel)}
+  .bBottom .statHp{font-size:34px;gap:9px}
+  .bBottom .statHp svg{width:24px;height:24px}
+  .bBottom .statHp small{font-size:8.5px;padding-bottom:5px}
+  .bBottom .statMana{margin-top:7px;gap:9px}
+  .bBottom .statMana b{font-size:20px}
+  .bBottom .manaRow{margin-top:7px;gap:5px}
+  .bBottom .mGem{width:13px;height:13px}
+  .bBottom .pBoardC{margin-top:8px;font-size:10px}
+  /* Кнопки — столбиком у правого края панели, а не в общей строке. */
+  .bBottom .hero .iconbtn{margin-left:0;width:38px;height:38px;padding:0;font-size:14px}
+  .pBtns{display:flex;flex-direction:column;justify-content:center;gap:8px;margin-left:2px}
+}
+@media (min-width:1200px){
+  .bBottom .heroIc.me{width:124px;height:124px}
+  .bBottom .statHp{font-size:40px}
+  .bBottom .pStats{min-width:196px}
+}
 .piles{display:flex;gap:12px;margin-left:auto}
 .pile{font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;line-height:1.6}
 .pile b{display:block;font-family:var(--disp);font-size:17px;color:#fff}
@@ -1009,8 +1054,10 @@ body.menuOn .infoF{display:grid}
           <div class="manaRow" id="pMana"></div>
           <div class="pBoardC" id="pBoardN">ПОЛЕ <b>0/5</b></div>
         </div>
-        <button class="btn iconbtn" data-info="battle" aria-label="Правила боя" style="margin-left:4px">?</button>
-        <button class="btn iconbtn bGiveUp" id="bGiveUp" aria-label="Сдаться и выйти из боя" title="Сдаться">⚑</button>
+        <div class="pBtns">
+          <button class="btn iconbtn" data-info="battle" aria-label="Правила боя">?</button>
+          <button class="btn iconbtn bGiveUp" id="bGiveUp" aria-label="Сдаться и выйти из боя" title="Сдаться">⚑</button>
+        </div>
       </div>
       <div class="bHand" id="bHand"></div>
       <button class="btn pri big bEnd" id="bEnd">КОНЕЦ<br>ХОДА</button>
