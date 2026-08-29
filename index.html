@@ -686,8 +686,24 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 #scr-battle{background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(255,213,46,.05),transparent 70%)}
 .bWrap{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
 .bWrap.shake{animation:bShk .4s}
-@keyframes bShk{0%,100%{transform:none}20%{transform:translate(-7px,3px)}40%{transform:translate(6px,-4px)}
-  60%{transform:translate(-4px,-2px)}80%{transform:translate(3px,2px)}}
+/* Тряска от попадания по герою. Затухающая: первый рывок резкий, дальше
+   всё мельче — так двигается то, чему прилетело, а не то, что вибрирует.
+   Прежняя шла почти ровной амплитудой и читалась как дрожь картинки. */
+@keyframes bShk{
+  0%{transform:translate(0,0) rotate(0)}
+  12%{transform:translate(-13px,5px) rotate(-.7deg)}
+  26%{transform:translate(11px,-7px) rotate(.6deg)}
+  42%{transform:translate(-8px,-3px) rotate(-.4deg)}
+  58%{transform:translate(6px,4px) rotate(.3deg)}
+  74%{transform:translate(-4px,-2px) rotate(-.15deg)}
+  88%{transform:translate(2px,1px) rotate(0)}
+  100%{transform:translate(0,0) rotate(0)}}
+/* Красная засветка по краям в момент удара по НАШЕМУ герою: тряску на
+   телефоне легко проглядеть, а рамку — нет. */
+.hurtFlash{position:fixed;inset:0;z-index:64;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse at 50% 50%,transparent 42%,rgba(255,40,70,.55) 100%)}
+.hurtFlash.go{animation:hurtF .5s ease-out}
+@keyframes hurtF{0%{opacity:0}14%{opacity:1}100%{opacity:0}}
 .bTop{display:flex;align-items:center;gap:12px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;border-bottom:3px solid #000;background:rgba(16,16,23,.92);flex:none;cursor:pointer;transition:.15s;z-index:6;position:relative}
 .bTop.dropOk{outline:3px dashed var(--red);outline-offset:-4px;background:rgba(255,51,85,.08)}
 .hero{display:flex;align-items:center;gap:11px}
@@ -876,7 +892,26 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .unit .uH{right:2px;background:#2b7ac2}
 .unit .uH.hurt{background:#8a1f2c}
 .unit.dying{animation:unitDie .4s forwards}
-@keyframes unitDie{to{transform:scale(.2) rotate(14deg);opacity:0;filter:blur(3px)}}
+/* Смерть: существо не схлопывается в точку, а заваливается и проваливается
+   вниз. Падение читается как «его выбили», схлопывание — как «оно исчезло». */
+@keyframes unitDie{
+  0%{transform:none;opacity:1}
+  22%{transform:translateY(-7px) rotate(-5deg) scale(1.04)}
+  100%{transform:translateY(26px) rotate(17deg) scale(.72);opacity:0}}
+/* Вспышка на цели в момент касания. Отдельный слой, а не filter на самой
+   ячейке: фильтр пересчитывался бы каждый кадр по всему содержимому. */
+.unit .uHit{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;
+  background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.9),rgba(255,90,120,.5) 45%,transparent 72%)}
+.unit.hit .uHit{animation:uHitF .26s ease-out}
+@keyframes uHitF{0%{opacity:0;transform:scale(.7)}18%{opacity:1}100%{opacity:0;transform:scale(1.25)}}
+/* Кто кого бьёт: короткая черта от атакующего к цели. Живёт 260мс — дольше
+   она уже мешает, короче не успевает прочитаться. */
+.atkLine{position:fixed;z-index:60;height:3px;pointer-events:none;transform-origin:0 50%;
+  background:linear-gradient(90deg,rgba(255,213,46,0),rgba(255,213,46,.95),rgba(255,255,255,.9));
+  box-shadow:0 0 10px rgba(255,213,46,.7)}
+/* Карта, летящая из руки на поле. Копия поверх всего: настоящую карту в этот
+   момент уже убирает перерисовка руки. */
+.flyCard{position:fixed;z-index:95;pointer-events:none;will-change:transform}
 .unit.buffed .uA{color:var(--grn)}
 .dmgPop{position:fixed;z-index:85;pointer-events:none;font-family:var(--disp);font-style:italic;font-size:26px;
   color:#fff;text-shadow:2px 2px 0 #000,0 0 12px var(--red);animation:dmgA .8s cubic-bezier(.2,1,.3,1) forwards}
@@ -904,9 +939,16 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .bTurn{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) rotate(-4deg);z-index:40;pointer-events:none;
   font-family:var(--disp);font-style:italic;font-size:clamp(30px,6vw,56px);color:#fff;
   text-shadow:3px 3px 0 #000,6px 6px 0 rgba(255,213,46,.5);animation:turnA 1.1s ease forwards}
-@keyframes turnA{0%{transform:translate(-50%,-50%) rotate(-10deg) scale(.3);opacity:0}
-  20%{transform:translate(-50%,-50%) rotate(-4deg) scale(1.05);opacity:1}
-  80%{opacity:1}100%{transform:translate(-50%,-50%) rotate(-4deg) scale(1);opacity:0}}
+/* Плашка смены хода прилетает с перелётом и коротким откатом — это читается
+   как удар, а не как всплывающая подсказка. Уходит вбок, а не растворяется:
+   исчезновение на месте глаз не отслеживает и легко пропускает. */
+@keyframes turnA{
+  0%{transform:translate(-50%,-50%) rotate(-13deg) scale(.24);opacity:0}
+  16%{transform:translate(-50%,-50%) rotate(-3deg) scale(1.14);opacity:1}
+  26%{transform:translate(-50%,-50%) rotate(-5deg) scale(.97)}
+  34%{transform:translate(-50%,-50%) rotate(-4deg) scale(1.02)}
+  78%{transform:translate(-50%,-50%) rotate(-4deg) scale(1);opacity:1}
+  100%{transform:translate(-46%,-50%) rotate(-2deg) scale(.94);opacity:0}}
 .bResult{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
   background:rgba(6,6,10,.86);animation:scrIn .3s}
 .bResBox{text-align:center;padding:30px}
@@ -3315,8 +3357,17 @@ function damageHero(who,v){
   const sil=who==='p'?$('#silP'):$('#silE');
   if(sil){sil.classList.remove('hurt');void sil.offsetWidth;sil.classList.add('hurt');
     setTimeout(()=>sil.classList.remove('hurt'),360)}
+  if(who==='p')hurtFlash();
   renderBattle();
   if(P.hp<=0&&!B.over)finish(who==='e');
+}
+/* Одна переиспользуемая плашка, а не новая на каждый удар: за бой их набегают
+   десятки, и создавать узел ради полусекунды — лишняя работа на ровном месте. */
+let hfEl=null;
+function hurtFlash(){
+  if(!gfxAnim()||!S.shk)return;
+  if(!hfEl){hfEl=document.createElement('div');hfEl.className='hurtFlash';document.body.appendChild(hfEl)}
+  hfEl.classList.remove('go');void hfEl.offsetWidth;hfEl.classList.add('go');
 }
 function popDmg(el,v,heal){
   const r=el.getBoundingClientRect();
@@ -3495,6 +3546,10 @@ function playCard(i,targetUnit){
      просто исчезала бы вместе с маной — эффект-то не к чему применять. */
   if(c.eff&&c.eff.tg==='ally'&&!(targetUnit&&P.board.includes(targetUnit))){
     toast('Нужен свой юнит на поле',1);tone(160,.08,{v:.06});return}
+  /* Позицию карты в руке снимаем ДО перерисовки: через миг этого узла уже
+     не будет, а без точки старта карте неоткуда лететь. */
+  const откуда=(()=>{const h=$(`#bHand .hCard[data-i="${i}"]`);
+    return h?h.getBoundingClientRect():null})();
   P.mana-=c.c;P.hand.splice(i,1);
   sfx.play(c.t);
   if(c.ty==='u'){
@@ -3502,6 +3557,7 @@ function playCard(i,targetUnit){
     renderBattle();
     const el=$(`#rowP .unit[data-uid="${u.uid}"]`);
     if(el){const r=el.getBoundingClientRect();
+      flyToBoard(c,откуда,r,el);
       burst(r.left+r.width/2,r.top+r.height/2,fxCols(c.t),10+c.t*8,1);
       bang(pick(c.stk||['БАМ!']),50,46)}
     if(c.eff)playerEff(c,targetUnit);
@@ -3551,23 +3607,45 @@ async function dealDamage(side,u,v){
   u.hp-=v;
   const row=side==='p'?$('#rowP'):$('#rowE');
   const el=row.querySelector(`.unit[data-uid="${u.uid}"]`);
-  if(el){popDmg(el,v,false);
+  if(el){
+    popDmg(el,v,false);
     const r=el.getBoundingClientRect();
     burst(r.left+r.width/2,r.top+r.height/2,['#ff3355','#fff'],7,.8);
-    el.animate([{transform:'translateX(0)'},{transform:'translateX(-6px) rotate(-3deg)'},
-      {transform:'translateX(5px) rotate(2deg)'},{transform:'translateX(0)'}],{duration:240})}
+    /* Вспышка и отдача — на цели, вместе. Раньше была только дрожь, и на
+       быстром размене было неясно, попали в кого-то вообще или нет. */
+    el.classList.remove('hit');void el.offsetWidth;el.classList.add('hit');
+    setTimeout(()=>el.classList.remove('hit'),280);
+    if(gfxAnim())el.animate([
+      {transform:'translate(0,0) rotate(0)'},
+      {transform:'translate(-7px,2px) rotate(-4deg)',offset:.25},
+      {transform:'translate(5px,-1px) rotate(2.5deg)',offset:.55},
+      {transform:'translate(0,0) rotate(0)'}],
+      {duration:300,easing:'cubic-bezier(.2,.9,.3,1)'});
+  }
   sfx.hit();
-  await sleep(120);
+  /* Остановка кадра на сильном ударе. Пауза перед продолжением — самый дешёвый
+     способ придать удару вес: глаз воспринимает её как инерцию от попадания. */
+  await sleep(v>=4?190:120);
   if(u.hp<=0){
     sfx.die();PF.hit('rigid');
     /* Злость — только когда выбили НАШЕГО. В dealDamage side это владелец
        получающего урон юнита (из B[side].board его и удаляют), поэтому
        наш — это 'p'. */
     if(side==='p')setMood('angry',1900);
-    if(el){el.classList.add('dying');
+    if(el){
+      el.classList.add('dying');
       const r=el.getBoundingClientRect();
-      burst(r.left+r.width/2,r.top+r.height/2,fxCols(u.card.t),12,1);
-      await sleep(340)}
+      burst(r.left+r.width/2,r.top+r.height/2,fxCols(u.card.t),18,1.15);
+      /* Ждём саму анимацию, а не круглое число: правка длительности в CSS
+         иначе разъехалась бы с этой задержкой, и существо либо исчезало
+         рывком, либо висело уже невидимым. */
+      const an=el.getAnimations().find(x=>x.animationName==='unitDie');
+      if(an){try{await an.finished}catch(e){}}else await sleep(420);
+      /* Убираем узел здесь же. Пересборка ряда его нарочно не трогает, пока на
+         нём метка dying, — иначе существо исчезало бы в первый же кадр
+         падения, — так что снять его обязан тот, кто это падение запустил. */
+      el.remove();
+    }
     const arr=B[side].board;
     const ix=arr.indexOf(u);if(ix>=0)arr.splice(ix,1);
   }
@@ -3592,14 +3670,83 @@ async function doAttack(side,u,tgt){
       const a=elS.getBoundingClientRect(),b=elT.getBoundingClientRect();
       const dx=b.left+b.width/2-(a.left+a.width/2),dy=b.top+b.height/2-(a.top+a.height/2);
       elS.style.zIndex=30;
-      await elS.animate([{transform:'translate(0,0)'},
-        {transform:`translate(${dx*.86}px,${dy*.86}px) scale(1.08)`,offset:.45},
-        {transform:'translate(0,0)'}],{duration:340,easing:'cubic-bezier(.3,.7,.3,1)'}).finished;
+      atkLine(a,b);
+      /* Замах назад перед броском. Без него выпад читается как рывок: глаз
+         ждёт подготовки, и она же делает сам удар быстрее по ощущению, хотя
+         общая длительность та же. */
+      if(gfxAnim())await elS.animate([
+        {transform:'translate(0,0) scale(1)',offset:0},
+        {transform:`translate(${-dx*.13}px,${-dy*.13}px) scale(.97)`,offset:.26},
+        {transform:`translate(${dx*.84}px,${dy*.84}px) scale(1.09)`,offset:.56},
+        {transform:`translate(${dx*.84}px,${dy*.84}px) scale(1.09)`,offset:.64},
+        {transform:'translate(0,0) scale(1)',offset:1}],
+        {duration:400,easing:'cubic-bezier(.35,.05,.2,1)'}).finished;
       elS.style.zIndex='';
     }
     await dealDamage(foe,tgt,u.atk);
     if(back>0)await dealDamage(side,u,back);
   }
+}
+
+/* Карта не исчезает из руки, чтобы существо возникло на поле из ниоткуда, —
+   она туда долетает. Летит копия поверх всего: настоящую карту в этот момент
+   уже убрала перерисовка руки, а новое существо должно оказаться на месте
+   сразу, иначе следующий клик пришёлся бы в пустоту.
+   Само существо на время полёта прячем прозрачностью, а не задержкой показа:
+   узел обязан существовать и занимать место, иначе поле дёрнется. */
+function flyToBoard(c,откуда,куда,el){
+  if(!gfxAnim()||!откуда||!куда||!куда.width){return}
+  const fly=document.createElement('div');
+  fly.className='flyCard';
+  fly.style.width=откуда.width+'px';
+  fly.style.left=откуда.left+'px';
+  fly.style.top=откуда.top+'px';
+  fly.innerHTML=cardHTML(c,{open:1,noAnim:1});
+  document.body.appendChild(fly);
+  const sx=куда.width/откуда.width, sy=куда.height/откуда.height;
+  const dx=куда.left+куда.width/2-(откуда.left+откуда.width/2);
+  const dy=куда.top+куда.height/2-(откуда.top+откуда.height/2);
+  el.style.opacity='0';
+  const an=fly.animate([
+    {transform:'translate(0,0) scale(1) rotate(0)',opacity:1},
+    {transform:`translate(${dx*.55}px,${dy*.55 - 26}px) scale(${(1+sx)/2}) rotate(-4deg)`,offset:.55},
+    {transform:`translate(${dx}px,${dy}px) scale(${Math.max(sx,sy*.72)}) rotate(0)`,opacity:.85,offset:1}],
+    {duration:340,easing:'cubic-bezier(.4,0,.2,1)'});
+  /* Уборка обязана случиться при любом исходе. Обещание анимации не резолвится,
+     если вкладка ушла в фон и кадры встали, — а вместе с копией так и осталось
+     бы спрятанным САМО существо: оно скрыто прозрачностью на время полёта.
+     Поэтому поверх обещания — жёсткий срок. Повторный вызов безвреден. */
+  let убрано=false;
+  const done=()=>{
+    if(убрано)return; убрано=true;
+    fly.remove(); el.style.opacity='';
+    if(gfxAnim())el.animate([{transform:'scale(1.16)'},{transform:'scale(1)'}],
+      {duration:220,easing:'cubic-bezier(.3,1.5,.4,1)'});
+  };
+  an.finished.then(done).catch(done);
+  setTimeout(done,900);
+}
+
+/* Черта от атакующего к цели: на поле из пяти клеток «кто кого» иначе
+   восстанавливается только задним числом, по тому, у кого убыло здоровье. */
+function atkLine(a,b){
+  if(!gfxAnim()||!S.vfx)return;
+  const x1=a.left+a.width/2,y1=a.top+a.height/2;
+  const x2=b.left+b.width/2,y2=b.top+b.height/2;
+  const len=Math.hypot(x2-x1,y2-y1);
+  if(len<8)return;
+  const el=document.createElement('div');
+  el.className='atkLine';
+  el.style.left=x1+'px';el.style.top=(y1-1.5)+'px';el.style.width=len+'px';
+  el.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;
+  document.body.appendChild(el);
+  const an=el.animate([{opacity:0,clipPath:'inset(0 100% 0 0)'},
+              {opacity:1,clipPath:'inset(0 0 0 0)',offset:.35},
+              {opacity:0,clipPath:'inset(0 0 0 60%)'}],
+    {duration:260,easing:'ease-out'});
+  const off=()=>el.remove();
+  an.finished.then(off).catch(off);
+  setTimeout(off,800);   /* тот же страховочный срок: в фоне кадры встают */
 }
 
 /* ================= ИНСПЕКТОР КАРТЫ ================= */
@@ -3850,11 +3997,9 @@ function renderBattle(){
   $('#pMana').innerHTML=manaRow(B.p.mana,B.p.mmax);
   $('#eMana').innerHTML=manaRow(B.e.mana,B.e.mmax);
   const canTargetE=B.sel&&(B.sel.type==='unit'||(B.sel.type==='hand'&&byId(B.p.hand[B.sel.i])?.eff?.tg==='any'));
-  $('#rowE').innerHTML=B.e.board.map(u=>unitHTML(u,'e',!!canTargetE)).join('')+
-    Array.from({length:Math.max(0,5-B.e.board.length)},()=>`<div class="slot ${canTargetE?'canDrop':''}" data-slot="e-hero"></div>`).join('');
+  syncRow($('#rowE'),B.e.board,'e',!!canTargetE,canTargetE?'<div class="slot canDrop" data-slot="e-hero"></div>':'<div class="slot" data-slot="e-hero"></div>');
   const canTargetP=B.sel&&B.sel.type==='hand'&&byId(B.p.hand[B.sel.i])?.eff?.tg==='ally';
-  $('#rowP').innerHTML=B.p.board.map(u=>unitHTML(u,'p',!!canTargetP)).join('')+
-    Array.from({length:Math.max(0,5-B.p.board.length)},()=>'<div class="slot"></div>').join('');
+  syncRow($('#rowP'),B.p.board,'p',!!canTargetP,'<div class="slot"></div>');
   const n=B.p.hand.length;
   $('#bHand').innerHTML=B.p.hand.map((id,i)=>{
     const c=byId(id);
@@ -3914,6 +4059,80 @@ function updateHint(){
       h.textContent='маны ни на что не хватает — жми КОНЕЦ ХОДА';
   }
 }
+/* ================= сборка ряда существ =================
+   Раньше ряд собирался через innerHTML при каждом изменении состояния — на
+   каждый удар, на каждую потраченную ману. Узлы существ уничтожались и
+   создавались заново, а вместе с ними заново запускалась анимация появления:
+   после любого попадания всё поле «выпрыгивало» повторно. Анимировать урон,
+   замах или смерть было попросту не на чем — элемент исчезал в тот самый
+   момент, когда должен был двигаться.
+   Теперь узлы переиспользуются по uid, а меняются только те поля, что
+   изменились. Появление играет один раз, всё остальное можно анимировать. */
+function syncRow(row,board,side,targetable,slotHTML){
+  const было=new Map();
+  row.querySelectorAll('.unit').forEach(el=>было.set(el.dataset.uid,el));
+  const порядок=[];
+  for(const u of board){
+    const key=String(u.uid);
+    let el=было.get(key);
+    if(el){было.delete(key);updateUnit(el,u,side,targetable)}
+    else{
+      const t=document.createElement('div');
+      t.innerHTML=unitHTML(u,side,targetable);
+      el=t.firstElementChild;
+    }
+    порядок.push(el);
+  }
+  /* Узел, помеченный .dying, не трогаем: его анимация смерти ещё идёт, и
+     удалит его тот, кто её запустил. Иначе существо исчезало бы мгновенно,
+     а размен становился нечитаемым. */
+  было.forEach(el=>{if(!el.classList.contains('dying'))el.remove()});
+  row.querySelectorAll('.slot').forEach(el=>el.remove());
+  порядок.forEach((el,i)=>{
+    const cur=row.children[i];
+    if(cur!==el)row.insertBefore(el,cur||null);
+  });
+  const пусто=Math.max(0,5-board.length);
+  if(пусто){
+    const t=document.createElement('div');
+    t.innerHTML=slotHTML.repeat(пусто);
+    while(t.firstChild)row.appendChild(t.firstChild);
+  }
+}
+/* Патчим только изменившееся. Полная перерисовка узла обнулила бы и подсветку,
+   и любую идущую анимацию — ровно то, от чего уходим. */
+function updateUnit(el,u,side,targetable){
+  const sel=B.sel&&B.sel.type==='unit'&&B.sel.uid===u.uid;
+  const tired=!u.canAtk&&side==='p';
+  el.classList.toggle('sel',!!sel);
+  el.classList.toggle('target',!!targetable);
+  el.classList.toggle('tired',!!tired);
+  el.classList.toggle('buffed',!!u.buffed);
+  const a=el.querySelector('.uA'), h=el.querySelector('.uH');
+  if(a&&a.textContent!=String(u.atk))a.textContent=u.atk;
+  if(h){
+    /* Цифру здоровья не просто подменяем: при убыли она вспыхивает и
+       вздрагивает, иначе размен читается только по всплывающему числу. */
+    if(h.textContent!=String(u.hp)){
+      const было=+h.textContent;
+      h.textContent=u.hp;
+      if(u.hp<было&&gfxAnim())h.animate(
+        [{transform:'scale(1)'},{transform:'scale(1.45)',offset:.3},{transform:'scale(1)'}],
+        {duration:280,easing:'cubic-bezier(.3,1.4,.4,1)'});
+    }
+    h.classList.toggle('hurt',u.hp<u.maxhp);
+  }
+  const kw=el.querySelector('.uKw');
+  const want=(u.taunt?'<i>ТАУНТ</i>':'')+(u.rush&&u.sick?'<i class="r">РАШ</i>':'');
+  if(kw&&kw.innerHTML!==want)kw.innerHTML=want;
+}
+/* Одно место, где решается, двигаться ли вообще. Системную настройку
+   «меньше движения» уважаем: для части людей это не вкус, а самочувствие. */
+let REDUCE=false;
+try{const m=matchMedia('(prefers-reduced-motion:reduce)');REDUCE=m.matches;
+  m.addEventListener&&m.addEventListener('change',e=>{REDUCE=e.matches})}catch(e){}
+function gfxAnim(){return !REDUCE}
+
 function unitHTML(u,side,targetable){
   const hex=u.card.ult?'#ff3355':TIER_HEX[u.card.t];
   const sel=B.sel&&B.sel.type==='unit'&&B.sel.uid===u.uid;
@@ -3931,6 +4150,7 @@ function unitHTML(u,side,targetable){
     ${CARD_ART.has(u.card.id)
       ? `<img class="uArtImg" src="art/cards/${u.card.id}.webp" alt="" draggable="false">`
       : `<svg class="uArt" viewBox="0 0 24 24">${EMB[u.card.el]||EMB.steel}</svg>`}
+    <span class="uHit"></span>
     <span class="uA">${u.atk}</span><span class="uH ${u.hp<u.maxhp?'hurt':''}">${u.hp}</span>
   </div>`;
 }
