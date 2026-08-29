@@ -2608,13 +2608,31 @@ function dPrevShow(id){
     dPrevEl=document.createElement('div');dPrevEl.className='dPrev';
     document.body.append(dPrevBd,dPrevEl);
   }
-  if(dPrevId!==id){dPrevId=id;dPrevEl.innerHTML=cardHTML(c,{open:1,noAnim:1})}
+  if(dPrevId!==id){dPrevId=id;dPrevEl.innerHTML=cardHTML(c,{open:1,noAnim:1});dPrevHi(id)}
   /* Ставим класс следующим кадром: иначе переход не запустится, элемент только
      что появился и браузер применит конечное состояние сразу. */
   requestAnimationFrame(()=>{
     if(dPrevId!==id)return;
     dPrevEl.classList.add('on');dPrevBd.classList.add('on');
   });
+}
+/* Игровой арт лежит в 512 px — этого хватает руке и коллекции, где карта ~150 px.
+   Превью растягивает её до 400, и на 512 видно кашу: тонкие искры и волоски не
+   переживают сжатие оригинала 1254 -> 512. Поэтому здесь подменяем картинку на
+   версию 1024 из art/cards/hi. Грузим только по наведению и только на десктопе:
+   телефон превью не показывает вовсе и лишний трафик не тратит.
+   Подмена — после декодирования, чтобы карта не моргнула пустотой; если файла
+   нет, onerror молчит и остаётся обычный арт. */
+const dPrevHiSeen=new Set();
+function dPrevHi(id){
+  const layer=dPrevEl&&dPrevEl.querySelector('.cfArtImg');
+  if(!layer)return;
+  const src='art/cards/hi/'+id+'.webp';
+  const put=()=>{ if(dPrevId===id)layer.style.backgroundImage='url('+src+')' };
+  if(dPrevHiSeen.has(id)){put();return}
+  const im=new Image();
+  im.onload=()=>{dPrevHiSeen.add(id);put()};
+  im.src=src;
 }
 function dPrevHide(){
   if(!dPrevEl)return;
