@@ -338,21 +338,27 @@ body.menuOn .infoF{display:grid}
 /* ====== карточки ====== */
 .cWrap{outline:none;cursor:pointer;position:relative;perspective:1100px;animation:flyIn .6s cubic-bezier(.2,1.2,.3,1) backwards}
 @keyframes flyIn{from{transform:translateY(90px) rotate(6deg) scale(.5);opacity:0}}
-/* Лестница «крутости» по тирам. Всё, чем тир отличается от тира, собрано в
-   переменные на одной строке — раньше это была одна лишь прозрачность радуги,
-   а блик светил одинаково и на рекруте, и на легенде. Держать эффекты рядом
-   важнее аккуратности: разбредись они по файлу, следующая правка рассогласует
-   их между собой и лестница перестанет читаться как лестница.
-     --ho  сила радуги      --hoT её период     --hoS масштаб полос
-     --sh  яркость блика    --shW его полуширина внутри полосы
-     --shT период блика     --gl  свечение по внутреннему краю */
-.cWrap{--ho:.3;--hoT:5.5s;--hoS:240%;--sh:.34;--shW:24%;--shT:5.4s;--gl:0}
-.cWrap.t0{--tc:#aab6bf;--ho:0;   --sh:.20;--shW:14%;--shT:7.0s;--gl:0}
-.cWrap.t1{--tc:#35f0ff;--ho:.16;--hoT:6.2s;--hoS:265%;--sh:.32;--shW:19%;--shT:6.0s;--gl:.16}
-.cWrap.t2{--tc:#ff4fd8;--ho:.30;--hoT:5.2s;--hoS:230%;--sh:.46;--shW:24%;--shT:5.0s;--gl:.32}
-.cWrap.t3{--tc:#ffd52e;--ho:.42;--hoT:4.2s;--hoS:200%;--sh:.64;--shW:29%;--shT:4.0s;--gl:.50}
-.cWrap.t4{--tc:#fff;   --ho:.60;--hoT:3.6s;--hoS:185%;--sh:.74;--shW:32%;--shT:3.4s;--gl:.62}
-.cWrap.sec{--tc:#ff3355;--ho:.65;--hoT:3.2s;--hoS:170%;--sh:.82;--shW:34%;--shT:3.0s;--gl:.72}
+/* Голографическая проекция вместо фольги. Прежний эффект был радугой во весь
+   спектр в режиме color-dodge: жёлтый с зелёным читаются как наклейка, а dodge
+   делит на инверсию подложки и на всём светлее чёрного уходит в белое — оттого
+   верхние тиры и выгорали. Здесь только холодная половина спектра и soft-light,
+   который подсвечивает, а не выбивает.
+   Числа подобраны вживую в примерочной (holo-lab.html) и приняты как есть для
+   РЕКРУТА — на нём их и смотрели. Тир добавляется поверх: перелив плотнее и
+   быстрее, свечение сильнее, кромка расслаивается заметнее.
+     --irid сила переливов   --iridT их период
+     --spec бегущий блик     --specT его период
+     --glow внешнее свечение --edge  расслоение кромки
+     --scan строчки развёртки --grain зерно  --tint плотность стекла
+     --tilt наклон в градусах --dep  расхождение слоёв при наклоне */
+.cWrap{--irid:.23;--iridT:1.5s;--spec:.03;--specT:4s;--glow:.85;--edge:.46;
+       --scan:.005;--grain:.14;--tint:1;--tilt:8;--dep:10;--tx:0;--ty:0}
+.cWrap.t0{--tc:#aab6bf}
+.cWrap.t1{--tc:#35f0ff;--irid:.28;--iridT:1.4s;--glow:.95;--edge:.50}
+.cWrap.t2{--tc:#ff4fd8;--irid:.34;--iridT:1.3s;--glow:1.05;--edge:.55}
+.cWrap.t3{--tc:#ffd52e;--irid:.42;--iridT:1.15s;--glow:1.15;--edge:.60}
+.cWrap.t4{--tc:#fff;   --irid:.47;--iridT:1.05s;--glow:1.22;--edge:.63}
+.cWrap.sec{--tc:#ff3355;--irid:.52;--iridT:.95s;--glow:1.32;--edge:.66}
 .cFlip{position:relative;width:100%;aspect-ratio:5/7;transform-style:preserve-3d;transition:transform .75s cubic-bezier(.2,1.25,.3,1)}
 .cWrap.open .cFlip{transform:rotateY(180deg)}
 .cFace{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:12px;overflow:hidden}
@@ -364,51 +370,91 @@ body.menuOn .infoF{display:grid}
 .cBack .bStar{width:44%;transform:rotate(-6deg);position:relative;z-index:1}
 .cBack .bStar svg{width:100%;fill:none;stroke:var(--yel);stroke-width:4;filter:drop-shadow(3px 4px 0 rgba(0,0,0,.6))}
 .cBack .bT{position:relative;z-index:1;font-family:var(--disp);font-style:italic;font-size:13px;color:#fff;text-shadow:2px 2px 0 #000}
-.cFront{transform:rotateY(180deg);background:linear-gradient(180deg,#17171f,#0b0b11);border:2px solid var(--tc);
-  display:flex;flex-direction:column;padding:9px}
-.cFront::before{content:'';position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--tc) 18%,transparent),transparent 68%)}
-/* Третья ступень лестницы — свечение по внутреннему краю в цвет тира.
-   Статичное, то есть бесплатное: растрируется один раз. При --gl:0 радиус
-   размытия нулевой и тени попросту нет, поэтому рекрут остаётся чистым. */
-.cFront{box-shadow:inset 0 0 calc(var(--gl) * 22px) color-mix(in srgb,var(--tc) 45%,transparent)}
-/* Верхним двум тирам свечение ещё и дышит. Анимируем прозрачность отдельного
-   слоя, а не сам box-shadow: тень пришлось бы пересчитывать каждый кадр —
-   ровно та ошибка, на которой у нас умирал экран круток. */
-.cFront::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;
-  box-shadow:inset 0 0 24px color-mix(in srgb,var(--tc) 55%,transparent)}
-/* Пульс — часть голографии, поэтому и гаснет вместе с ней. Слои радуги и
-   блика просто не попадают в разметку при выключенной настройке, а пульс
-   живёт на псевдоэлементе и без этой привязки продолжал бы дышать у того,
-   кто эффекты как раз отключил. */
-.cWrap.foil.t3 .cFront::after,.cWrap.foil.t4 .cFront::after,.cWrap.foil.sec .cFront::after{
-  animation:tierPulse 2.6s ease-in-out infinite}
-@keyframes tierPulse{0%,100%{opacity:.2}50%{opacity:.9}}
+/* Стекло: тёмное, слегка синеющее, с тонкой светящейся кромкой. Рамка в цвет
+   тира ушла — рарность теперь несут третья тень (в цвет тира) и звёзды. */
+.cFront{transform:rotateY(180deg);display:flex;flex-direction:column;padding:9px;
+  background:linear-gradient(160deg,
+    rgba(18,26,42,var(--tint)) 0%,
+    rgba(10,14,26,calc(var(--tint) * .92)) 46%,
+    rgba(16,12,30,var(--tint)) 100%);
+  border:1px solid rgba(150,215,255,.30);
+  box-shadow:
+    0 0 calc(var(--glow) * 26px) rgba(80,190,255,calc(var(--glow) * .38)),
+    0 0 calc(var(--glow) * 62px) rgba(150,90,255,calc(var(--glow) * .22)),
+    /* Третья тень — в цвет тира: без неё редкость читалась бы только по
+       звёздам, а рамка, которая раньше её несла, стала общей голубой. */
+    0 0 calc(var(--glow) * 34px) color-mix(in srgb,var(--tc) 40%,transparent),
+    inset 0 0 calc(var(--glow) * 30px) rgba(120,200,255,calc(var(--glow) * .13)),
+    /* Хроматическое расслоение кромки: ровно 1px и без размытия — шире, и это
+       уже глитч, а не проекция. */
+    inset 1px 0 0 rgba(255,80,200,var(--edge)),
+    inset -1px 0 0 rgba(90,225,255,var(--edge))}
+/* Переливы. Маска стоит на неподвижной обёртке, а градиент едет ВНУТРИ неё:
+   будь маска на том же элементе, чистая середина ездила бы вместе с ним, и
+   текст снова тонул бы в переливе. Едем трансформом, а не смещением фона —
+   смещение перерисовывает слой каждый кадр, а в коллекции таких карточек под
+   сорок сразу, и ровно на вечных перерисовках у нас умирала страница на iPhone. */
+.holo{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 44%,transparent 6%,#000 72%);
+  mask-image:radial-gradient(ellipse at 50% 44%,transparent 6%,#000 72%)}
+.holo i{position:absolute;inset:-45%;display:block;
+  /* Только холодная половина спектра. Вернёшь жёлтый с зелёным — снова фольга. */
+  background:linear-gradient(114deg,
+    rgba(0,240,255,0) 0%, rgba(0,225,255,.85) 14%, rgba(60,130,255,.9) 30%,
+    rgba(150,90,255,.85) 46%, rgba(240,90,220,.8) 60%, rgba(90,200,255,.85) 76%,
+    rgba(0,240,255,0) 100%);
+  mix-blend-mode:soft-light;opacity:var(--irid);
+  animation:holoOsc var(--iridT) ease-in-out infinite}
+@keyframes holoOsc{0%,100%{transform:translate3d(-14%,-4%,0)}50%{transform:translate3d(14%,4%,0)}}
+/* Зеркальный блик по диагонали: узкий и мягкий. Широкая белая полоса — это
+   глянец на пластике, а не свет внутри проекции. */
+.cShine{position:absolute;inset:-40%;pointer-events:none;z-index:1;mix-blend-mode:screen;
+  background:linear-gradient(114deg,transparent 42%,
+    rgba(215,245,255,var(--spec)) 50%,transparent 58%);
+  animation:shineS var(--specT) cubic-bezier(.4,0,.35,1) infinite}
+@keyframes shineS{0%{transform:translate3d(-42%,-18%,0)}62%,100%{transform:translate3d(42%,18%,0)}}
+/* Строчки развёртки и зерно — подпись «проекция». Оба статичны: анимировать их
+   значит добавить по перерисовке на карту, а на выбранной силе (строчки .005)
+   движения всё равно не разглядеть. */
+.cScan{position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:repeating-linear-gradient(0deg,
+    rgba(190,235,255,var(--scan)) 0 1px,transparent 1px 3px)}
+.cGrain{position:absolute;inset:0;pointer-events:none;z-index:1;
+  opacity:var(--grain);mix-blend-mode:overlay;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 
-.cFront.sec{background:linear-gradient(180deg,#1a0f14,#0d0709)}
-/* Радуга ездит трансформом, а не background-position. Смещение фона — это
-   перерисовка слоя каждый кадр, и делать её пришлось бы ЕЩЁ и сквозь filter,
-   который тут же рядом. Трансформ браузер применяет к уже готовому растру.
-   Разница не косметическая: в коллекции таких карточек под сорок сразу, а
-   именно на вечных перерисовках у нас недавно умирала страница на iPhone.
-   Слой шире карты на 40% с каждой стороны, поэтому ход в ±9% её не оголяет. */
-.holo{position:absolute;inset:-40%;pointer-events:none;mix-blend-mode:color-dodge;opacity:var(--ho);
-  background:repeating-linear-gradient(115deg,#ff0044 0 12.5%,#ff9500 12.5% 25%,#f8ff2e 25% 37.5%,#2bff77 37.5% 50%,#00cfff 50% 62.5%,#8a5cff 62.5% 75%,#ff4fd8 75% 87.5%,#ff0044 87.5% 100%);
-  background-size:var(--hoS) var(--hoS);filter:saturate(1.4) brightness(1.35);
-  animation:holoOsc var(--hoT) ease-in-out infinite}
-/* У рекрута радуги нет вовсе — по замыслу, у него только блик. Прячем слой
-   целиком, а не гасим прозрачностью: невидимый слой всё равно анимировался бы,
-   а рекрутов в коллекции 11 из 38. */
-.cWrap.t0 .holo{display:none}
-@keyframes holoOsc{0%,100%{transform:translate3d(-9%,0,0)}50%{transform:translate3d(9%,0,0)}}
-/* Ширину блика задаём остановками градиента, а не шириной элемента. Путь в
-   keyframes измеряется в процентах от самой полосы, так что узкая полоса не
-   доезжала бы до правого края карты — блик обрывался бы на середине. */
-.cShine{position:absolute;top:-30%;bottom:-30%;left:-70%;width:50%;pointer-events:none;mix-blend-mode:screen;
-  background:linear-gradient(90deg,transparent calc(50% - var(--shW)),
-             rgba(255,255,255,var(--sh)) 50%,transparent calc(50% + var(--shW)));
-  animation:shineS var(--shT) cubic-bezier(.3,.1,.3,1) infinite}
-@keyframes shineS{0%,55%{transform:translateX(0) rotate(22deg)}88%,100%{transform:translateX(340%) rotate(22deg)}}
+/* --- ПАРАЛАКС ---
+   Слои разъезжаются через отдельное свойство translate, а не transform:
+   transform уже занят анимациями перелива и блика, а translate применяется к
+   тому же элементу независимо — иначе под каждый слой пришлось бы плодить
+   обёртку. Встречное движение и читается как объём: арт уходит против наклона,
+   зерно со строчками — за ним, блик ходит сильнее всех. */
+.cWrap.tilt .cFront{transform:rotateY(180deg)
+  rotateY(calc(var(--tx) * var(--tilt) * 1deg))
+  rotateX(calc(var(--ty) * var(--tilt) * -1deg))}
+.cWrap.tilt .cfArtImg{translate:calc(var(--tx) * var(--dep) * -1px) calc(var(--ty) * var(--dep) * -1px);
+  scale:calc(1 + var(--dep) / 90)}
+.cWrap.tilt .cScan,.cWrap.tilt .cGrain{
+  translate:calc(var(--tx) * var(--dep) * .5px) calc(var(--ty) * var(--dep) * .5px)}
+.cWrap.tilt .cShine{translate:calc(var(--tx) * var(--dep) * 1.6px) calc(var(--ty) * var(--dep) * 1.6px)}
+.cWrap.tilt .holo i{translate:calc(var(--tx) * var(--dep) * 1.1px) 0}
+.cWrap.tilt .cfHead,.cWrap.tilt .cfName,.cWrap.tilt .cfText,
+.cWrap.tilt .cfAtkHp,.cWrap.tilt .cfFoot{
+  translate:calc(var(--tx) * var(--dep) * -.3px) calc(var(--ty) * var(--dep) * -.3px)}
+/* Слежение почти мгновенное, возврат плавный: длинный переход на слежении
+   ощущается как задержка, а резкий возврат — как рывок. */
+.cWrap.tilt .cFront,.cWrap.tilt .cfArtImg,.cWrap.tilt .cScan,.cWrap.tilt .cGrain,
+.cWrap.tilt .cShine,.cWrap.tilt .holo i,.cWrap.tilt .cfHead,.cWrap.tilt .cfName,
+.cWrap.tilt .cfText,.cWrap.tilt .cfAtkHp,.cWrap.tilt .cfFoot{
+  transition:transform .1s linear,translate .1s linear}
+.cWrap.tilt.rest .cFront,.cWrap.tilt.rest .cfArtImg,.cWrap.tilt.rest .cScan,
+.cWrap.tilt.rest .cGrain,.cWrap.tilt.rest .cShine,.cWrap.tilt.rest .holo i,
+.cWrap.tilt.rest .cfHead,.cWrap.tilt.rest .cfName,.cWrap.tilt.rest .cfText,
+.cWrap.tilt.rest .cfAtkHp,.cWrap.tilt.rest .cfFoot{
+  transition:transform .5s cubic-bezier(.2,.9,.3,1),translate .5s cubic-bezier(.2,.9,.3,1)}
+/* Слои проекции лежат на z-index 0..1, поэтому содержимому нужен свой уровень —
+   иначе перелив и зерно ложились бы поверх текста. */
+.cfName,.cfText,.cfAtkHp,.cfFoot,.cfArt{position:relative;z-index:2}
 .cfHead{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:2}
 .cfCost{font-family:var(--disp);font-size:19px;width:32px;height:32px;display:grid;place-items:center;
   background:var(--yel);color:#0a0a0e;border:2px solid #000;transform:rotate(-4deg);
@@ -417,7 +463,7 @@ body.menuOn .infoF{display:grid}
    без этого лестница держалась бы на одном переливе. Свечение вписано прямо
    сюда — отдельным правилом выше по файлу его перебивало бы это же. */
 .cfStars{font-size:9px;letter-spacing:1px;color:var(--tc);align-self:center;
-  text-shadow:0 0 calc(4px + var(--gl) * 11px) currentColor}
+  text-shadow:0 0 calc(3px + var(--glow) * 7px) currentColor}
 .cfArt{position:relative;flex:1;display:grid;place-items:center;min-height:0;z-index:1}
 .cfArt svg{width:74%;height:74%;color:var(--tc);filter:drop-shadow(0 0 9px currentColor) drop-shadow(0 4px 4px rgba(0,0,0,.6))}
 /* Нарисованный арт вместо эмблемы. Картинка квадратная, а карта 5:7 — кладём
@@ -2284,7 +2330,9 @@ function cardHTML(c,opts={}){
       buffAll:'усиление всем',aoe:'по всем врагам',weaken:'ослабление',drain:'урон+лечение',mana:'+1 маны'};
     eff=`${names[e.k]||''} ${e.v||''}${e.a?` (+${e.a}/+${e.h})`:''}`.trim()}
   const atkHp=c.ty==='u'?`<div class="cfAtkHp"><b class="a">${c.a}</b><b class="h">${c.h}</b></div>`:'';
-  const holo=S.foil?`<div class="holo"></div><div class="cShine"></div>`:'';
+  const holo=S.foil
+    ? `<div class="holo"><i></i></div><div class="cShine"></div><div class="cScan"></div><div class="cGrain"></div>`
+    : '';
   const art=CARD_ART.has(c.id);
   return `<div class="cWrap t${c.t}${c.ult?' sec':''}${S.foil?' foil':''}${opts.open?' open':''}" ${opts.noAnim?'style="animation:none"':''}>
    <div class="cFlip">
@@ -4308,6 +4356,37 @@ function pullCloud(){
     }catch(e){}
   });
 }
+/* Наклон карты под указателем — то, ради чего затевался паралакс: без него
+   слои стоят на месте и объёма не видно.
+   Слушатель ОДИН на весь документ, а не по штуке на карту: в коллекции их под
+   сорок, и сорок подписок на pointermove — это ровно тот перерасход, на котором
+   у нас недавно умирала страница.
+   Только для мыши, и решает это САМО событие (pointerType), а не медиазапрос
+   при подписке. Медиазапрос читается один раз на старте, и устройство, у
+   которого мышь появилась позже — планшет с клавиатурой, десктоп в режиме
+   эмуляции, — наклона не получило бы уже никогда. Проверка в обработчике
+   вдобавок точнее по смыслу: на тач-экране pointermove приходит во время
+   перетаскивания карты на поле, и наклонять её там как раз не надо.
+   Гироскоп для всей коллекции разом не включаем — это та же ловушка с памятью,
+   из которой мы только что выбирались. Для крупных экранов (вскрытие пака,
+   инспектор) его можно будет добавить отдельно: там карт единицы. */
+function wireCardTilt(){
+  let cur=null;
+  const relax=w=>{w.classList.add('rest');w.style.setProperty('--tx',0);w.style.setProperty('--ty',0)};
+  document.addEventListener('pointermove',e=>{
+    if(e.pointerType&&e.pointerType!=='mouse')return;
+    const w=e.target&&e.target.closest?e.target.closest('.cWrap'):null;
+    if(w!==cur){ if(cur)relax(cur); cur=w; if(w)w.classList.add('tilt') }
+    if(!w)return;
+    const r=w.getBoundingClientRect();
+    if(!r.width)return;
+    w.classList.remove('rest');
+    w.style.setProperty('--tx',(((e.clientX-r.left)/r.width)*2-1).toFixed(3));
+    w.style.setProperty('--ty',(((e.clientY-r.top)/r.height)*2-1).toFixed(3));
+  },{passive:true});
+}
+wireCardTilt();
+
 pullCloud();
 
 /* Если прошлый запуск оборвался, не дойдя до чистой метки, — показываем, где
