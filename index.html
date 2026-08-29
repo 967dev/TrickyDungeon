@@ -576,23 +576,34 @@ body.menuOn .infoF{display:grid}
 
 /* ====== туториал ====== */
 /* ================= тренировка: БОТ-КАРТЁЖНИК ================= */
-/* Затемнение. pointer-events:none — оно только красит. Ввод режет отдельный
-   перехватчик в JS: пытаться «прорезать дырку» в оверлее под подсвеченный
-   элемент пришлось бы либо clip-path'ом (ломается на не-прямоугольниках),
-   либо подъёмом цели по z-index (а она лежит в чужом контексте наложения). */
+/* Затемнение целого экрана — только для шагов без цели, где подсвечивать
+   нечего. Когда цель есть, затемнение рисует САМА рамка (см. ниже). */
 .trOv{position:fixed;inset:0;z-index:70;pointer-events:none;
   background:rgba(4,4,8,.72);animation:scrIn .3s}
-/* Рамка вокруг того, на что можно нажать. */
+.trOv.off{display:none}
+/* Рамка вокруг того, на что можно нажать — и одновременно вырез в затемнении.
+   Огромная тень с растяжкой закрашивает всё ВОКРУГ рамки, оставляя её
+   внутренность чистой. Так подсветка и дырка физически не могут разойтись:
+   это один элемент.
+   Прошлый подход — отдельный оверлей плюс подъём цели через z-index — не
+   работал в принципе: экран это position:fixed;z-index:2, то есть контекст
+   наложения, и ребёнок из него не выпрыгивает никаким z-index. Подсвеченная
+   область оставалась затемнённой всегда.
+   Большая тень идёт ПОСЛЕДНЕЙ в списке: тени красятся в порядке объявления,
+   и поставь её первой — она закрыла бы собой жёлтое свечение рамки. */
 .trRing{position:fixed;z-index:72;pointer-events:none;border:3px solid var(--yel);
-  border-radius:10px;box-shadow:0 0 0 4px rgba(255,213,46,.18),0 0 26px rgba(255,213,46,.5);
+  border-radius:10px;
+  box-shadow:0 0 0 4px rgba(255,213,46,.18),0 0 26px rgba(255,213,46,.5),
+             0 0 0 100vmax rgba(4,4,8,.72);
   transition:left .28s cubic-bezier(.2,1,.3,1),top .28s cubic-bezier(.2,1,.3,1),
              width .28s cubic-bezier(.2,1,.3,1),height .28s cubic-bezier(.2,1,.3,1);
   animation:trRingPulse 1.5s ease-in-out infinite}
-@keyframes trRingPulse{0%,100%{box-shadow:0 0 0 4px rgba(255,213,46,.16),0 0 20px rgba(255,213,46,.4)}
-  50%{box-shadow:0 0 0 7px rgba(255,213,46,.30),0 0 34px rgba(255,213,46,.75)}}
+@keyframes trRingPulse{
+  0%,100%{box-shadow:0 0 0 4px rgba(255,213,46,.16),0 0 20px rgba(255,213,46,.4),
+                    0 0 0 100vmax rgba(4,4,8,.72)}
+  50%{box-shadow:0 0 0 7px rgba(255,213,46,.30),0 0 34px rgba(255,213,46,.75),
+              0 0 0 100vmax rgba(4,4,8,.72)}}
 .trRing.off{display:none}
-/* Подсвеченный элемент поднимаем над затемнением, чтобы он читался. */
-.trLit{position:relative;z-index:71}
 
 /* Бот. Прижат к нижнему краю, пузырь над ним; на узком экране бот мельче,
    иначе он и пузырь вдвоём съедают пол-экрана. */
@@ -1386,7 +1397,13 @@ function go(id){
   sfx.ui();
   /* Игрок сам ушёл с боя — значит рейд брошен осознанно. Снимок держим
      только для аварийных случаев (свернули приложение, упал webview). */
-  if(CUR==='battle'&&id!=='battle')dropBattleSnap();
+  if(CUR==='battle'&&id!=='battle'){
+    dropBattleSnap();
+    /* И обязательно снять обучение. Иначе оно продолжает жить на другом
+       экране: перехватчик ввода остаётся навешенным и блокирует ВСЁ
+       приложение, а рамка указывает на элементы скрытого боя. */
+    if(TR)stopTraining();
+  }
   $$('.screen').forEach(s=>s.classList.remove('on'));
   $('#scr-'+id).classList.add('on');CUR=id;
   document.body.classList.toggle('menuOn',id==='menu');
@@ -1966,9 +1983,17 @@ function renderStages(){
 let B=null,UID=1,DRAG=null,suppressClick=false;
 document.addEventListener('click',e=>{
   if(suppressClick){e.stopPropagation();e.preventDefault();suppressClick=false}},true);
-function mkUnit(card){return{uid:UID++,card,atk:card.a||0,hp:card.h||0,maxhp:card.h||0,
-  taunt:!!(card.kw&&card.kw.includes('taunt')),rush:!!(card.kw&&card.kw.includes('rush')),
-  canAtk:false,sick:true}}
+function mkUnit(card){
+  const rush=!!(card.kw&&card.kw.includes('rush'));
+  /* canAtk:rush — иначе РАШ не работает вовсе. Юнит создавался с canAtk:false,
+     и обе проверки атаки (перетаскивание в onDragUp и тап в onUnitTap) первым
+     делом требуют canAtk — так что «атакует в тот же ход» не срабатывало ни
+     разу, хотя обещано на шести картах и в справке.
+     sick при этом остаётся true: юнит действительно только что вышел, на этом
+     держится значок РАШ на портрете (u.rush && u.sick) и тусклая рамка. */
+  return{uid:UID++,card,atk:card.a||0,hp:card.h||0,maxhp:card.h||0,
+    taunt:!!(card.kw&&card.kw.includes('taunt')),rush,
+    canAtk:rush,sick:true}}
 /* ================= снапшот боя =================
    Прогресс по рейдам лежит в основном сейве, а сам бой жил только в памяти:
    перезагрузка страницы его теряла. В браузере это мелочь, в Telegram — нет,
@@ -2743,6 +2768,14 @@ const TR_GATED=['pointerdown','mousedown','touchstart','click'];
 function trHand(id){return B?B.p.hand.indexOf(id):-1}
 function trCard(id){const i=trHand(id);return i<0?null:document.querySelector(`#bHand .hCard[data-i="${i}"]`)}
 function trOnBoard(id){return B&&B.p.board.some(u=>u.card.id===id)}
+/* Конкретный юнит на поле, а не «первый попавшийся». На шаге про размен
+   подсветка обязана указывать на Стрелка с РАШем, а `#rowP .unit` вернул бы
+   Гончую — она стоит первой, и игрок бил бы не тем. */
+function trUnit(id){
+  if(!B)return null;
+  const u=B.p.board.find(x=>x.card.id===id);
+  return u?document.querySelector(`#rowP .unit[data-uid="${u.uid}"]`):null;
+}
 
 function trSteps(){return [
 {t:'Так. Ты <b>новенький</b>. Я — <b>БОТ-КАРТЁЖНИК</b>, раздаю в этом Провале с тех пор, как тут ещё был свет. Сядь ровно, покажу правила за один бой.',btn:'ДАВАЙ'},
@@ -2779,10 +2812,10 @@ function trSteps(){return [
 {t:'На нём <span class="kw">РАШ</span> — он <b>бьёт в тот же ход, когда вышел</b>. Единственное исключение из правила отдыха.',at:'#rowP'},
 
 {t:'<b>Перетащи Стрелка на Патрульного.</b> Оба погибнут: он снимет 3 и добьёт, а получит 2 при одном здоровье. Это <b>размен</b> — ты отдал двухманового, чтобы убрать стену. Честная сделка.',
- at:()=>document.querySelector('#rowP .unit'),until:()=>B&&B.e.board.length===0},
+ at:()=>trUnit('r06'),until:()=>B&&B.e.board.length===0},
 
 {t:'Стены нет — дорога открыта. <b>Тащи Гончую прямо на его панель наверху.</b> Это удар в лицо, минус 2 здоровья.',
- at:()=>document.querySelector('#rowP .unit'),until:()=>B&&B.e.hp<=12},
+ at:()=>trUnit('r01'),until:()=>B&&B.e.hp<=12},
 
 {t:'<b>12.</b> Вот так это и работает: ставишь дешёвое, меняешь по-умному, а лишний урон уходит в героя. Заканчивай ход.',
  at:'#bEnd',until:()=>B&&B.eTurn>=2},
@@ -2815,33 +2848,67 @@ function trBlock(e){
   e.stopPropagation();e.preventDefault();
 }
 
-function trPaint(){
+/* Отрисовка разделена намеренно.
+   trRender — только при смене шага: текст, кнопка, что разрешено нажимать.
+   trPlace — геометрия, каждый тик. Раньше это была одна функция, и рамка
+   пересчитывалась лишь на шагах с условием: renderBattle перестраивает руку
+   целиком, старый элемент отваливается, и рамка оставалась висеть на пустом
+   месте. Плюс пересборка кнопки «ДАЛЬШЕ» на каждом тике могла увести клик
+   из-под пальца. */
+function trRender(){
   if(!TR)return;
   const st=TR.steps[TR.i];if(!st)return;
-  const say=TR.say,ring=TR.ring;
+  const say=TR.say;
   say.querySelector('.trTxt').innerHTML=st.t;
   say.querySelector('.trStep').textContent=`${TR.i+1} / ${TR.steps.length}`;
   const btns=say.querySelector('.trBtns');
-  btns.querySelector('.btn')?.remove();
+  const old=btns.querySelector('.btn');if(old)old.remove();
   if(!st.until){                       /* информационный шаг — ведём кнопкой */
     const b=document.createElement('button');
     b.className='btn pri';b.textContent=st.btn||'ДАЛЬШЕ ►';
     b.onclick=()=>{sfx.ui();trNext()};
     btns.insertBefore(b,btns.firstChild);
   }
-  const el=st.at?trEl(st.at):null;
-  if(TR.lit&&TR.lit!==el)TR.lit.classList.remove('trLit');
-  if(el){
-    const r=el.getBoundingClientRect();
-    ring.classList.remove('off');
-    ring.style.left=(r.left-6)+'px';ring.style.top=(r.top-6)+'px';
-    ring.style.width=(r.width+12)+'px';ring.style.height=(r.height+12)+'px';
-    el.classList.add('trLit');TR.lit=el;
-    /* Пузырь не должен закрывать то, на что показывает. */
-    const low=r.top>innerHeight*.55;
-    say.classList.toggle('top',low);TR.bot.classList.toggle('top',low);
-  }else{ring.classList.add('off');TR.lit=null}
   TR.allow=st.until?st.at:null;
+  trPlace();
+}
+
+const trHits=(a,b)=>!(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom);
+function trBubbleBox(){
+  const s=TR.say.getBoundingClientRect(),b=TR.bot.getBoundingClientRect();
+  return {left:Math.min(s.left,b.left),right:Math.max(s.right,b.right),
+          top:Math.min(s.top,b.top),bottom:Math.max(s.bottom,b.bottom)};
+}
+function trSide(top){TR.say.classList.toggle('top',top);TR.bot.classList.toggle('top',top)}
+
+function trPlace(){
+  if(!TR)return;
+  const st=TR.steps[TR.i];if(!st)return;
+  const el=st.at?trEl(st.at):null;
+  const r=el&&el.getBoundingClientRect();
+  /* Цели нет или она схлопнута (элемент пересоздан и ещё не разложен) —
+     затемняем экран целиком, рамку прячем: лучше честное затемнение, чем
+     рамка вокруг пустоты. */
+  if(!r||!r.width||!r.height){
+    TR.ring.classList.add('off');TR.ov.classList.remove('off');return;
+  }
+  TR.ov.classList.add('off');
+  TR.ring.classList.remove('off');
+  const pad=6;
+  TR.ring.style.left=(r.left-pad)+'px';TR.ring.style.top=(r.top-pad)+'px';
+  TR.ring.style.width=(r.width+pad*2)+'px';TR.ring.style.height=(r.height+pad*2)+'px';
+  /* Куда убрать бота с репликой, чтобы не закрывать то, на что показываем.
+     Решение считается от положения цели, а не от текущей стороны пузыря —
+     иначе он бы дёргался туда-сюда на каждом тике. Проверяем замером, а не
+     порогом по высоте: пузырь с ботом занимает заметный угол экрана, и
+     «цель в нижней половине» ещё не значит, что он её накрыл. */
+  const ringR={left:r.left-pad,right:r.right+pad,top:r.top-pad,bottom:r.bottom+pad};
+  const want=(r.top+r.height/2)>innerHeight*.5;
+  trSide(want);
+  if(trHits(trBubbleBox(),ringR)){
+    trSide(!want);
+    if(trHits(trBubbleBox(),ringR))trSide(want);   /* мешает с обеих — берём предпочтительную */
+  }
 }
 
 function trNext(){
@@ -2850,7 +2917,7 @@ function trNext(){
   if(st&&st.go)try{st.go()}catch(e){}
   TR.i++;
   if(TR.i>=TR.steps.length){trFinish();return}
-  trPaint();
+  trRender();
   trCheck();
 }
 
@@ -2859,10 +2926,24 @@ function trNext(){
 function trCheck(){
   if(!TR||TR.done)return;
   const st=TR.steps[TR.i];
-  if(!st||!st.until)return;
+  if(!st)return;
+  trPlace();
+  if(!st.until||TR.pending)return;
   let ok=false;try{ok=!!st.until()}catch(e){ok=false}
-  if(ok)setTimeout(()=>{if(TR&&TR.steps[TR.i]===st)trNext()},st.pause||520);
-  else trPaint();
+  if(!ok)return;
+  /* Между выполнением условия и переходом есть пауза, чтобы игрок увидел
+     результат своего действия. Всё это время нельзя держать разрешённой
+     старую цель: на шаге «тапни карту» инспектор уже открыт, а кнопка
+     «РАЗЫГРАТЬ» в нём ещё заблокирована — нажатие просто не срабатывает и
+     выглядит поломкой. Поэтому сразу отдаём разрешение следующему шагу. */
+  TR.pending=true;
+  const nxt=TR.steps[TR.i+1];
+  TR.allow=nxt&&nxt.until?nxt.at:null;
+  setTimeout(()=>{
+    if(!TR||TR.done)return;
+    TR.pending=false;
+    if(TR.steps[TR.i]===st)trNext();
+  },st.pause||520);
 }
 
 function startTraining(){
@@ -2884,7 +2965,7 @@ function startTraining(){
     sfx.ui();
     if(confirm('Выйти из тренировки? Бой прервётся.')){stopTraining();finish(false,true)}
   };
-  TR={steps:trSteps(),i:0,armed:true,allow:null,lit:null,ov,ring,bot,say,done:false,tick:0};
+  TR={steps:trSteps(),i:0,armed:true,allow:null,ov,ring,bot,say,done:false,pending:false,tick:0};
   /* renderBattle зовётся только на изменение состояния боя, а часть условий
      смотрит на интерфейс (открылся ли инспектор). Такие шаги без опроса
      висли бы вечно. 200мс — незаметно на глаз и дёшево. */
@@ -2896,8 +2977,8 @@ function startTraining(){
      действие всё равно нечем, а click гасится отдельно: блокировка
      pointerdown его не отменяет. */
   for(const ev of TR_GATED)document.addEventListener(ev,trBlock,true);
-  addEventListener('resize',trPaint);
-  trPaint();trCheck();
+  addEventListener('resize',trPlace);
+  trRender();trCheck();
 }
 
 function stopTraining(silent){
@@ -2905,8 +2986,7 @@ function stopTraining(silent){
   TR.done=true;TR.armed=false;
   if(TR.tick)clearInterval(TR.tick);
   for(const ev of TR_GATED)document.removeEventListener(ev,trBlock,true);
-  removeEventListener('resize',trPaint);
-  if(TR.lit)TR.lit.classList.remove('trLit');
+  removeEventListener('resize',trPlace);
   for(const n of [TR.ov,TR.ring,TR.bot,TR.say])if(n&&n.parentNode)n.remove();
   TR=null;
   if(!silent)closeInspector();
