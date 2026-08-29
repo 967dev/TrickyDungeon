@@ -1312,6 +1312,7 @@ function rollOne(){
   else card=pick(CARDS.filter(c=>c.t===tier&&!c.noColl));
   return card}
 function renderGacha(){
+  tearing=false;
   $('#gTok').textContent=fmtN(S.sparks);
   const broke=S.sparks<PACK;
   $('#gBody').innerHTML=`
@@ -1360,9 +1361,17 @@ function wirePack(){
   pk.addEventListener('click',e=>{if(pk.disabled)return;
     if(e.target.closest&&e.target.closest('.pTab'))return;tearOff(true)});
 }
+/* Пак вскрывается двумя независимыми путями: pointerup по этикетке и click
+   по самой коробке. Резкий свайп зовёт tearOff прямо из pointermove, палец
+   отпускается над коробкой, браузер синтезирует click — и заход второй.
+   Защиты по $('#pack') не хватало: id у коробки снимается только в
+   отложенном колбэке, а до него ещё 600 мс. Флаг закрывает окно целиком,
+   каким бы путём ни пришли. */
+let tearing=false;
 function tearOff(){
-  const pk=$('#pack');if(!pk||pk.disabled)return;
+  const pk=$('#pack');if(!pk||pk.disabled||tearing)return;
   if(S.sparks<PACK){toast('Не хватает искр!',1);return}
+  tearing=true;
   S.sparks-=PACK;S.gacha.packs++;S.stats.packs++;
   $('#gTok').textContent=fmtN(S.sparks);
   sfx.tear();noise(.18,{f:150,q:.6,v:.22});PF.hit('heavy');
@@ -1380,6 +1389,7 @@ function tearOff(){
     {duration:320,easing:'ease-out'});
   setTimeout(()=>sfx.whoosh(),300);
   setTimeout(()=>{
+    tearing=false;
     const zone=$('#gZone');
     const items=[];for(let i=0;i<5;i++)items.push(rollOne());
     let dupSparks=0;
@@ -1387,6 +1397,10 @@ function tearOff(){
       if((S.inv[c.id]||0)>=2){const v=[30,90,260,900,2600][c.t];dupSparks+=v;S.sparks+=v;c._dup=v}
       else S.inv[c.id]=(S.inv[c.id]||0)+1}
     save();$('#gTok').textContent=fmtN(S.sparks);
+    /* Ушли с экрана за эти 600 мс (нативная «Назад» в Telegram, например) —
+       показывать нечего, но искры уже списаны, поэтому карты всё равно
+       зачисляем и говорим об этом. */
+    if(!zone){toast('Пак вскрыт — 5 карт в коллекции');return}
     const g=document.createElement('div');g.className='packGhost';
     const zr=zone.getBoundingClientRect();
     g.style.left=(r.left-zr.left)+'px';g.style.top=(r.top-zr.top)+'px';g.style.width=r.width+'px';
@@ -1416,8 +1430,8 @@ function tearOff(){
         if(w.classList.contains('open')){w.querySelector('.cFlip').style.transform='rotateY(0deg)';
           w.classList.remove('open');sfx.ui();return}
         w.classList.add('open');
-        PF.hit(c.t>=3?'heavy':c.t>=2?'medium':'light');
         const c=items[i];
+        PF.hit(c.t>=3?'heavy':c.t>=2?'medium':'light');
         tone(220+i*90,.1,{v:.06});
         sfx.play(c.t);
         const rr=w.getBoundingClientRect();
