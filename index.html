@@ -425,6 +425,38 @@ body.menuOn .infoF{display:grid}
 .stState.w{background:var(--grn);color:#04140a}.stState.n{background:var(--yel);color:#0a0a0e}
 .stState.l{background:#2c2c38;color:#777}
 
+/* ================= акты ================= */
+.actHead{display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  border:3px solid #2c2c38;background:linear-gradient(160deg,rgba(30,28,18,.9),rgba(16,16,23,.95));
+  padding:13px 15px;cursor:pointer;transition:.14s;position:relative;
+  box-shadow:5px 6px 0 rgba(0,0,0,.5)}
+.actHead:hover:not(.soon){transform:translate(-2px,-2px);border-color:var(--yel);
+  box-shadow:7px 8px 0 rgba(0,0,0,.55)}
+.actHead.open{border-color:var(--yel)}
+.actHead .actN{font-family:var(--disp);font-style:italic;font-size:22px;color:var(--yel);
+  width:46px;flex:none;text-align:center;text-shadow:2px 2px 0 #000}
+.actHead .actC{flex:1;min-width:0}
+.actHead .actT{font-family:var(--disp);font-size:14.5px;color:#fff}
+.actHead .actS{font-family:var(--mono);font-size:9px;color:#5a5a6e;margin-top:5px;
+  letter-spacing:.1em;text-transform:uppercase}
+.actHead .actArrow{font-size:13px;color:var(--yel);flex:none;transition:transform .22s}
+.actHead.open .actArrow{transform:rotate(180deg)}
+/* Полоса опасности по левому краю — акт как раздел, а не ещё один бой. */
+.actHead::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;
+  background:repeating-linear-gradient(-45deg,var(--yel) 0 8px,#0a0a0e 8px 16px);opacity:.8}
+/* Закрытый акт. cursor:default и никакой реакции на наведение — он не кнопка. */
+.actHead.soon{cursor:default;opacity:.55;border-color:#2c2c38;box-shadow:5px 6px 0 rgba(0,0,0,.35)}
+.actHead.soon::before{filter:grayscale(1);opacity:.5}
+.actHead.soon .actN,.actHead.soon .actArrow{color:#5a5a6e}
+.actBadge{font-family:var(--disp);font-style:italic;font-size:12px;background:var(--red);color:#fff;
+  padding:5px 11px;border:2px solid #000;transform:rotate(-4deg);flex:none;
+  box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+/* Список боёв акта. Схлопнут по высоте, поэтому раскрытие видно как выезд. */
+.actBody{display:flex;flex-direction:column;gap:12px;overflow:hidden;
+  max-height:0;opacity:0;transition:max-height .34s cubic-bezier(.2,.9,.3,1),opacity .22s,margin .34s}
+.actBody.open{max-height:2200px;opacity:1;margin-top:0}
+@media (prefers-reduced-motion:reduce){.actBody{transition:none}}
+
 /* ====== бой ====== */
 #scr-battle{background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(255,213,46,.05),transparent 70%)}
 .bWrap{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
@@ -1102,7 +1134,7 @@ body.menuOn .infoF{display:grid}
 <div class="screen" id="scr-stages">
   <div class="topbar">
     <button class="btn tbBack" data-go="menu">◄ МЕНЮ</button>
-    <div><div class="tbTitle">РЕЙДЫ ПО ПРОВАЛАМ</div><div class="tbSub">pve · зачисти все десять</div></div>
+    <div><div class="tbTitle">РЕЙДЫ ПО ПРОВАЛАМ</div><div class="tbSub">pve · акты и бои</div></div>
     <div class="tbSpace"></div>
     <button class="btn iconbtn" data-info="raid" aria-label="Справка">?</button>
   </div>
@@ -1501,7 +1533,10 @@ const STAGES=[
 {n:'Тишина Второго Рода',d:'Не отсутствие звука. Присутствие.',hp:36,pool:3,reward:200,ic:'skull',boss:1},
 {n:'Сердце Прилива',d:'Тот самый Тихий Прилив. Личная встреча.',hp:42,pool:3,reward:300,ic:'ghost',boss:1},
 ];
-const DIFF=['учебная','учебная','лёгкая','лёгкая','боевая','боевая','боевая','злая','злая','злая'];
+/* Одна запись на каждый этап, включая тренировку в начале. При вставке
+   «Тренировки» нулевым этапом массив остался на десяти записях: индексы
+   сдвинулись, каждый рейд показывал чужую сложность, а последний — undefined. */
+const DIFF=['учебная','учебная','учебная','лёгкая','лёгкая','боевая','боевая','боевая','злая','злая','злая'];
 
 /* ================= звук ================= */
 let AC=null,nzBuf=null;
@@ -2459,15 +2494,52 @@ function autoDeck(){
 }
 
 /* ================= этапы ================= */
+/* Раскрыт ли первый акт. Живёт в модуле, а не в сейве: состояние списка —
+   вопрос текущего сеанса, и переживать перезагрузку ему незачем. Зато при
+   возврате из боя акт остаётся открытым, а не схлопывается каждый раз. */
+let act1Open=false;
+/* num — что показать в кружке. Раньше это был сквозной индекс этапа, и внутри
+   акта бои нумеровались с двойки: тренировка занимает нулевой индекс. Теперь
+   номер передаётся явно, у акта своя нумерация с единицы. */
+function stNodeHTML(st,i,num){
+  const done=S.done[i],lock=i>S.stage;
+  return `<div class="stNode ${done?'done':''} ${lock?'lock':''} ${st.boss?'boss':''}" data-i="${i}">
+    <span class="stNum">${num}</span>
+    <div class="stInfo"><div class="stName">${st.n}</div><div class="stDesc">${st.d}</div>
+      <div class="stMeta">${st.hp} хп · награда ${st.reward} ⚡ · ии: ${DIFF[i]}${st.boss?' · БОСС':''}</div></div>
+    <span class="stState ${done?'w':lock?'l':'n'}">${done?'ЗАЧИЩЕНО':lock?'ЗАКРЫТО':'В БОЙ'}</span>
+  </div>`;
+}
 function renderStages(){
-  $('#stMap').innerHTML=STAGES.map((st,i)=>{
-    const done=S.done[i],lock=i>S.stage;
-    return `<div class="stNode ${done?'done':''} ${lock?'lock':''} ${st.boss?'boss':''}" data-i="${i}">
-      <span class="stNum">${i+1}</span>
-      <div class="stInfo"><div class="stName">${st.n}</div><div class="stDesc">${st.d}</div>
-        <div class="stMeta">${st.hp} хп · награда ${st.reward} ⚡ · ии: ${DIFF[i]}${st.boss?' · БОСС':''}</div></div>
-      <span class="stState ${done?'w':lock?'l':'n'}">${done?'ЗАЧИЩЕНО':lock?'ЗАКРЫТО':'В БОЙ'}</span>
-    </div>`}).join('');
+  /* Тренировка стоит отдельно от актов: это не бой сюжета, а обучение. */
+  const trainHTML=STAGES[0]&&STAGES[0].tutorial?stNodeHTML(STAGES[0],0,'★'):'';
+  const acts=STAGES.map((st,i)=>i).filter(i=>i>0);
+  const doneN=acts.filter(i=>S.done[i]).length;
+  const body=acts.map((i,n)=>stNodeHTML(STAGES[i],i,n+1)).join('');
+  $('#stMap').innerHTML=`
+    ${trainHTML}
+    <button class="actHead ${act1Open?'open':''}" id="act1Head">
+      <span class="actN">I</span>
+      <div class="actC">
+        <div class="actT">ПЕРВЫЙ АКТ · ПРОВАЛ</div>
+        <div class="actS">${acts.length} боёв · ${doneN}/${acts.length} зачищено</div>
+      </div>
+      <span class="actArrow">▼</span>
+    </button>
+    <div class="actBody ${act1Open?'open':''}" id="act1Body">${body}</div>
+    <div class="actHead soon" aria-disabled="true">
+      <span class="actN">II</span>
+      <div class="actC">
+        <div class="actT">ВТОРОЙ АКТ · ???</div>
+        <div class="actS">ещё не открыт</div>
+      </div>
+      <span class="actBadge">SOON!</span>
+    </div>`;
+  $('#act1Head').onclick=()=>{
+    act1Open=!act1Open;sfx.ui();
+    $('#act1Head').classList.toggle('open',act1Open);
+    $('#act1Body').classList.toggle('open',act1Open);
+  };
   $$('#stMap .stNode').forEach(el=>el.onclick=()=>{
     const i=+el.dataset.i;
     if(i>S.stage){toast('Зачисти предыдущий Провал!',1);return}
