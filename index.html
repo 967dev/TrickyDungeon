@@ -288,12 +288,24 @@ body.menuOn .infoF{display:grid}
    чёрном фоне всё равно видна ступенькой, а растворённая — нет. Полоски и
    вспышка, уходящие за край, при этом красиво тают, а не обрубаются.
    Проценты маски подобраны так, чтобы затухание не задело саму пачку. */
-.pVid{position:absolute;z-index:7;background:none;cursor:pointer;
-  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 6%,#000 94%,transparent 100%),
-                     linear-gradient(to bottom,transparent 0,#000 4%,#000 96%,transparent 100%);
-  mask-image:linear-gradient(to right,transparent 0,#000 6%,#000 94%,transparent 100%),
-             linear-gradient(to bottom,transparent 0,#000 4%,#000 96%,transparent 100%);
-  -webkit-mask-composite:source-in;mask-composite:intersect}
+/* Затухание краёв рисуем НАКЛАДКОЙ, а не маской на самом <video>.
+   Маска выбивает видео из аппаратного слоя: WebKit перестаёт отдавать кадры
+   напрямую композитору и заводит буфер в полный размер на каждый кадр. На
+   iPhone это сходилось с вращающимися лучами и частицами, и весь webview
+   уходил в чёрное — целиком, вместе с топбаром, которого код вскрытия даже
+   не касается. Накладка того же вида стоит один раз отрисованный градиент:
+   позади ролика ровный --bg, поэтому заливка им неотличима от прозрачности. */
+.pVid{position:absolute;z-index:7;background:none;cursor:pointer}
+/* Прозрачный конец задан цветом фона с нулевой альфой, а не словом
+   transparent: оно означает прозрачный ЧЁРНЫЙ, и затухание шло бы через
+   оттенок темнее фона — по краю ролика проступал быеле заметный тёмный ореол. */
+.pVidFade{position:absolute;z-index:8;pointer-events:none;
+  background:linear-gradient(to right,var(--bg) 0,rgba(10,10,15,0) 6%,rgba(10,10,15,0) 94%,var(--bg) 100%),
+             linear-gradient(to bottom,var(--bg) 0,rgba(10,10,15,0) 4%,rgba(10,10,15,0) 96%,var(--bg) 100%)}
+/* Пока идёт ролик, гасим вечное вращение лучей: это конический градиент под
+   маской 640x640, который перерисовывается каждый кадр. За 4.6 секунды
+   кинематографа на него всё равно никто не смотрит. */
+.gZone.vid .pkRays{animation:none}
 .pVidSkip{position:absolute;left:50%;bottom:-30px;transform:translateX(-50%);
   font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;
   color:var(--dim);white-space:nowrap;pointer-events:none}
@@ -2271,7 +2283,11 @@ function renderGacha(){
 const PACK_VIDEO='art/pack-open.mp4', PACK_VIDEO_CUT=4.6;
 let packVid=null,packVidDead=false;
 function primePackVideo(){
-  if(packVid)return;
+  /* Заходя на экран круток, просим догрузиться ещё раз. preload="auto" —
+     всего лишь пожелание, и Safari его игнорирует: до жеста пользователя
+     файл может не качаться вовсе. Поэтому ролик оказывался не готов ровно
+     тогда, когда он нужен. load() на уже готовом элементе безвреден. */
+  if(packVid){ if(!packVidDead&&packVid.readyState<3)try{packVid.load()}catch(e){} return }
   const v=document.createElement('video');
   v.src=PACK_VIDEO;
   v.muted=true;                 /* у ролика своя дорожка, но звук у нас свой,
@@ -2483,6 +2499,11 @@ function playPackVideo(pk,r,done){
   v.style.top=(r.top-zr.top-0.0517*VH)+'px';
   try{v.currentTime=0}catch(e){}
   zone.appendChild(v);
+  const fade=document.createElement('div');
+  fade.className='pVidFade';
+  fade.style.cssText+=`left:${v.style.left};top:${v.style.top};width:${VW}px;height:${VH}px`;
+  zone.appendChild(fade);
+  zone.classList.add('vid');
   pk.style.visibility='hidden';
   const skip=document.createElement('div');
   skip.className='pVidSkip';skip.textContent='тап — пропустить';
@@ -2495,7 +2516,8 @@ function playPackVideo(pk,r,done){
     if(fired)return;fired=true;
     clearInterval(watch);if(cleanup)cleanup();
     try{v.pause()}catch(e){}
-    v.remove();skip.remove();v.style.display='none';
+    v.remove();skip.remove();fade.remove();zone.classList.remove('vid');
+    v.style.display='none';
     /* Видимость пачке НЕ возвращаем: ролик заканчивается вспышкой, и
        вернувшаяся статичная пачка мелькала одним кадром перед самыми
        картами — тот самый топорный рывок. */
