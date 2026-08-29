@@ -434,6 +434,19 @@ body.menuOn .infoF{display:grid}
   opacity:var(--grain);mix-blend-mode:overlay;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 
+/* Настройки графики гасят слои классами на <body>, а не пересборкой карт.
+   Пересобирать пришлось бы всё, что сейчас на экране, а тут достаточно
+   переключить класс — и рука, и коллекция, и живой пример в настройках
+   меняются одним кадром. display:none, а не opacity: невидимый слой всё
+   равно крутил бы свою анимацию. */
+body.gNoIrid .holo{display:none}
+body.gNoSpec .cShine{display:none}
+body.gNoScan .cScan{display:none}
+body.gNoGrain .cGrain{display:none}
+/* Свечение не убираем в ноль: карта без него теряет край и выглядит поломанной,
+   а не «попроще». Оставляем ровно столько, чтобы читалась рамка. */
+body.gNoGlow .cWrap{--glow:.20;--edge:.10}
+
 /* --- ПАРАЛАКС ---
    Слои разъезжаются через отдельное свойство translate, а не transform:
    transform уже занят анимациями перелива и блика, а translate применяется к
@@ -553,6 +566,9 @@ body.menuOn .infoF{display:grid}
   transition:transform .22s cubic-bezier(.2,1.1,.3,1),opacity .18s;
   filter:drop-shadow(0 24px 46px rgba(0,0,0,.85)) drop-shadow(0 0 40px rgba(255,213,46,.16))}
 .dPrev.on{transform:translate(-50%,-50%) scale(1);opacity:1}
+/* Превью втрое крупнее карточки в сетке, поэтому и размах наклона ему нужен
+   больше: те же 10px расхождения на карте в 400px попросту не читаются. */
+.dPrev .cWrap{--tilt:11;--dep:24}
 .dPrev .cWrap{pointer-events:none;animation:none}
 /* Затемнение под превью, чтобы крупная карта не спорила с сеткой позади. */
 .dPrevBd{position:fixed;inset:0;z-index:79;pointer-events:none;background:rgba(5,5,9,.55);
@@ -1144,6 +1160,35 @@ body.menuOn .infoF{display:grid}
 
 /* ====== настройки ====== */
 #scr-settings .setBody{flex:1;overflow-y:auto;padding:24px;scrollbar-width:thin}
+/* Три положения — сегментами в один ряд, а не выпадающим списком: выбор из
+   трёх должен быть виден целиком, иначе игрок не знает, что вообще есть. */
+.gPres{display:flex;gap:0;flex:none}
+.gPre{font-family:var(--disp);font-size:11px;letter-spacing:.06em;cursor:pointer;
+  background:#15151e;color:#8d8da0;border:2px solid #2c2c38;border-right-width:0;
+  padding:8px 11px}
+.gPre:last-child{border-right-width:2px}
+.gPre.on{background:var(--yel);color:#0a0a0e;border-color:var(--yel)}
+.gHead{align-items:center}
+/* Пример справа от переключателей на широком экране и снизу на узком:
+   на 375px две колонки схлопнули бы карту до нечитаемого огрызка. */
+.gPanel{display:flex;gap:18px;align-items:flex-start;padding:4px 0 14px}
+.gList{flex:1;min-width:0}
+.gList .setRow:last-child{border-bottom:0}
+.gDemo{width:150px;flex:none;position:sticky;top:4px}
+.gDemoCap{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:#5a5a6e;
+  text-align:center;margin-top:8px;text-transform:uppercase}
+@media (max-width:640px){
+  .gPanel{flex-direction:column-reverse;align-items:center}
+  .gDemo{width:170px;position:static}
+  .gList{width:100%}
+  /* Три сегмента и заголовок в одну строку на 375px не влезают — замерено,
+     кнопки уходили за край на 47px. Перенос внутри самого блока не спасал:
+     он лежит в строке с flex:none, и места ему хватало «по своим меркам».
+     Поэтому разворачиваем всю строку в столбец, а сегменты делим поровну. */
+  .gHead{flex-direction:column;align-items:stretch;gap:10px}
+  .gPres{width:100%}
+  .gPre{flex:1;text-align:center;padding:9px 4px}
+}
 .setWrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 .setRow{display:flex;align-items:center;justify-content:space-between;gap:14px;border:3px solid #2c2c38;
   background:#12121a;padding:15px 17px}
@@ -1887,6 +1932,9 @@ function migrate(s){
 const INV_CAP=20;
 const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'',story:0,
   gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,
+  /* Настройки графики. По умолчанию всё включено: игра должна показывать себя
+     как задумана, а урезать пусть решает тот, кому тяжело. */
+  gfx:{irid:1,spec:1,scan:1,grain:1,glow:1,tilt:1},
   stats:{packs:0,wins:0,battles:0}};
 let S=load();
 function defaultDeck(){return CARDS.filter(c=>c.t===0&&!c.noColl).flatMap(c=>[c.id,c.id]).slice(0,20)}
@@ -1894,6 +1942,11 @@ function fixS(s){
   for(const c of CARDS){if(Number.isFinite(s.inv[c.id]))s.inv[c.id]=clamp(s.inv[c.id]|0,0,INV_CAP)}
   if(!Array.isArray(s.deck)||s.deck.length!==20)s.deck=defaultDeck();
   if(!Number.isFinite(s.stage))s.stage=0;
+  /* Сейвы, сделанные до появления блока графики, приходят без gfx. Дополняем
+     по ключам, а не подменяем объект целиком: иначе будущий новый флаг
+     затирал бы уже выбранное игроком. */
+  if(!s.gfx||typeof s.gfx!=='object')s.gfx={};
+  for(const k in DEF.gfx)if(s.gfx[k]!==0&&s.gfx[k]!==1)s.gfx[k]=DEF.gfx[k];
   return s}
 function load(){
   const raw=store.get('bbduel');
@@ -4234,11 +4287,11 @@ function renderSettings(){
     {k:'snd',t:'ЗВУК',s:'выстрелы, удары, срыв крышек — весь WebAudio-набор'},
     {k:'vfx',t:'ЧАСТИЦЫ',s:'искры и звёзды при ударах и крутках'},
     {k:'shk',t:'ТРЯСКА ЭКРАНА',s:'отдача при ударах по героям'},
-    {k:'foil',t:'ФОЛЬГА-ГОЛОГРАММА',s:'радужная плёнка на картах'},
   ];
   $('#setWrap').innerHTML=rows.map(r=>`
     <div class="setRow"><div><div class="sT">${r.t}</div><div class="sS">${r.s}</div></div>
     <button class="tgl ${S[r.k]?'on':''}" data-k="${r.k}" role="switch" aria-checked="${!!S[r.k]}"><i></i></button></div>`).join('')+
+    gfxHTML()+
     `<div class="setRow"><div><div class="sT">СПРАВКА</div>
       <div class="sS">правила · все карты · стратегии · шансы</div></div>
       <button class="btn" data-info="battle">ОТКРЫТЬ</button></div>
@@ -4249,12 +4302,58 @@ function renderSettings(){
       БАМ-БАМ: КАСКАД · v1.4 · шансы как в кейсах · секрет 1 из 3 846</div>`;
   $$('#setWrap .tgl').forEach(t=>t.onclick=()=>{
     S[t.dataset.k]=!S[t.dataset.k];save();sfx.ui();renderSettings()});
+  wireGfx();
   let armed=false;
   $('#setReset').onclick=e=>{
     if(!armed){armed=1;e.target.textContent='ТОЧНО? ЖМИ ЕЩЁ';return}
     S=clone(DEF);for(const c of CARDS.filter(c=>c.t===0&&!c.noColl))S.inv[c.id]=2;
     S.deck=defaultDeck();save();B=null;
     toast('Прогресс сброшен. С чистого листа!',1);go('menu')};
+}
+
+/* Блок графики. Живой пример стоит рядом с переключателями намеренно: словами
+   «зерно» и «развёртка» разницу не объяснить, а на карте она видна сразу.
+   Пример — карта тира ЛЕГЕНДА: на рекруте половина эффектов отключена самой
+   лестницей редкости, и щёлкать по ним было бы бессмысленно. */
+let gfxOpen=false;
+function gfxCardId(){
+  const c=COLLECTIBLE.find(x=>x.t===3&&!x.ult)||COLLECTIBLE[0];
+  return c?c.id:null;
+}
+function gfxHTML(){
+  const g=gfx(), cur=gfxPreset();
+  const preset=GFX_PRESETS.map((p,i)=>
+    `<button class="gPre ${i===cur?'on':''}" data-pre="${i}">${p.n}</button>`).join('');
+  const sub=cur>=0?GFX_PRESETS[cur].s:'свои настройки';
+  const rows=GFX_KEYS.map(k=>`
+    <div class="setRow gRow"><div><div class="sT">${GFX_NAMES[k][0]}</div>
+      <div class="sS">${GFX_NAMES[k][1]}</div></div>
+      <button class="tgl ${g[k]?'on':''}" data-g="${k}" role="switch"
+        aria-checked="${!!g[k]}"><i></i></button></div>`).join('');
+  const card=gfxCardId();
+  return `<div class="setRow gHead"><div><div class="sT">ГРАФИКА</div>
+      <div class="sS">${sub}</div></div>
+      <div class="gPres">${preset}</div></div>
+    <div class="setRow gMore"><div><div class="sT">РАСШИРЕННЫЕ</div>
+      <div class="sS">каждый эффект по отдельности, с примером</div></div>
+      <button class="btn" id="gToggle">${gfxOpen?'СВЕРНУТЬ':'ОТКРЫТЬ'}</button></div>
+    ${gfxOpen?`<div class="gPanel">
+      <div class="gList">${rows}</div>
+      <div class="gDemo">${card?cardHTML(byId(card),{open:1,noAnim:1}):''}
+        <div class="gDemoCap">живой пример</div></div>
+    </div>`:''}`;
+}
+function wireGfx(){
+  $$('#setWrap .gPre').forEach(b=>b.onclick=()=>{
+    Object.assign(gfx(),GFX_PRESETS[+b.dataset.pre].v);
+    save();sfx.ui();applyGfx();renderSettings();
+  });
+  $$('#setWrap .tgl[data-g]').forEach(t=>t.onclick=()=>{
+    const g=gfx(),k=t.dataset.g; g[k]=g[k]?0:1;
+    save();sfx.ui();applyGfx();renderSettings();
+  });
+  const tg=$('#gToggle');
+  if(tg)tg.onclick=()=>{gfxOpen=!gfxOpen;sfx.ui();renderSettings()};
 }
 
 /* ================= кристаллы и параллакс ================= */
@@ -4381,22 +4480,81 @@ function pullCloud(){
    Гироскоп для всей коллекции разом не включаем — это та же ловушка с памятью,
    из которой мы только что выбирались. Для крупных экранов (вскрытие пака,
    инспектор) его можно будет добавить отдельно: там карт единицы. */
+/* ================= настройки графики =================
+   Три готовых набора и точная подстройка под ними. Хранится один объект
+   флагов; набор — это просто его заполнение, а не отдельный режим. Иначе
+   пришлось бы держать два источника правды и разбирать, кто из них главнее,
+   когда игрок тронет отдельный переключатель. */
+const GFX_KEYS=['irid','spec','scan','grain','glow','tilt'];
+const GFX_NAMES={irid:['ПЕРЕЛИВЫ','радужный спектр по редкости карты'],
+                 spec:['ПОЛОСКА БЛИКА','светлая полоса, идущая по стеклу'],
+                 scan:['СТРОЧКИ','тонкая развёртка, как у проектора'],
+                 grain:['ЗЕРНО','плёночный шум поверх карты'],
+                 glow:['СВЕЧЕНИЕ','ореол вокруг карты в цвет редкости'],
+                 tilt:['НАКЛОН','карта поворачивается за указателем, слои расходятся']};
+const GFX_PRESETS=[
+  {n:'ПРОСТАЯ', s:'только стекло — для слабых телефонов',
+   v:{irid:0,spec:0,scan:0,grain:0,glow:0,tilt:0}},
+  {n:'ОБЫЧНАЯ', s:'переливы, блик и наклон; без плёночной текстуры',
+   v:{irid:1,spec:1,scan:0,grain:0,glow:1,tilt:1}},
+  {n:'ПОЛНАЯ',  s:'всё сразу, как задумано',
+   v:{irid:1,spec:1,scan:1,grain:1,glow:1,tilt:1}},
+];
+function gfx(){ if(!S.gfx||typeof S.gfx!=='object')S.gfx=clone(GFX_PRESETS[2].v); return S.gfx }
+/* Какой набор сейчас — вычисляем сравнением, а не храним. Хранимый номер
+   разъезжается с флагами при первой же ручной правке. */
+function gfxPreset(){
+  const g=gfx();
+  return GFX_PRESETS.findIndex(p=>GFX_KEYS.every(k=>!!p.v[k]===!!g[k]));
+}
+function applyGfx(){
+  const g=gfx(), b=document.body;
+  b.classList.toggle('gNoIrid',!g.irid);
+  b.classList.toggle('gNoSpec',!g.spec);
+  b.classList.toggle('gNoScan',!g.scan);
+  b.classList.toggle('gNoGrain',!g.grain);
+  b.classList.toggle('gNoGlow',!g.glow);
+  /* Слои вообще не попадают в разметку, если не включён ни один из них:
+     четыре пустых узла на каждую из сорока карт коллекции — это зря. */
+  S.foil=(g.irid||g.spec||g.scan||g.grain)?1:0;
+  if(!g.tilt)document.querySelectorAll('.cWrap.tilt').forEach(w=>{
+    w.classList.remove('tilt');w.style.removeProperty('--tx');w.style.removeProperty('--ty')});
+}
+
 function wireCardTilt(){
   let cur=null;
-  const relax=w=>{w.classList.add('rest');w.style.setProperty('--tx',0);w.style.setProperty('--ty',0)};
+  const relax=w=>{
+    w.classList.add('rest');w.style.setProperty('--tx',0);w.style.setProperty('--ty',0);
+    const big=dPrevEl&&dPrevEl.querySelector('.cWrap');
+    if(big){big.classList.add('rest');big.style.setProperty('--tx',0);big.style.setProperty('--ty',0)}
+  };
   document.addEventListener('pointermove',e=>{
     if(e.pointerType&&e.pointerType!=='mouse')return;
+    if(!gfx().tilt)return;
     const w=e.target&&e.target.closest?e.target.closest('.cWrap'):null;
     if(w!==cur){ if(cur)relax(cur); cur=w; if(w)w.classList.add('tilt') }
     if(!w)return;
     const r=w.getBoundingClientRect();
     if(!r.width)return;
     w.classList.remove('rest');
-    w.style.setProperty('--tx',(((e.clientX-r.left)/r.width)*2-1).toFixed(3));
-    w.style.setProperty('--ty',(((e.clientY-r.top)/r.height)*2-1).toFixed(3));
+    const tx=(((e.clientX-r.left)/r.width)*2-1).toFixed(3);
+    const ty=(((e.clientY-r.top)/r.height)*2-1).toFixed(3);
+    w.style.setProperty('--tx',tx);
+    w.style.setProperty('--ty',ty);
+    /* Увеличенная карта в коллекции наклоняется вместе с той, на которую
+       навели. Своих событий она не получает: слой висит с pointer-events:none,
+       чтобы не перехватывать клик, — значит указатель до неё не доходит
+       никогда. Поэтому просто отзеркаливаем на неё то же положение: ведёшь
+       мышью по маленькой карте, наклоняется большая. */
+    if(dPrevEl&&dPrevEl.classList.contains('on')){
+      const big=dPrevEl.querySelector('.cWrap');
+      if(big){big.classList.add('tilt');big.classList.remove('rest');
+        big.style.setProperty('--tx',tx);big.style.setProperty('--ty',ty)}
+    }
   },{passive:true});
 }
 wireCardTilt();
+applyGfx();
 
 pullCloud();
 
