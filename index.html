@@ -351,14 +351,21 @@ body.menuOn .infoF{display:grid}
      --glow внешнее свечение --edge  расслоение кромки
      --scan строчки развёртки --grain зерно  --tint плотность стекла
      --tilt наклон в градусах --dep  расхождение слоёв при наклоне */
-.cWrap{--irid:.23;--iridT:1.5s;--spec:.03;--specT:4s;--glow:.85;--edge:.46;
+.cWrap{--irid:0;--iridT:1.5s;--spec:.03;--specT:4s;--glow:.85;--edge:.46;
        --scan:.005;--grain:.14;--tint:1;--tilt:8;--dep:10;--tx:0;--ty:0}
-.cWrap.t0{--tc:#aab6bf}
-.cWrap.t1{--tc:#35f0ff;--irid:.28;--iridT:1.4s;--glow:.95;--edge:.50}
-.cWrap.t2{--tc:#ff4fd8;--irid:.34;--iridT:1.3s;--glow:1.05;--edge:.55}
-.cWrap.t3{--tc:#ffd52e;--irid:.42;--iridT:1.15s;--glow:1.15;--edge:.60}
-.cWrap.t4{--tc:#fff;   --irid:.47;--iridT:1.05s;--glow:1.22;--edge:.63}
-.cWrap.sec{--tc:#ff3355;--irid:.52;--iridT:.95s;--glow:1.32;--edge:.66}
+/* Общее у ВСЕХ карт — стекло, полоска блика и паралакс. Цвет добавляет только
+   редкость: у рекрута перелива нет вовсе, дальше он густеет и ускоряется.
+   Шаги нарочно крупные. Прошлая лестница шла .23 -> .52, и на глаз соседние
+   тиры не отличались — редкость, которую надо угадывать, редкости не передаёт.
+   Свечение и расслоение кромки идут тем же ходом: у рекрута карта чистая,
+   к секрету светится. Строчки, зерно и плотность стекла одинаковы у всех —
+   это текстура проекции, а не признак редкости. */
+.cWrap.t0{--tc:#aab6bf;--irid:0;  --glow:.34;--edge:.16}
+.cWrap.t1{--tc:#35f0ff;--irid:.20;--iridT:1.45s;--glow:.60;--edge:.30}
+.cWrap.t2{--tc:#ff4fd8;--irid:.36;--iridT:1.30s;--glow:.85;--edge:.44}
+.cWrap.t3{--tc:#ffd52e;--irid:.52;--iridT:1.10s;--glow:1.10;--edge:.56}
+.cWrap.t4{--tc:#fff;   --irid:.62;--iridT:1.00s;--glow:1.25;--edge:.62}
+.cWrap.sec{--tc:#ff3355;--irid:.72;--iridT:.85s;--glow:1.40;--edge:.68}
 .cFlip{position:relative;width:100%;aspect-ratio:5/7;transform-style:preserve-3d;transition:transform .75s cubic-bezier(.2,1.25,.3,1)}
 .cWrap.open .cFlip{transform:rotateY(180deg)}
 .cFace{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:12px;overflow:hidden}
@@ -405,6 +412,10 @@ body.menuOn .infoF{display:grid}
     rgba(0,240,255,0) 100%);
   mix-blend-mode:soft-light;opacity:var(--irid);
   animation:holoOsc var(--iridT) ease-in-out infinite}
+/* У рекрута слой перелива убираем целиком, а не гасим прозрачностью:
+   невидимый слой всё равно крутил бы анимацию, а рекрутов в коллекции 11
+   из 38 — это четверть всей работы впустую. */
+.cWrap.t0 .holo{display:none}
 @keyframes holoOsc{0%,100%{transform:translate3d(-14%,-4%,0)}50%{transform:translate3d(14%,4%,0)}}
 /* Зеркальный блик по диагонали: узкий и мягкий. Широкая белая полоса — это
    глянец на пластике, а не свет внутри проекции. */
