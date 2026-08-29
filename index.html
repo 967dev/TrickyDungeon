@@ -947,7 +947,10 @@ body.menuOn .infoF{display:grid}
              autocomplete="off" spellcheck="false">
       <button class="btn pri hGo" id="hGo" disabled>В ПРОВАЛ ►</button>
     </div>
-    <div class="hHint" id="hHint">выбери героя и впиши имя</div>
+    <div class="hRow" style="justify-content:center">
+      <div class="hHint" id="hHint">выбери героя и впиши имя</div>
+      <button class="btn" data-go="menu" style="font-size:10px;padding:7px 12px">◄ ПОЗЖЕ</button>
+    </div>
   </div>
 </div>
 
@@ -1590,6 +1593,10 @@ if(!S.inv||!Object.keys(S.inv).length){
 /* ================= экраны ================= */
 let CUR='menu';
 function go(id){
+  /* Играть можно только героем. Перехват стоит здесь, а не на кнопке меню,
+     чтобы закрыть и остальные входы в рейды — например «В БОЙ» с экрана
+     колоды. Выбрал героя — дальше этот перехват не срабатывает никогда. */
+  if(id==='stages'&&!S.hero)id='hero';
   sfx.ui();
   /* Игрок сам ушёл с боя — значит рейд брошен осознанно. Снимок держим
      только для аварийных случаев (свернули приложение, упал webview). */
@@ -1605,7 +1612,7 @@ function go(id){
   document.body.classList.toggle('menuOn',id==='menu');
   /* В TMA: нативная кнопка «Назад» вместо экранной на всех экранах кроме меню,
      и подтверждение закрытия во время боя, чтобы не потерять рейд. */
-  PF.back(id!=='menu'&&id!=='hero',()=>{if(CUR!=='menu'&&CUR!=='hero')go('menu')});
+  PF.back(id!=='menu',()=>{if(CUR!=='menu')go('menu')});
   PF.guardClose(id==='battle');
   if(id==='hero')renderHero();
   if(id==='menu')renderMenu();
@@ -1653,7 +1660,8 @@ function renderHero(){
     if(!heroPick||!nm)return;
     S.hero=heroPick;S.name=nm;save();
     sfx.sparks();PF.notify('success');
-    go('menu');
+    renderMenu();                 /* чтобы портрет и плитки обновились под героя */
+    go('stages');
     toast(`${nm}, добро пожаловать в Провал`);
   };
   heroReady();
@@ -1686,8 +1694,10 @@ function renderMenu(){
   $('#mTiles').innerHTML=`
   <button class="mTile" data-go="stages">
     <span class="tIc">${svgWrap(EMB.boom)}</span>
-    <span class="tT">РЕЙДЫ</span><span class="tS">pve-бои · ${doneN}/${STAGES.length} зачищено</span>
-    ${doneN<STAGES.length?'<span class="tBadge">ВПЕРЁД!</span>':''}
+    <span class="tT">ИГРАТЬ</span><span class="tS">${S.hero
+      ? `pve-бои · ${doneN}/${STAGES.length} зачищено`
+      : 'новая игра · выбери героя и имя'}</span>
+    ${doneN<STAGES.length?`<span class="tBadge">${S.hero?'ВПЕРЁД!':'СТАРТ'}</span>`:''}
   </button>
   <button class="mTile" data-go="gacha">
     <span class="tIc">${svgWrap('<path d="M13 2 L4 14 H11 L10 22 L20 9 H13 Z" fill="currentColor"/>')}</span>
@@ -3584,9 +3594,8 @@ setInterval(()=>{
 PF.init();
 renderMenu();
 document.body.classList.add('menuOn');
-/* Герой не выбран — первым делом спрашиваем. Проверка по полю, а не по
-   «новый ли сейв»: так же спросим и у тех, кто играл до появления выбора. */
-if(!S.hero){$('#scr-menu').classList.remove('on');go('hero')}
+/* Выбор героя больше не встречает игрока на пороге: меню открывается сразу,
+   а спрашиваем при первом нажатии «ИГРАТЬ» (см. перехват в go). */
 document.querySelector('#mbSilL .mbSil').innerHTML=SIL.diesel;
 document.querySelector('#mbSilR .mbSil').innerHTML=SIL.aya;
 sprinkleCrystals($('#mbCry'),9,['#ffd52e','#35f0ff','#ff4fd8']);
