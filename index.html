@@ -227,6 +227,11 @@ body.menuOn .infoF{display:grid}
   background:repeating-conic-gradient(from 0deg,rgba(255,213,46,.07) 0 2deg,transparent 2deg 10deg);
   -webkit-mask:radial-gradient(circle,#000 12%,transparent 62%);mask:radial-gradient(circle,#000 12%,transparent 62%);
   animation:spin 40s linear infinite}
+/* На телефоне лучи стоят. Это 640x640 под маской, то есть на плотном экране
+   слой под два десятка мегабайт, и маска мешает браузеру растрировать его
+   один раз. Оборот занимает 40 секунд — стоящий узор от вращающегося на
+   глаз не отличить, а экрана круток эта пара слоёв и так еле держала. */
+@media (hover:none),(pointer:coarse){.pkRays{animation:none}}
 @keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 /* Пачка — тот же рендер, что играет в ролике, с вырезанным фоном.
    Соотношение 640:1013 взято из самого файла: задать его вручную значит
@@ -239,13 +244,30 @@ body.menuOn .infoF{display:grid}
   /* Перспектива нужна полосе: без неё rotateX/rotateY схлопываются в плоское
      сжатие и «скручивания в воздухе» не видно вообще. */
   perspective:900px;perspective-origin:50% 12%;
-  transition:transform .2s;animation:packPulse 2.4s ease-in-out infinite}
-.pack::after{content:'';position:absolute;inset:0;background:url(art/pack.webp) 0 0/100% 100% no-repeat}
-@keyframes packPulse{
-  0%,100%{filter:drop-shadow(7px 9px 0 rgba(255,213,46,.16)) drop-shadow(0 22px 34px rgba(0,0,0,.6))}
-  50%{filter:drop-shadow(7px 9px 0 rgba(255,213,46,.32)) drop-shadow(0 0 26px rgba(255,213,46,.2)) drop-shadow(0 22px 34px rgba(0,0,0,.6))}}
+  transition:transform .2s}
+/* Тень статична, а «дыхание» отдано отдельному слою через opacity.
+   Раньше пульсировал сам filter, и это убивало вкладку на iPhone: filter на
+   элементе с perspective заставляет WebKit собирать содержимое в отдельный
+   буфер и прогонять через размытия ЗАНОВО КАЖДЫЙ КАДР. Пачка на телефоне —
+   примерно 920x1460 физических точек, три тени, шестьдесят раз в секунду;
+   память кончалась, и iOS убивал процесс страницы (экран белел, помогала
+   только перезагрузка). Списки теней в кадрах вдобавок были разной длины —
+   две против трёх — так что браузер даже не мог их интерполировать и
+   пересобирал цепочку с нуля. Статичный filter растрируется один раз, а
+   анимация opacity целиком уезжает на видеоускоритель и не стоит ничего. */
+.pack::after{content:'';position:absolute;inset:0;
+  background:url(art/pack.webp) 0 0/100% 100% no-repeat;
+  filter:drop-shadow(7px 9px 0 rgba(255,213,46,.16)) drop-shadow(0 22px 34px rgba(0,0,0,.6))}
+.pack::before{content:'';position:absolute;inset:-14% -18%;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse,rgba(255,213,46,.20) 0,rgba(255,213,46,.07) 46%,rgba(255,213,46,0) 70%);
+  animation:packPulse 2.4s ease-in-out infinite}
+@keyframes packPulse{0%,100%{opacity:.45}50%{opacity:1}}
 .pack:not(:disabled):hover{transform:rotate(-1.5deg) translateY(-6px) scale(1.03)}
-.pack:disabled{cursor:not-allowed;opacity:.5;animation:none}
+/* Пульс теперь на ::before, поэтому гасить надо его: правило на самой .pack
+   после переноса стало пустышкой, и у недоступной пачки свечение продолжало
+   бы дышать как ни в чём не бывало. */
+.pack:disabled{cursor:not-allowed;opacity:.5}
+.pack:disabled::before{animation:none;opacity:.35}
 /* Зев вскрывается слева направо вслед за отрывом, а не появляется целиком.
    Раскрытие идёт через clip-path:inset, а не через анимацию кастомного
    свойства в маске: --rev без работающей регистрации @property не
@@ -1423,6 +1445,23 @@ const store=(()=>{try{const k='__bbt';localStorage.setItem(k,'1');localStorage.r
                              set:(k,v)=>{m[k]=v;PF.cloudSet(k,v)},
                              setLocal:(k,v)=>{m[k]=v},del:k=>{delete m[k]},ok:false}}})();
 
+/* Хлебные крошки на случай, когда страница не падает, а УМИРАЕТ: iOS убивает
+   процесс отрисовки при нехватке памяти, и тогда не срабатывает ни один
+   обработчик — ни window.onerror, ни аварийная плашка. Экран просто белеет,
+   и помогает только перезагрузка. Отладчика к телефону из-под Windows не
+   подключить, поэтому единственный способ узнать, на каком шаге всё умерло —
+   записать шаг в хранилище заранее и прочитать после перезапуска.
+   Ключ отдельный от сейва: он не должен ни ехать в облако, ни попадать в
+   миграции. Метка 'ok' ставится, когда экран круток покинут по-человечески. */
+const CRUMB='bbduel_crumb';
+function crumb(step){try{store.setLocal(CRUMB,step+'|'+Math.round(performance.now()/100)/10)}catch(e){}}
+function crumbRead(){
+  const v=store.get(CRUMB);
+  if(!v||v.indexOf('ok')===0)return null;
+  store.del(CRUMB);
+  return v.split('|');
+}
+
 /* ================= эмблемы ================= */
 const EMB={
   volta:'<path d="M13 2 L4 14 H11 L10 22 L20 9 H13 Z" fill="currentColor"/>',
@@ -1816,7 +1855,7 @@ function go(id){
      счётчик стоит в конце, и повтор открывался сразу на последней реплике. */
   if(id==='story'&&!vnAfter){vnI=0;vnArt=0;setTimeout(()=>vnShow(),0)}
   if(id==='menu')renderMenu();
-  if(id==='gacha')renderGacha();
+  if(id==='gacha')renderGacha(); else if(CUR==='gacha')crumb('ok-ушёл');
   if(id==='deck')renderDeck();
   if(id==='stages')renderStages();
   if(id==='settings')renderSettings();
@@ -2251,6 +2290,7 @@ function rollOne(){
   else card=pick(CARDS.filter(c=>c.t===tier&&!c.noColl));
   return card}
 function renderGacha(){
+  crumb('экран-круток');
   tearing=false;
   $('#gTok').textContent=fmtN(S.sparks);
   const broke=S.sparks<PACK;
@@ -2271,6 +2311,7 @@ function renderGacha(){
      по верху пачки. */
   primePackVideo();
   wirePack();
+  crumb('круткиготовы');
 }
 /* Единый порядок функций трансформа для полосы: и перетаскивание, и кадры
    анимации строят строку только через него. */
@@ -2287,13 +2328,21 @@ function primePackVideo(){
      всего лишь пожелание, и Safari его игнорирует: до жеста пользователя
      файл может не качаться вовсе. Поэтому ролик оказывался не готов ровно
      тогда, когда он нужен. load() на уже готовом элементе безвреден. */
-  if(packVid){ if(!packVidDead&&packVid.readyState<3)try{packVid.load()}catch(e){} return }
+  /* load() ровно один раз. Повторный вызов бросает уже скачанное и тянет
+     822 КБ заново — а сюда заходят при каждом показе экрана круток. */
+  if(packVid){
+    if(!packVidDead&&!packVid.__pulled&&packVid.readyState<3){
+      packVid.__pulled=1;crumb('догружаю-ролик');try{packVid.load()}catch(e){}
+    }
+    return;
+  }
   const v=document.createElement('video');
   v.src=PACK_VIDEO;
   v.muted=true;                 /* у ролика своя дорожка, но звук у нас свой,
                                    процедурный, и он завязан на настройку S.snd */
   v.playsInline=true;v.preload='auto';v.setAttribute('playsinline','');
   v.className='pVid';v.style.display='none';
+  crumb('ролик-создан');
   v.addEventListener('error',()=>{packVidDead=true});
   packVid=v;
 }
@@ -2349,6 +2398,7 @@ function tearOff(){
   const pk=$('#pack');if(!pk||pk.disabled||tearing)return;
   if(S.sparks<PACK){toast('Не хватает искр!',1);return}
   tearing=true;
+  crumb('пак-вскрыт');
   S.sparks-=PACK;S.gacha.packs++;S.stats.packs++;
   $('#gTok').textContent=fmtN(S.sparks);
   sfx.tear();noise(.18,{f:150,q:.6,v:.22});PF.hit('heavy');
@@ -2390,6 +2440,7 @@ function tearOff(){
   setTimeout(()=>sfx.whoosh(),useVid?2100:300);   /* в ролике полоса рвётся к 2.1с */
   const openPack=()=>{
     tearing=false;
+    crumb('ok-карты');
     const zone=$('#gZone');
     const items=[];for(let i=0;i<5;i++)items.push(rollOne());
     /* Карты просто ложатся в коллекцию. Раньше здесь лишние копии молча
@@ -2504,6 +2555,7 @@ function playPackVideo(pk,r,done){
   fade.style.cssText+=`left:${v.style.left};top:${v.style.top};width:${VW}px;height:${VH}px`;
   zone.appendChild(fade);
   zone.classList.add('vid');
+  crumb('ролик-пошёл');
   pk.style.visibility='hidden';
   const skip=document.createElement('div');
   skip.className='pVidSkip';skip.textContent='тап — пропустить';
@@ -4203,6 +4255,15 @@ function pullCloud(){
   });
 }
 pullCloud();
+
+/* Если прошлый запуск оборвался, не дойдя до чистой метки, — показываем, где
+   именно. Диагностика для отчёта: обычный игрок сюда не попадает, пока не
+   умрёт вкладка, и тогда сообщение всё равно полезнее молчания. */
+(()=>{
+  const c=crumbRead();
+  if(!c)return;
+  setTimeout(()=>toast('Прошлый раз оборвался: '+c[0]+' ('+c[1]+'с)',1),1200);
+})();
 
 /* SDK Telegram грузится с async, поэтому мог не успеть к этому месту.
    Колбэк из onload тега добирает то, что требует уже готового объекта. */
