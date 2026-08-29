@@ -8,8 +8,13 @@
 <!-- Telegram Mini App SDK. Единственная внешняя зависимость и она
      необязательная: если скрипт не загрузился (обычный браузер, offline,
      открытие файла напрямую), игра работает как обычная веб-страница —
-     вся интеграция идёт через PF, который в этом случае no-op. -->
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+     вся интеграция идёт через PF, который в этом случае no-op.
+     async обязателен: синхронный тег держит парсер, и на сети, где
+     telegram.org недоступен, игрок смотрит в белый экран до таймаута.
+     Цена — SDK может приехать позже старта игры, поэтому PF разрешает
+     объект Telegram лениво, а onload добирает телеграмную инициализацию. -->
+<script async id="tgsdk" src="https://telegram.org/js/telegram-web-app.js"
+        onload="window.__tgReady&&window.__tgReady()"></script>
 <style>
 :root{
   --bg:#0a0a0f; --panel:#101017; --ink:#f2f2f6; --dim:#8d8da0; --line:#262633;
@@ -723,6 +728,37 @@ body.menuOn .infoF{display:grid}
 
 <script>
 'use strict';
+/* ================= аварийный обработчик =================
+   В Telegram-webview нет ни консоли, ни возможности перезагрузить страницу
+   жестом. Необработанное исключение посреди хода просто «вешает» игру, и
+   снаружи это выглядит как «кнопки перестали нажиматься». Поэтому ловим
+   всё на верхнем уровне и показываем плашку с выходом в меню.
+   Стили — инлайном: плашка обязана нарисоваться, даже если сломалось
+   что-то до неё. */
+const crash=(()=>{
+  let shown=false;
+  return function crash(err){
+    try{console.error('[bbduel]',err)}catch(e){}
+    if(shown)return;shown=true;
+    const box=document.createElement('div');
+    box.setAttribute('style','position:fixed;left:8px;right:8px;'+
+      'bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:9999;'+
+      'background:#101017;border:2px solid #ff3355;box-shadow:4px 4px 0 rgba(255,51,85,.4);'+
+      'padding:12px 14px;color:#f2f2f6;font:600 12px/1.35 ui-monospace,Consolas,monospace');
+    const msg=document.createElement('div');
+    msg.textContent='Что-то сломалось: '+((err&&(err.message||err))+'').slice(0,140);
+    const btn=document.createElement('button');
+    btn.textContent='В МЕНЮ';
+    btn.setAttribute('style','margin-top:10px;background:#ffd52e;color:#0a0a0f;border:2px solid #000;'+
+      'padding:7px 14px;font:900 12px/1 Arial Black,Impact,sans-serif;cursor:pointer');
+    btn.onclick=()=>{box.remove();shown=false;
+      try{if(typeof go==='function')go('menu')}catch(e){location.reload()}};
+    box.appendChild(msg);box.appendChild(btn);
+    (document.body||document.documentElement).appendChild(box);
+  };
+})();
+window.addEventListener('error',e=>crash(e.error||e.message));
+window.addEventListener('unhandledrejection',e=>crash(e.reason));
 /* ================= утилиты ================= */
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -739,33 +775,41 @@ const svgWrap=p=>`<svg viewBox="0 0 24 24">${p}</svg>`;
    Вне Telegram (GitHub Pages, Vercel, локальный файл) всё это молча
    превращается в no-op, и игра работает как обычная веб-страница. */
 const PF=(()=>{
-  const tg=(typeof window!=='undefined'&&window.Telegram&&window.Telegram.WebApp)||null;
+  /* SDK грузится асинхронно, чтобы недоступный telegram.org не задерживал
+     игру. Значит объект Telegram может появиться уже после старта — поэтому
+     никаких снимков при создании PF, каждый вызов смотрит на актуальное
+     состояние окна. */
+  const TG=()=>(typeof window!=='undefined'&&window.Telegram&&window.Telegram.WebApp)||null;
   /* Скрипт Telegram отдаёт объект WebApp даже в обычном браузере, поэтому
      наличие объекта ничего не доказывает. Реальный признак TMA — непустой
      initData либо известная платформа. */
-  const isTMA=!!(tg&&((tg.initData&&tg.initData.length)||(tg.platform&&tg.platform!=='unknown')));
+  const inTMA=()=>{const tg=TG();
+    return !!(tg&&((tg.initData&&tg.initData.length)||(tg.platform&&tg.platform!=='unknown')))};
   /* Доступность метода зависит от версии клиента Telegram, поэтому каждый
      вызов заворачиваем: отсутствующий метод не должен ронять игру. */
-  const call=(name,...a)=>{if(!isTMA||!tg||typeof tg[name]!=='function')return undefined;
+  const call=(name,...a)=>{const tg=TG();
+    if(!inTMA()||!tg||typeof tg[name]!=='function')return undefined;
     try{return tg[name](...a)}catch(e){return undefined}};
 
   const HAPTIC={light:'light',medium:'medium',heavy:'heavy',rigid:'rigid',soft:'soft'};
   return {
-    isTMA,tg,
+    get isTMA(){return inTMA()},
+    get tg(){return TG()},
     /* Тактильная отдача. Вне TMA — тишина. */
-    hit(style){if(!isTMA||!tg||!tg.HapticFeedback)return;
+    hit(style){const tg=TG();if(!inTMA()||!tg||!tg.HapticFeedback)return;
       try{tg.HapticFeedback.impactOccurred(HAPTIC[style]||'medium')}catch(e){}},
-    notify(type){if(!isTMA||!tg||!tg.HapticFeedback)return;
+    notify(type){const tg=TG();if(!inTMA()||!tg||!tg.HapticFeedback)return;
       try{tg.HapticFeedback.notificationOccurred(type)}catch(e){}},
     /* Нативная кнопка «Назад» в шапке Telegram. */
-    back(show,cb){if(!isTMA||!tg||!tg.BackButton)return;
+    back(show,cb){const tg=TG();if(!inTMA()||!tg||!tg.BackButton)return;
       try{if(cb)tg.BackButton.onClick(cb);show?tg.BackButton.show():tg.BackButton.hide()}catch(e){}},
     /* Спросить подтверждение при закрытии — чтобы не потерять бой свайпом. */
     guardClose(on){call(on?'enableClosingConfirmation':'disableClosingConfirmation')},
     /* Высота вьюпорта: в webview Telegram 100vh врёт. Держим реальную высоту
        в CSS-переменной --app-h, на неё завязана вёрстка. */
     syncHeight(){
-      const h=(isTMA&&tg&&(tg.viewportStableHeight||tg.viewportHeight))||window.innerHeight||0;
+      const tg=TG();
+      const h=(inTMA()&&tg&&(tg.viewportStableHeight||tg.viewportHeight))||window.innerHeight||0;
       /* В свёрнутой вкладке или фоновом webview innerHeight бывает 0. Записать
          такое значение — схлопнуть вёрстку в ноль, поэтому нули игнорируем:
          остаётся CSS-фолбэк 100vh. */
@@ -775,17 +819,25 @@ const PF=(()=>{
        асинхронный, а игровой load/save синхронный — поэтому облако работает
        как зеркало поверх localStorage, а не как источник истины. */
     cloudGet(key,cb){
-      if(!isTMA||!tg||!tg.CloudStorage)return cb(null);
+      const tg=TG();
+      if(!inTMA()||!tg||!tg.CloudStorage)return cb(null);
       try{tg.CloudStorage.getItem(key,(err,val)=>cb(err?null:(val||null)))}catch(e){cb(null)}
     },
     cloudSet(key,val){
-      if(!isTMA||!tg||!tg.CloudStorage)return;
+      const tg=TG();
+      if(!inTMA()||!tg||!tg.CloudStorage)return;
       try{tg.CloudStorage.setItem(key,val,()=>{})}catch(e){}
     },
+    /* Идемпотентно: вызывается сразу на старте и ещё раз, когда доедет SDK.
+       Возвращает true, если телеграмная часть уже настроена. */
     init(){
-      this.syncHeight();
-      window.addEventListener('resize',()=>this.syncHeight());
-      if(!isTMA)return;
+      if(!this._base){this._base=1;
+        this.syncHeight();
+        window.addEventListener('resize',()=>this.syncHeight())}
+      if(this._tma)return true;
+      const tg=TG();
+      if(!inTMA()||!tg)return false;
+      this._tma=1;
       call('ready');call('expand');
       /* Критично: свайп-вниз-закрыть в Telegram дерётся с нашими драгами
          (тянем карту на поле, срываем этикетку пака). */
@@ -793,6 +845,7 @@ const PF=(()=>{
       /* Хром Telegram под нашу палитру, чтобы не было светлой рамки. */
       call('setHeaderColor','#0a0a0f');call('setBackgroundColor','#0a0a0f');
       if(tg.onEvent)try{tg.onEvent('viewportChanged',()=>this.syncHeight())}catch(e){}
+      return true;
     }
   };
 })();
@@ -800,9 +853,16 @@ const PF=(()=>{
 /* ================= хранилище ================= */
 const store=(()=>{try{const k='__bbt';localStorage.setItem(k,'1');localStorage.removeItem(k);
   return{get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},
-         set:(k,v)=>{try{localStorage.setItem(k,v);PF.cloudSet(k,v)}catch(e){}},ok:true}}
+         set:(k,v)=>{try{localStorage.setItem(k,v);PF.cloudSet(k,v)}catch(e){}},
+         /* setLocal — намеренно мимо CloudStorage. Снапшот боя пишется после
+            каждого действия игрока; гнать это в облако значит долбить API
+            Telegram десятки раз за бой, а данные всё равно привязаны к
+            конкретному устройству и живут минуты. */
+         setLocal:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},
+         del:k=>{try{localStorage.removeItem(k)}catch(e){}},ok:true}}
   catch(e){const m={};return{get:k=>(k in m?m[k]:null),
-                             set:(k,v)=>{m[k]=v;PF.cloudSet(k,v)},ok:false}}})();
+                             set:(k,v)=>{m[k]=v;PF.cloudSet(k,v)},
+                             setLocal:(k,v)=>{m[k]=v},del:k=>{delete m[k]},ok:false}}})();
 
 /* ================= эмблемы ================= */
 const EMB={
@@ -1073,7 +1133,25 @@ function toast(msg,red){
 function shake(el){if(!S.shk)return;el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake')}
 
 /* ================= состояние ================= */
-const DEF={sparks:600,inv:{},deck:null,stage:0,done:{},tut:0,
+/* Версия схемы сейва. Поднимать на единицу при любом изменении, которое
+   старые данные не переживут сами: переименование id карты, смена структуры
+   inv/deck, перенос поля. */
+const SCHEMA=1;
+/* Ступени миграции: MIGRATE[n] поднимает состояние с версии n-1 на n, поэтому
+   сейв любого возраста доезжает до актуального цепочкой. Сейчас ступеней нет —
+   ценность в самом механизме: без него первое же переименование id молча
+   ломает чужие сохранения, а обнаружится это уже у игрока.
+   MIGRATE[2]=s=>{...} — так будет выглядеть следующая. */
+const MIGRATE={};
+function migrate(s){
+  let v=Number.isFinite(s.v)?s.v:0;
+  /* Сейв из более новой сборки (прилетел из облака после отката версии):
+     не трогаем и не штампуем — иначе на новой сборке он окажется испорчен. */
+  if(v>SCHEMA)return s;
+  while(v<SCHEMA){const step=MIGRATE[v+1];if(step)step(s);v++}
+  s.v=SCHEMA;return s;
+}
+const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:0,done:{},tut:0,
   gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,
   stats:{packs:0,wins:0,battles:0}};
 let S=load();
@@ -1087,7 +1165,10 @@ function load(){try{const raw=store.get('bbduel');if(!raw)return clone(DEF);
   const d=JSON.parse(raw);if(typeof d!=='object'||!d)throw 0;
   const s=Object.assign(clone(DEF),d);
   s.gacha=Object.assign({pity:0,packs:0},d.gacha||{});s.stats=Object.assign({},DEF.stats,d.stats||{});
-  return fixS(s)}catch(e){return clone(DEF)}}
+  /* v берём из сырых данных: Object.assign уже подставил актуальную из DEF,
+     и по ней старый сейв выглядел бы свежим. */
+  s.v=Number.isFinite(d.v)?d.v:0;
+  return fixS(migrate(s))}catch(e){return clone(DEF)}}
 function save(){try{store.set('bbduel',JSON.stringify(S))}catch(e){}}
 if(!store.ok)setTimeout(()=>toast('Хранилище недоступно — сейв до перезагрузки',1),900);
 if(!S.inv||!Object.keys(S.inv).length){
@@ -1098,6 +1179,9 @@ if(!S.inv||!Object.keys(S.inv).length){
 let CUR='menu';
 function go(id){
   sfx.ui();
+  /* Игрок сам ушёл с боя — значит рейд брошен осознанно. Снимок держим
+     только для аварийных случаев (свернули приложение, упал webview). */
+  if(CUR==='battle'&&id!=='battle')dropBattleSnap();
   $$('.screen').forEach(s=>s.classList.remove('on'));
   $('#scr-'+id).classList.add('on');CUR=id;
   document.body.classList.toggle('menuOn',id==='menu');
@@ -1436,7 +1520,70 @@ document.addEventListener('click',e=>{
 function mkUnit(card){return{uid:UID++,card,atk:card.a||0,hp:card.h||0,maxhp:card.h||0,
   taunt:!!(card.kw&&card.kw.includes('taunt')),rush:!!(card.kw&&card.kw.includes('rush')),
   canAtk:false,sick:true}}
+/* ================= снапшот боя =================
+   Прогресс по рейдам лежит в основном сейве, а сам бой жил только в памяти:
+   перезагрузка страницы его теряла. В браузере это мелочь, в Telegram — нет,
+   webview выгружается при сворачивании.
+   Снимок делается только в фазе игрока: восстанавливаться всегда в чистый
+   свой ход проще и честнее, чем пытаться доиграть прерванный ход бота. Если
+   приложение убили посреди хода врага, бот отыграет его заново.
+   Юниты на поле хранят ссылку на объект карты — в снапшот кладём id и
+   поднимаем обратно через byId. */
+const BSNAP='bbduel_battle';
+function snapBattle(){
+  if(!B||B.over||B.phase!=='p')return;
+  const side=P=>({hp:P.hp,max:P.max,mana:P.mana,mmax:P.mmax,fatigue:P.fatigue,
+    deck:P.deck,hand:P.hand,
+    board:P.board.map(u=>({id:u.card.id,uid:u.uid,atk:u.atk,hp:u.hp,maxhp:u.maxhp,
+      taunt:u.taunt?1:0,rush:u.rush?1:0,canAtk:u.canAtk?1:0,sick:u.sick?1:0,buffed:u.buffed?1:0}))});
+  try{store.setLocal(BSNAP,JSON.stringify(
+    {v:1,si:B.si,skill:B.skill,uid:UID,p:side(B.p),e:side(B.e)}))}catch(e){}
+}
+function dropBattleSnap(){store.del(BSNAP)}
+function restoreBattle(){
+  let d=null;
+  try{d=JSON.parse(store.get(BSNAP)||'null')}catch(e){}
+  if(!d||d.v!==1)return false;
+  const st=STAGES[d.si];
+  /* Снимок из другой версии игры: этап исчез или карты переименовали.
+     Молча выкидываем — лучше начать бой заново, чем упасть на рендере. */
+  if(!st){dropBattleSnap();return false}
+  const side=x=>({hp:x.hp|0,max:x.max|0,mana:x.mana|0,mmax:x.mmax|0,fatigue:x.fatigue|0,
+    deck:(x.deck||[]).filter(byId),hand:(x.hand||[]).filter(byId),
+    board:(x.board||[]).map(u=>{const card=byId(u.id);if(!card)return null;
+      return{uid:u.uid,card,atk:u.atk|0,hp:u.hp|0,maxhp:u.maxhp|0,
+        taunt:!!u.taunt,rush:!!u.rush,canAtk:!!u.canAtk,sick:!!u.sick,buffed:u.buffed?1:0}})
+      .filter(Boolean)});
+  const P=side(d.p),E=side(d.e);
+  if(P.hp<=0||E.hp<=0){dropBattleSnap();return false}
+  B={si:d.si,st,phase:'p',over:false,skill:d.skill,p:P,e:E,sel:null};
+  /* Иначе следующий призванный юнит получит uid уже занятый на поле. */
+  UID=Math.max(UID,(d.uid|0)+1);
+  go('battle');
+  dressBattle(st);
+  $('#bEnd').onclick=endTurn;
+  $('#bEnd').disabled=false;
+  renderBattle();
+  toast('Бой восстановлен');
+  return true;
+}
+
+/* Оформление экрана боя — портрет врага, силуэты, кристаллы. Вынесено из
+   startBattle, потому что то же самое нужно при восстановлении боя из
+   снапшота, где новое состояние не создаётся. */
+function dressBattle(st){
+  $('#eName').textContent=st.n.toUpperCase();
+  $('#eIc').innerHTML=svgWrap(EMB[st.ic]||EMB.skull);
+  $('#eIc').style.borderColor=st.boss?'#ff3355':'#2c2c38';
+  $('#silP').innerHTML=SIL.aya;
+  const variant=st.boss?'boss':(st.ic==='ghost'?'wraith':'thug');
+  $('#silE').innerHTML=SIL[variant];
+  $('#silEO').classList.toggle('boss',!!st.boss);
+  const cry=$('#bCry');cry.innerHTML='';
+  sprinkleCrystals(cry,5,['#ffd52e','#35f0ff','#ff4fd8']);
+}
 function startBattle(si){
+  dropBattleSnap();
   const st=STAGES[si];
   const pool=CARDS.filter(c=>!c.noColl&&c.t<=st.pool&&(c.ty==='u'||c.ty==='s'));
   const aiDeck=[];
@@ -1447,15 +1594,7 @@ function startBattle(si){
     e:{hp:st.hp,max:st.hp,mana:0,mmax:0,deck:shuffle(aiDeck),hand:[],board:[],fatigue:0},
     sel:null};
   go('battle');
-  $('#eName').textContent=st.n.toUpperCase();
-  $('#eIc').innerHTML=svgWrap(EMB[st.ic]||EMB.skull);
-  $('#eIc').style.borderColor=st.boss?'#ff3355':'#2c2c38';
-  $('#silP').innerHTML=SIL.aya;
-  const variant=st.boss?'boss':(st.ic==='ghost'?'wraith':'thug');
-  $('#silE').innerHTML=SIL[variant];
-  $('#silEO').classList.toggle('boss',!!st.boss);
-  const cry=$('#bCry');cry.innerHTML='';
-  sprinkleCrystals(cry,5,['#ffd52e','#35f0ff','#ff4fd8']);
+  dressBattle(st);
   for(let i=0;i<3;i++)drawCard('p',true);
   if(B.p.hand.every(id=>byId(id).c>2)){
     const cheapIdx=B.p.deck.findIndex(id=>byId(id).c<=2);
@@ -1989,6 +2128,7 @@ function renderBattle(){
     el.addEventListener('click',e=>{e.stopPropagation();onEnemyTap('hero')});
   });
   updateHint();
+  snapBattle();
 }
 function updateHint(){
   const h=$('#bHint');if(!h||!B)return;
@@ -2023,7 +2163,7 @@ function unitHTML(u,side,targetable){
   </div>`;
 }
 function finish(win){
-  B.over=true;$('#bEnd').disabled=true;
+  B.over=true;dropBattleSnap();$('#bEnd').disabled=true;
   closeInspector();
   S.stats.battles++;
   let gained=0;
@@ -2272,12 +2412,18 @@ bindParallax($('#scr-menu'));
 bindParallax($('#scr-battle'));
 document.addEventListener('pointerdown',()=>{const c=ac();if(c&&c.state==='suspended')c.resume()},{once:true});
 
+/* Прерванный бой — вернуть игрока прямо в него, минуя меню. */
+restoreBattle();
+
 /* Подтянуть облачный сейв. Локальный уже загружен и игра работает — облако
    лишь догоняет, если на другом устройстве прогресс дальше. Сравниваем по
    числу зачищенных рейдов, чтобы случайно не откатить игрока назад.
    Нормализация та же, что в load(): merge на клон DEF, иначе fixS падает
    на отсутствующих полях. */
-if(PF.isTMA){
+let cloudPulled=false;
+function pullCloud(){
+  if(cloudPulled||!PF.isTMA)return;
+  cloudPulled=true;
   PF.cloudGet('bbduel',raw=>{
     if(!raw)return;
     try{
@@ -2286,6 +2432,7 @@ if(PF.isTMA){
       const cloud=Object.assign(clone(DEF),d);
       cloud.gacha=Object.assign({pity:0,packs:0},d.gacha||{});
       cloud.stats=Object.assign({},DEF.stats,d.stats||{});
+      migrate(cloud);
       const mine=Object.keys(S.done||{}).length,theirs=Object.keys(cloud.done||{}).length;
       if(theirs>mine){
         S=fixS(cloud);save();
@@ -2295,6 +2442,14 @@ if(PF.isTMA){
     }catch(e){}
   });
 }
+pullCloud();
+
+/* SDK Telegram грузится с async, поэтому мог не успеть к этому месту.
+   Колбэк из onload тега добирает то, что требует уже готового объекта. */
+window.__tgReady=function(){
+  if(PF.init()){pullCloud();PF.guardClose(CUR==='battle');PF.back(CUR!=='menu',()=>{if(CUR!=='menu')go('menu')})}
+};
+if(window.Telegram)window.__tgReady();
 </script>
 </body>
 </html>
