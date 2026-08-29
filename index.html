@@ -604,12 +604,12 @@ body.menuOn .infoF{display:grid}
    панели врага и игрока. */
 .bBg{position:absolute;inset:0;z-index:0;pointer-events:none;
   background-position:center 28%;background-size:cover;background-repeat:no-repeat;
-  filter:brightness(.20) saturate(.35) blur(3px);
+  filter:brightness(.36) saturate(.55) blur(2px);
   transform:scale(1.06) translate(calc(var(--mx,0)*-8px),calc(var(--my,0)*-5px));
   transition:transform .35s ease-out}
 .bBg::after{content:'';position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(10,10,15,.86) 0,rgba(10,10,15,.55) 26%,
-             rgba(10,10,15,.62) 50%,rgba(10,10,15,.55) 74%,rgba(10,10,15,.88) 100%)}
+  background:linear-gradient(180deg,rgba(10,10,15,.80) 0,rgba(10,10,15,.34) 26%,
+             rgba(10,10,15,.40) 50%,rgba(10,10,15,.34) 74%,rgba(10,10,15,.82) 100%)}
 /* С фотографическим задником силуэты становятся мусором: игрок и так виден в
    своей панели, а врага называет верхняя. */
 .bField.hasBg .bSilO{display:none}
