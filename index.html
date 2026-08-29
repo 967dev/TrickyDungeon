@@ -162,6 +162,9 @@ body.menuOn .infoF{display:grid}
   animation:spin 40s linear infinite}
 @keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 .pack{position:relative;width:min(320px,82vw);border:3px solid var(--yel);background:#12121a;cursor:pointer;
+  /* Перспектива нужна полосе: без неё rotateX/rotateY схлопываются в плоское
+     сжатие и «скручивания в воздухе» не видно вообще. */
+  perspective:900px;perspective-origin:50% 12%;
   padding:58px 0 20px;text-align:center;color:var(--ink);
   box-shadow:8px 10px 0 rgba(255,213,46,.16),0 34px 60px rgba(0,0,0,.6);
   transition:transform .2s;animation:packPulse 2.4s ease-in-out infinite}
@@ -169,12 +172,22 @@ body.menuOn .infoF{display:grid}
   50%{box-shadow:8px 10px 0 rgba(255,213,46,.3),0 0 46px rgba(255,213,46,.14),0 34px 60px rgba(0,0,0,.6)}}
 .pack:not(:disabled):hover{transform:rotate(-1.5deg) translateY(-6px) scale(1.03)}
 .pack:disabled{cursor:not-allowed;opacity:.5;animation:none}
-.pMouth{position:absolute;top:9px;left:10px;right:10px;height:24px;border-radius:5px;z-index:1;
-  background:linear-gradient(180deg,#05050a,#17171f);opacity:0;transition:opacity .2s}
+/* Зев вскрывается слева направо вслед за отрывом, а не появляется целиком.
+   Раскрытие идёт через clip-path:inset, а не через анимацию кастомного
+   свойства в маске: --rev без работающей регистрации @property не
+   интерполируется вовсе и держит 0% на всём протяжении — проверено. */
+.pMouth{position:absolute;top:9px;left:10px;right:10px;height:24px;z-index:1;
+  background:linear-gradient(180deg,#05050a,#17171f);opacity:0;transition:opacity .2s;
+  clip-path:inset(0 100% 0 0)}
 .pMouth.on{opacity:1;animation:mouthGlow .5s ease-in-out infinite alternate}
 @keyframes mouthGlow{from{box-shadow:0 0 10px rgba(255,213,46,.25),inset 0 0 8px rgba(255,213,46,.2)}
   to{box-shadow:0 0 26px rgba(255,213,46,.6),inset 0 0 14px rgba(255,213,46,.45)}}
-.pTear{position:absolute;top:-2px;left:-3px;right:-3px;height:46px;z-index:3;transform-origin:0 50%;
+/* Петля на правом крае: рвём слева направо, поэтому полоса отходит левым
+   концом, а правый до последнего держится за пачку.
+   backface-visibility:visible — при перевороте в воздухе должна быть видна
+   изнанка полосы, иначе она мигает пустотой на каждом полуобороте. */
+.pTear{position:absolute;top:-2px;left:-3px;right:-3px;height:46px;z-index:3;
+  transform-origin:100% 50%;transform-style:preserve-3d;backface-visibility:visible;
   background:repeating-linear-gradient(-45deg,var(--yel) 0 14px,#0a0a0e 14px 28px);animation:tapeCrawl 9s linear infinite}
 @keyframes tapeCrawl{to{background-position:39.6px 0}}
 .pTab{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
@@ -277,6 +290,8 @@ body.menuOn .infoF{display:grid}
 .dRow .rC{font-family:var(--disp);font-size:12px;color:var(--yel);width:16px;flex:none}
 .dRow .rN{flex:1;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dRow .rA{font-family:var(--mono);font-size:9.5px;color:var(--dim);flex:none}
+.bGiveUp{margin-left:4px;color:var(--red);border-color:var(--red)}
+.bGiveUp:not(:disabled):hover{background:var(--red);color:#fff}
 .dDust{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
 .dDust .dDustT{font-family:var(--mono);font-size:9px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--dim)}
@@ -713,6 +728,7 @@ body.menuOn .infoF{display:grid}
           <div class="pBoardC" id="pBoardN">ПОЛЕ <b>0/5</b></div>
         </div>
         <button class="btn iconbtn" data-info="battle" aria-label="Правила боя" style="margin-left:4px">?</button>
+        <button class="btn iconbtn bGiveUp" id="bGiveUp" aria-label="Сдаться и выйти из боя" title="Сдаться">⚑</button>
       </div>
       <div class="bHand" id="bHand"></div>
       <button class="btn pri big bEnd" id="bEnd">КОНЕЦ<br>ХОДА</button>
@@ -1352,6 +1368,11 @@ function renderGacha(){
   tear.style.clipPath=`polygon(${pts})`;
   wirePack();
 }
+/* Единый порядок функций трансформа для полосы: и перетаскивание, и кадры
+   анимации строят строку только через него. */
+function tearT(x,y,rz,rx,ry,sc){
+  return `translate(${x}px,${y}px) rotateZ(${rz}deg) rotateX(${rx}deg) rotateY(${ry}deg) scale(${sc})`;
+}
 function wirePack(){
   const pk=$('#pack');if(!pk)return;
   const tear=$('#pTear'),tab=$('#pTab');
@@ -1364,7 +1385,11 @@ function wirePack(){
     tab.addEventListener('pointermove',e=>{if(!down)return;
       const dx=e.clientX-sx,dy=e.clientY-sy,d=Math.hypot(dx,dy),k=Math.min(1,d/130);
       tear.style.transition='none';
-      tear.style.transform=`translate(${dx*.45}px,${dy*.45-8*k}px) rotate(${k*80}deg)`;
+      /* Набор функций трансформа обязан совпадать с кадрами анимации отрыва
+         вплоть до порядка. Иначе браузер не может интерполировать покомпонентно,
+         сваливается в интерполяцию матриц — и все обороты свыше 180° по дороге
+         теряются: вместо трёх витков в воздухе получается вялый доворот. */
+      tear.style.transform=tearT(dx*.45,dy*.45-8*k,k*80,0,0,1);
       if(d>70&&!tab._rip){tab._rip=1;sfx.rip();PF.hit('light')}
       if(d>150){down=false;try{tab.releasePointerCapture(e.pointerId)}catch(_){}
         tab._rip=0;tearOff(false)}});
@@ -1397,11 +1422,31 @@ function tearOff(){
   const mouth=pk.querySelector('.pMouth');if(mouth)mouth.classList.add('on');
   const tear=$('#pTear');
   if(tear){tear.style.animation='none';
-    tear.animate([{transform:tear.style.transform||'none',opacity:1},
-      {transform:'translate(70px,-120px) rotate(45deg)',offset:.3},
-      {transform:'translate(330px,-300px) rotate(160deg) scale(.85)',opacity:.8,offset:.72},
-      {transform:'translate(540px,-460px) rotate(265deg) scale(.7)',opacity:0}],
-      {duration:880,easing:'cubic-bezier(.2,.62,.35,1)',fill:'forwards'})}
+    /* Три фазы, как рвут по-настоящему.
+       1. 0→35%: разрыв идёт по перфорации слева направо. Полоса ещё висит на
+          правом крае (transform-origin:100% 50%), левый конец задирается и
+          выворачивается к зрителю — это rotateY, а не плоский поворот.
+       2. 35→50%: последний зубец лопается, полоса свободна.
+       3. 50→100%: свободный полёт. rotateX — скручивание вокруг собственной
+          продольной оси, rotateZ — кувырок в плоскости кадра. Падение вниз
+          с ease-in по вертикали читается как тяжесть.
+       Одинаковый набор функций во всех кадрах — см. комментарий в wirePack. */
+    const from=tear.style.transform||tearT(0,0,0,0,0,1);
+    tear.animate([
+      {transform:from,offset:0},
+      {transform:tearT(-4,-6,-10,0,22,1),offset:.14},
+      {transform:tearT(-2,-12,-22,0,52,1),offset:.26},
+      {transform:tearT(6,-16,-31,0,74,1),offset:.35},
+      {transform:tearT(38,-34,10,150,150,.98),offset:.52},
+      {transform:tearT(150,-10,120,430,300,.92),offset:.7},
+      {transform:tearT(250,180,260,760,470,.82),offset:.86},
+      {transform:tearT(330,560,400,1080,620,.72),opacity:1,offset:.94},
+      {transform:tearT(350,660,430,1180,660,.7),opacity:0,offset:1}],
+      {duration:1150,easing:'cubic-bezier(.3,.05,.6,1)',fill:'forwards'});
+    /* Зев вскрывается ровно за первую фазу — синхронно с ходом разрыва. */
+    const mouthEl=pk.querySelector('.pMouth');
+    if(mouthEl)mouthEl.animate([{clipPath:'inset(0 100% 0 0)'},{clipPath:'inset(0 0% 0 0)'}],
+      {duration:400,easing:'cubic-bezier(.4,0,.5,1)',fill:'forwards'});}
   pk.animate([{transform:'none'},{transform:'translateY(8px) scale(1.06,.88)'},{transform:'none'}],
     {duration:320,easing:'ease-out'});
   setTimeout(()=>sfx.whoosh(),300);
@@ -1639,6 +1684,7 @@ function restoreBattle(){
   dressBattle(st);
   $('#bEnd').onclick=endTurn;
   $('#bEnd').disabled=false;
+  $('#bGiveUp').onclick=askGiveUp;
   renderBattle();
   toast('Бой восстановлен');
   return true;
@@ -1647,6 +1693,24 @@ function restoreBattle(){
 /* Оформление экрана боя — портрет врага, силуэты, кристаллы. Вынесено из
    startBattle, потому что то же самое нужно при восстановлении боя из
    снапшота, где новое состояние не создаётся. */
+/* Сдача необратима и стоит игроку рейда, поэтому спрашиваем. Оверлей
+   переиспользует классы панели результата, чтобы не плодить стилей. */
+function askGiveUp(){
+  if(!B||B.over)return;
+  if(document.querySelector('.bResult'))return;      /* бой уже кончился */
+  sfx.ui();
+  const box=document.createElement('div');box.className='bResult';
+  box.innerHTML=`<div class="bResBox">
+    <div class="bResT lose">СДАТЬСЯ?</div>
+    <div class="bResS">${B.st.n} · рейд засчитается как проигранный, <b>награды не будет</b></div>
+    <div class="bResB">
+      <button class="btn" id="guYes">ДА, ОТСТУПАЮ</button>
+      <button class="btn pri" id="guNo">ДЕРЖИМСЯ!</button>
+    </div></div>`;
+  document.body.appendChild(box);
+  box.querySelector('#guNo').onclick=()=>{sfx.ui();box.remove()};
+  box.querySelector('#guYes').onclick=()=>{box.remove();finish(false,true)};
+}
 function dressBattle(st){
   $('#eName').textContent=st.n.toUpperCase();
   $('#eIc').innerHTML=svgWrap(EMB[st.ic]||EMB.skull);
@@ -1685,6 +1749,7 @@ function startBattle(si){
   for(let i=0;i<4;i++)drawCard('e',true);
   $('#bEnd').onclick=endTurn;
   $('#bEnd').disabled=false;
+  $('#bGiveUp').onclick=askGiveUp;
   renderBattle();
   turnBanner('ТВОЙ ХОД!');
   setTimeout(()=>{startTurn('p')},600);
@@ -2238,7 +2303,10 @@ function unitHTML(u,side,targetable){
     <span class="uA">${u.atk}</span><span class="uH ${u.hp<u.maxhp?'hurt':''}">${u.hp}</span>
   </div>`;
 }
-function finish(win){
+/* forfeit — досрочная сдача. Награду за неё не даём принципиально: утешительные
+   15% превратили бы «начать десятый рейд и сразу сдаться» в ферму по 45 искр за
+   пару секунд, что после починки экономики паков было бы единственной дырой. */
+function finish(win,forfeit){
   B.over=true;dropBattleSnap();$('#bEnd').disabled=true;
   closeInspector();
   S.stats.battles++;
@@ -2253,16 +2321,16 @@ function finish(win){
     burst(innerWidth/2,innerHeight/2,['#ffd52e','#fff','#ff4fd8','#35f0ff'],70,1.8);
     bang('ПОБЕДА!!',50,30);
   }else{
-    gained=Math.round(B.st.reward*.15);
+    gained=forfeit?0:Math.round(B.st.reward*.15);
     sfx.lose();PF.notify('error');
-    bang('ОБЛОМ…',50,30);
+    bang(forfeit?'СДАЛСЯ…':'ОБЛОМ…',50,30);
   }
   S.sparks+=gained;save();
   setTimeout(()=>{
     const box=document.createElement('div');box.className='bResult';
     box.innerHTML=`<div class="bResBox">
-      <div class="bResT ${win?'win':'lose'}">${win?'ПОБЕДА!!':'ПРОВАЛ'}</div>
-      <div class="bResS">${B.st.n} · <b>+${fmtN(gained)} искр</b> · побед: ${S.stats.wins}/${S.stats.battles}</div>
+      <div class="bResT ${win?'win':'lose'}">${win?'ПОБЕДА!!':forfeit?'ОТСТУПЛЕНИЕ':'ПРОВАЛ'}</div>
+      <div class="bResS">${B.st.n} · <b>${gained?'+'+fmtN(gained)+' искр':'без награды'}</b> · побед: ${S.stats.wins}/${S.stats.battles}</div>
       <div class="bResB">
         ${win&&B.si+1<STAGES.length?'<button class="btn pri" id="rNext">ДАЛЬШЕ ►</button>':''}
         <button class="btn" id="rRetry">ЕЩЁ РАЗ</button>
