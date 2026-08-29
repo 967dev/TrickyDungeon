@@ -44,8 +44,10 @@
     --glow:.85;   --edge:.46;
     --scan:.085;  --grain:.11;
     --tint:.8;    --glass:0px;
-    --tilt:9;     /* размах наклона в градусах */
-    --dep:14;     /* расхождение слоёв в пикселях на краю наклона */
+    --tilt:19;    /* размах наклона в градусах */
+    --dep:17;     /* расхождение слоёв в пикселях на краю наклона */
+    --back:.45;   /* яркость задней плиты — она же порог, по которому
+                     персонаж перекрывает сетку */
     --tx:0; --ty:0;   /* положение указателя, -1..1 — их пишет скрипт */
   }
 
@@ -91,22 +93,34 @@
   /* --- РАЗДЕЛЕНИЕ ПЕРСОНАЖА И ФОНА ---
      Арт у нас плоская картинка: персонаж на почти чёрном фоне. Двигать её
      целиком — это возить наклейку, глубины не будет, что бы вокруг ни ездило.
-     Поэтому включаем арту mix-blend-mode:screen. Screen осветляет: чёрное
-     становится прозрачным, светлое остаётся. Тёмный фон картинки исчезает,
-     персонаж повисает над тем, что под ним, — ровно то разделение, которого
-     не давала маска: вырезать по яркости через mask-mode:luminance браузеры
-     поддерживают вразнобой, а screen работает везде и даром.
-     Побочный эффект нам на руку: персонаж не закрывает заднюю плиту, а
-     просвечивает — настоящая проекция себя так и ведёт. */
-  .hgx.split .cfArtImg{mix-blend-mode:screen}
+     Режим — lighten, а НЕ screen. Разница здесь решающая. Screen считает
+     1-(1-низ)(1-верх), то есть результат всегда светлее обоих слоёв: сетка
+     неизбежно просвечивает сквозь персонажа, и перекрыть её он не может в
+     принципе. Lighten берёт max(низ, верх) поканально — где персонаж светлее
+     плиты, остаётся ровно он, в своём цвете и без подмешивания; где картинка
+     темнее плиты, видно плиту. Тёмный фон арта уходит сам, а персонаж плиту
+     закрывает.
+     Отсюда важное следствие: граница проходит по ЯРКОСТИ, и порог задаёт
+     ползунок «яркость плиты». Сделаешь плиту светлее тёмных доспехов — сетка
+     полезет прямо по фигуре; темнее — персонаж встанет плотно. Вырезать по
+     яркости честной маской (mask-mode:luminance) браузеры поддерживают
+     вразнобой, а lighten работает везде и даром. */
+  .hgx.split .cfArtImg{mix-blend-mode:lighten}
+  /* Режим «вырезан»: у картинки настоящий альфа-канал, фон в ней уже
+     прозрачен. Тогда никакого режима наложения не нужно вовсе — персонаж
+     непрозрачен и перекрывает плиту целиком, независимо от того, насколько он
+     тёмный. Это единственный способ получить и плотную фигуру, и сетку вокруг
+     неё: у измеренного арта медиана яркости фигуры 10 из 255, то есть он
+     ТЕМНЕЕ плиты, и любой режим наложения по яркости его неизбежно съедает. */
+  .hgx.cut .cfArtImg{mix-blend-mode:normal}
   /* Задняя плита — тот самый «нижний слой». Ездит ЗА наклоном, навстречу
      персонажу. Лежит в DOM перед артом и с тем же z-index, поэтому и
      оказывается позади без гонки z-index'ов. */
   .hgx .hgBack{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;
     background:
-      radial-gradient(ellipse at 50% 36%,rgba(90,200,255,.22),transparent 62%),
-      repeating-linear-gradient(0deg,rgba(120,200,255,.10) 0 1px,transparent 1px 13px),
-      repeating-linear-gradient(90deg,rgba(120,200,255,.07) 0 1px,transparent 1px 13px),
+      radial-gradient(ellipse at 50% 36%,rgba(90,200,255,calc(var(--back) * .5)),transparent 62%),
+      repeating-linear-gradient(0deg,rgba(120,200,255,calc(var(--back) * .22)) 0 1px,transparent 1px 13px),
+      repeating-linear-gradient(90deg,rgba(120,200,255,calc(var(--back) * .16)) 0 1px,transparent 1px 13px),
       linear-gradient(180deg,#0a1322 0%,#070a14 100%);
     translate:calc(var(--tx) * var(--dep) * .75px) calc(var(--ty) * var(--dep) * .75px);
     scale:calc(1 + var(--dep) / 70);
@@ -221,7 +235,7 @@
   <div class="bar">
     <button class="sw" id="bCard" aria-pressed="true">карта: с артом</button>
     <button class="sw" id="bGlass" aria-pressed="false">стекло: без размытия</button>
-    <button class="sw" id="bSplit" aria-pressed="true">персонаж отдельно: да</button>
+    <button class="sw" id="bSplit" aria-pressed="true">персонаж: вырезан</button>
     <button class="sw" id="bGyro" aria-pressed="false">датчик наклона: выкл</button>
     <button class="sw" id="bPause" aria-pressed="false">анимация: идёт</button>
   </div>
@@ -244,8 +258,9 @@
 
 <script>
 const KNOBS=[
-  ['--tilt','наклон (°)',0,20,.5],
+  ['--tilt','наклон (°)',0,26,.5],
   ['--dep','глубина слоёв',0,40,1],
+  ['--back','яркость плиты',0,1,.05],
   ['sep'],
   ['--irid','переливы',0,1,.01],
   ['--iridT','их период',1,20,.5,'s'],
@@ -261,9 +276,13 @@ const KNOBS=[
   ['--glass','размытие фона',0,16,1,'px'],
 ];
 /* Значения, которые вы выбрали в прошлый заход; наклон и глубина — новые. */
-const DEF={'--tilt':9,'--dep':14,'--irid':.43,'--iridT':3,'--spec':.11,'--specT':6,
-           '--glow':.85,'--edge':.46,'--scan':.085,'--grain':.11,'--tint':.8,'--glass':0};
-let CARDS=null, withArt=true, glassOn=false, paused=false, gyro=false, split=true;
+const DEF={'--tilt':19,'--dep':17,'--back':.45,'--irid':.19,'--iridT':1,'--spec':.03,
+           '--specT':4,'--glow':.85,'--edge':.46,'--scan':.07,'--grain':.095,
+           '--tint':.55,'--glass':0};
+let CARDS=null, withArt=true, glassOn=false, paused=false, gyro=false;
+/* 0 — арт целиком, 1 — разделение режимом наложения, 2 — настоящий вырез */
+const MODES=['слитно','по яркости','вырезан'];
+let mode=2;
 
 function cardMarkup(c,cls){
   const stars='★'.repeat(c.t+1);
@@ -271,14 +290,16 @@ function cardMarkup(c,cls){
   const HEX=['#aab6bf','#35f0ff','#ff4fd8','#ffd52e','#ff3355'];
   const hex=c.ult?'#ff3355':HEX[c.t];
   const atkHp=c.ty==='u'?`<div class="cfAtkHp"><b class="a">${c.a}</b><b class="h">${c.h}</b></div>`:'';
-  const art=c.artUrl
-    ? `<div class="hgBack"></div><div class="cfArtImg" style="background-image:url(${c.artUrl})"></div>`
+  const url=(cls==='hgx'&&mode===2&&c.cutUrl)?c.cutUrl:c.artUrl;
+  const art=url
+    ? `<div class="hgBack"></div><div class="cfArtImg" style="background-image:url(${url})"></div>`
     : '';
   const layers=cls==='hgx'
     ? `<div class="hgIrid"><i></i></div><div class="hgSpec"></div><div class="hgScan"></div><div class="hgGrain"></div>`
     : `<div class="holo"></div><div class="cShine"></div>`;
   const back=(cls==='hgx')?art:art.replace(/<div class="hgBack"><\/div>/,'');
-  return `<div class="cWrap t${c.t} foil open ${cls} rest${cls==='hgx'&&split?' split':''}" style="animation:none">
+  const m=cls==='hgx'?(mode===1?' split':(mode===2?' split cut':'')):'';
+  return `<div class="cWrap t${c.t} foil open ${cls} rest${m}" style="animation:none">
    <div class="cFlip"><div class="cFace cFront${c.artUrl?' art':''}" style="--tc:${hex}">
      ${back}${layers}
      <div class="cfHead"><span class="cfCost">${c.c}</span><span class="cfStars">${stars}</span></div>
@@ -408,6 +429,7 @@ function buildKnobs(){
   };
   const art=line('r05')||mk('r05','Огнемётчик',0,'u',3,2,4,'Пламя подчиняется бровям.',null);
   art.artUrl='art/cards/r05.webp';
+  art.cutUrl='art/cards/cut/r05.webp';   /* тот же кадр, но с прозрачным фоном */
   let plain=null;
   const m2=[...src.matchAll(/\{id:'([a-z]\d\d)',n:'([^']*)',t:(\d)/g)].find(x=>x[3]==='2');
   if(m2)plain=line(m2[1]);
@@ -423,8 +445,8 @@ function buildKnobs(){
     e.target.textContent='карта: '+(withArt?'с артом':'без арта'); draw();
   };
   document.getElementById('bSplit').onclick=e=>{
-    split=!split; e.target.setAttribute('aria-pressed',split);
-    e.target.textContent='персонаж отдельно: '+(split?'да':'нет'); draw();
+    mode=(mode+1)%3; e.target.setAttribute('aria-pressed',mode>0);
+    e.target.textContent='персонаж: '+MODES[mode]; draw();
   };
   document.getElementById('bGlass').onclick=e=>{
     glassOn=!glassOn; e.target.setAttribute('aria-pressed',glassOn);
