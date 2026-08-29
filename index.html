@@ -430,6 +430,15 @@ body.menuOn .infoF{display:grid}
 .heroIc{width:52px;height:52px;border:3px solid var(--red);background:#15151d;display:grid;place-items:center;color:var(--red);flex:none;transform:rotate(-3deg)}
 .heroIc.me{border-color:var(--yel);color:var(--yel);transform:rotate(2deg)}
 .heroIc svg{width:60%;height:60%}
+/* Лицо героя вместо декоративного щитка. Портрет квадратный и заполняет
+   рамку целиком, поэтому обрезаем по центру и чуть выше середины — там глаза. */
+.heroIc.face{padding:0;overflow:hidden;background:#0b0b11}
+.heroIc.face img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;
+  transition:opacity .12s}
+.heroIc.face.pop{animation:moodPop .42s cubic-bezier(.2,1.5,.35,1)}
+@keyframes moodPop{0%{transform:rotate(2deg) scale(1)}
+  40%{transform:rotate(-4deg) scale(1.16)}100%{transform:rotate(2deg) scale(1)}}
+@media (prefers-reduced-motion:reduce){.heroIc.face.pop{animation:none}}
 .heroName{font-family:var(--disp);font-style:italic;font-size:12px;color:#fff}
 .pStats{padding:5px 10px;border:2px solid rgba(255,213,46,.3);background:rgba(255,213,46,.06)}
 .eStats{padding:5px 10px;border:2px solid rgba(255,51,85,.3);background:rgba(255,51,85,.05)}
@@ -517,6 +526,12 @@ body.menuOn .infoF{display:grid}
 .unit.tired{filter:saturate(.4) brightness(.6)}
 .unit.dragSrc{opacity:.35}
 .unit .uArt{width:56%;height:56%;color:var(--tc);filter:drop-shadow(0 0 6px currentColor)}
+/* У карты с нарисованным артом на поле показываем его же, а не эмблему стихии:
+   иначе карта «теряла картинку», как только выходила на стол. Кадр квадратный,
+   ячейка юнита — нет, поэтому cover с обрезкой по центру. */
+.unit .uArtImg{width:100%;height:100%;object-fit:cover;object-position:center 22%;
+  filter:none;opacity:.9;position:absolute;inset:0;z-index:0;border-radius:5px}
+.unit .uArtImg+*{position:relative;z-index:1}
 .unit .uName{position:absolute;top:3px;left:0;right:0;text-align:center;font-family:var(--disp);font-size:7.5px;
   color:#fff;text-shadow:1px 1px 0 #000;overflow:hidden;white-space:nowrap;padding:0 3px}
 .unit .uKw{position:absolute;top:20px;left:3px;right:3px;display:flex;justify-content:center;gap:3px}
@@ -673,13 +688,19 @@ body.menuOn .infoF{display:grid}
 /* Бот. Прижат к нижнему краю, пузырь над ним; на узком экране бот мельче,
    иначе он и пузырь вдвоём съедают пол-экрана. */
 .trBot{position:fixed;z-index:74;left:10px;bottom:10px;width:132px;
-  filter:drop-shadow(0 10px 22px rgba(0,0,0,.7)) drop-shadow(0 0 18px rgba(53,240,255,.18));
+  /* Подложка обязательна: бот — вырезанный чёрный робот, а сцена под ним тоже
+     чёрная и вдобавок затемнена. Без круга за спиной он читался как пятно,
+     и казалось, что затемнение легло поверх него. */
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.75)) drop-shadow(0 0 20px rgba(53,240,255,.30));
   animation:trBotIn .45s cubic-bezier(.2,1.4,.35,1) backwards;
   transition:left .35s ease,bottom .35s ease}
 .trBot.top{bottom:auto;top:10px}
 .trBot.right{left:auto;right:10px}
 @keyframes trBotIn{from{opacity:0;transform:translateY(40px) scale(.86)}}
 .trBotArt{position:relative;width:100%}
+.trBotArt::before{content:'';position:absolute;left:50%;top:46%;width:132%;height:118%;
+  transform:translate(-50%,-50%);border-radius:50%;z-index:-1;
+  background:radial-gradient(circle,rgba(20,24,34,.95) 0,rgba(14,16,24,.72) 52%,transparent 74%)}
 .trBotArt>img{width:100%;display:block}
 /* Глаза-масти мигают попеременно: центры вымерены по самой картинке
    (39.83%/32.58% и 58.93%/31.94%), поэтому свечение ложится точно на них.
@@ -705,7 +726,8 @@ body.menuOn .infoF{display:grid}
   border:7px solid transparent;border-right-color:var(--yel)}
 .trSay .trWho{font-family:var(--disp);font-style:italic;font-size:12px;color:var(--cyn);
   letter-spacing:.04em;margin-bottom:6px}
-.trSay .trTxt{font-size:13.5px;line-height:1.62;color:#e6e3f0}
+.trSay{background:#0c0c12}
+.trSay .trTxt{font-size:13.5px;line-height:1.62;color:#f2f0f8}
 .trSay .trTxt b{color:var(--yel)}
 .trSay .trTxt .kw{color:var(--cyn);font-family:var(--disp);font-style:italic}
 .trSay .trBtns{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
@@ -1472,10 +1494,14 @@ function fixS(s){
   return s}
 function load(){
   const raw=store.get('bbduel');
-  if(!raw)return clone(DEF);                 /* сейва нет — честно новый игрок */
+  /* fixS и на чистом DEF: у него deck=null, и без нормализации загрузчик
+     возвращал заведомо нерабочее состояние, а доводил его до ума лишь
+     стартовый блок ниже по файлу. Любой вызов load() мимо него — например
+     при сбросе прогресса — получал колоду null и ронял отрисовку меню. */
+  if(!raw)return fixS(clone(DEF));            /* сейва нет — честно новый игрок */
   let d=null;
   try{d=JSON.parse(raw)}catch(e){d=null}
-  if(!d||typeof d!=='object')return clone(DEF);   /* мусор вместо сейва */
+  if(!d||typeof d!=='object')return fixS(clone(DEF));   /* мусор вместо сейва */
   try{
     const s=Object.assign(clone(DEF),d);
     s.gacha=Object.assign({pity:0,packs:0},d.gacha||{});s.stats=Object.assign({},DEF.stats,d.stats||{});
@@ -1535,9 +1561,11 @@ document.addEventListener('click',e=>{
    Показывается один раз: пока в сейве нет hero, игра не пускает дальше.
    Старые сейвы это поле не имеют, поэтому спросим и у них — миграция не
    нужна, отсутствие поля само по себе означает «ещё не выбирал». */
+/* Имён у героев нет намеренно: имя вписывает игрок, здесь выбирается только
+   внешность. Поэтому под портретом — не имя, а короткая ремарка. */
 const HEROES={
-  m:{n:'ДИЗЕЛЬ',d:'сидит за ноутом · считает чужие колоды',art:'art/hero-m.webp'},
-  f:{n:'АЯ',    d:'сидит в кресле · тасует не глядя',      art:'art/hero-f.webp'}
+  m:{d:'за ноутом · считает чужие колоды',art:'art/hero-m.webp'},
+  f:{d:'в кресле · тасует не глядя',      art:'art/hero-f.webp'}
 };
 let heroPick=null;
 function renderHero(){
@@ -1547,8 +1575,7 @@ function renderHero(){
   $('#hPick').innerHTML=['m','f'].map(k=>`
     <div class="hOpt ${heroPick===k?'on':''}" data-h="${k}">
       <span class="hTick">✓</span>
-      <img src="${HEROES[k].art}" alt="${HEROES[k].n}" draggable="false">
-      <div class="hName">${HEROES[k].n}</div>
+      <img src="${HEROES[k].art}" alt="" draggable="false">
       <div class="hDesc">${HEROES[k].d}</div>
     </div>`).join('');
   $$('#hPick .hOpt').forEach(el=>el.onclick=()=>{
@@ -2147,6 +2174,30 @@ function renderStages(){
     startBattle(i)});
 }
 
+/* ================= настроение героя =================
+   Лицо в панели игрока реагирует на бой. Спокойное — состояние покоя: в наборе
+   эмоций нет грустного лица, поэтому поражение показывает его же. Как только
+   грустный кадр появится, достаточно положить файл и дописать строку в MOOD.
+   Сброс к покою по таймеру, а не по следующему событию: иначе после единичного
+   удара лицо так и застыло бы удивлённым до конца боя. */
+const MOOD={calm:'calm',joy:'joy',surp:'surp',angry:'angry',sad:'calm'};
+let moodTimer=null;
+function moodEl(){return $('.bBottom .heroIc.me')}
+function setMood(kind,hold){
+  const el=moodEl();if(!el||!S.hero)return;
+  const file=MOOD[kind]||'calm';
+  el.classList.add('face');
+  const img=el.querySelector('img');
+  const src=`art/emo/emo-${S.hero}-${file}.webp`;
+  if(img){ if(img.getAttribute('src')!==src)img.setAttribute('src',src); }
+  else el.innerHTML=`<img src="${src}" alt="" draggable="false">`;
+  if(kind!=='calm'){
+    el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
+  }
+  clearTimeout(moodTimer);
+  if(kind!=='calm')moodTimer=setTimeout(()=>setMood('calm'),hold||1600);
+}
+
 /* ================= БОЙ ================= */
 let B=null,UID=1,DRAG=null,suppressClick=false;
 document.addEventListener('click',e=>{
@@ -2242,6 +2293,7 @@ function dressBattle(st){
   $('#eIc').style.borderColor=st.boss?'#ff3355':'#2c2c38';
   $('#silP').innerHTML=SIL.aya;
   { const n=$('#pName'); if(n)n.textContent=(S.name||'ТЫ').toUpperCase(); }
+  setMood('calm');
   const variant=st.boss?'boss':(st.ic==='ghost'?'wraith':'thug');
   $('#silE').innerHTML=SIL[variant];
   $('#silEO').classList.toggle('boss',!!st.boss);
@@ -2322,6 +2374,7 @@ function damageHero(who,v){
   sfx.hit();
   /* По своему герою бьёт ощутимее, чем по вражескому. */
   PF.hit(who==='p'?'heavy':'light');
+  if(who==='p')setMood('surp');
   const ic=who==='p'?$('#pHp'):$('#eHp');
   const r=ic.getBoundingClientRect();
   burst(r.left+r.width/2,r.top+10,['#ff3355','#fff'],8,.9);
@@ -2573,6 +2626,10 @@ async function dealDamage(side,u,v){
   await sleep(120);
   if(u.hp<=0){
     sfx.die();PF.hit('rigid');
+    /* Злость — только когда выбили НАШЕГО. В dealDamage side это владелец
+       получающего урон юнита (из B[side].board его и удаляют), поэтому
+       наш — это 'p'. */
+    if(side==='p')setMood('angry',1900);
     if(el){el.classList.add('dying');
       const r=el.getBoundingClientRect();
       burst(r.left+r.width/2,r.top+r.height/2,fxCols(u.card.t),12,1);
@@ -2931,7 +2988,9 @@ function unitHTML(u,side,targetable){
     data-uid="${u.uid}" style="--tc:${hex}">
     <span class="uName">${u.card.n}</span>
     <span class="uKw">${u.taunt?'<i>ТАУНТ</i>':''}${u.rush&&u.sick?'<i class="r">РАШ</i>':''}</span>
-    <svg class="uArt" viewBox="0 0 24 24">${EMB[u.card.el]||EMB.steel}</svg>
+    ${CARD_ART.has(u.card.id)
+      ? `<img class="uArt uArtImg" src="art/cards/${u.card.id}.webp" alt="" draggable="false">`
+      : `<svg class="uArt" viewBox="0 0 24 24">${EMB[u.card.el]||EMB.steel}</svg>`}
     <span class="uA">${u.atk}</span><span class="uH ${u.hp<u.maxhp?'hurt':''}">${u.hp}</span>
   </div>`;
 }
@@ -2952,12 +3011,12 @@ function finish(win,forfeit){
     if(!S.done[B.si]){S.done[B.si]=1;gained=Math.round(gained*1.5);
       if(B.si+1>S.stage)S.stage=B.si+1;
       toast('Провал зачищен! Бонус первой зачистки ×1,5')}
-    sfx.win();PF.notify('success');
+    sfx.win();PF.notify('success');setMood('joy',3200);
     burst(innerWidth/2,innerHeight/2,['#ffd52e','#fff','#ff4fd8','#35f0ff'],70,1.8);
     bang('ПОБЕДА!!',50,30);
   }else{
     gained=forfeit?0:Math.round(B.st.reward*.15);
-    sfx.lose();PF.notify('error');
+    sfx.lose();PF.notify('error');setMood('sad',3200);
     bang(forfeit?'СДАЛСЯ…':'ОБЛОМ…',50,30);
   }
   S.sparks+=gained;save();
@@ -3076,6 +3135,11 @@ function trBlockInner(e){
   if(!TR||!TR.armed)return;
   const t=e.target;
   if(t.closest&&(t.closest('.trSay')||t.closest('.trBot')))return;   /* пузырь свой */
+  /* Инспектор пропускаем всегда. Он открывается только тапом по разрешённой
+     карте, но его кнопки в разрешённую зону не входили — и если игрок на шаге
+     «перетащи карту» вместо перетаскивания тапал по ней, окно открывалось и
+     закрывалось уже нечем: ни «РАЗЫГРАТЬ», ни «ЗАКРЫТЬ» не нажимались. */
+  if(t.closest&&t.closest('.iWrap'))return;
   const allow=TR.allow&&trEl(TR.allow);
   /* Ровно два условия: сам разрешённый элемент или что-то внутри него.
      Раньше тут была ещё склейка селектора по id, и на элементе без id
