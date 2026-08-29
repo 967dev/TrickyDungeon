@@ -649,6 +649,66 @@ body.menuOn .infoF{display:grid}
 .ghost small{display:block;font-family:var(--mono);font-size:9.5px;color:var(--yel);margin-top:4px;letter-spacing:.08em}
 
 /* ====== туториал ====== */
+/* ================= сюжет: визуальная новелла ================= */
+#scr-story{align-items:center;justify-content:center;padding:0;background:#07070b}
+.vnWrap{width:100%;max-width:900px;height:100%;display:flex;flex-direction:column;
+  justify-content:center;gap:0;padding:12px;position:relative}
+.vnArt{position:relative;width:100%;aspect-ratio:1/1;max-height:56vh;flex:none;
+  border:3px solid #000;box-shadow:0 0 0 2px rgba(255,213,46,.25) inset,8px 9px 0 rgba(0,0,0,.5);
+  background:#0a0a0f;overflow:hidden}
+.vnArt img{width:100%;height:100%;object-fit:cover;object-position:center 22%;display:block}
+/* Смена кадра — короткое затемнение, а не резкий подрез: иначе чередование
+   спокойного и злого кадра читается как дёрганье. */
+.vnArt img.sw{animation:vnSwap .34s ease}
+@keyframes vnSwap{0%{opacity:.25;filter:brightness(.5)}100%{opacity:1;filter:none}}
+/* Лента опасности между картинкой и репликой — та же «шапка», что у панели боя. */
+.vnArt::after{content:'';position:absolute;left:0;right:0;bottom:0;height:5px;
+  background:repeating-linear-gradient(-45deg,var(--yel) 0 9px,#0a0a0e 9px 18px);opacity:.9}
+
+.vnBox{border:3px solid #000;border-top:0;background:#0c0c12;
+  box-shadow:8px 9px 0 rgba(0,0,0,.5);padding:12px 14px 10px;min-height:132px;
+  display:flex;flex-direction:column}
+.vnWho{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.vnFace{width:46px;height:46px;flex:none;border:3px solid var(--yel);background:#0b0b11;
+  overflow:hidden;display:grid;place-items:center}
+.vnFace img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block}
+.vnFace.q{border-color:var(--red);color:var(--red);font-family:var(--disp);font-size:24px}
+.vnName{font-family:var(--disp);font-style:italic;font-size:14px;color:var(--yel);
+  text-shadow:2px 2px 0 #000;letter-spacing:.02em}
+.vnName.c{color:var(--red)}
+.vnText{flex:1;font-size:14px;line-height:1.6;color:#f2f0f8}
+/* Мысли — другой голос: курсив, циан, с отбивкой слева. */
+.vnText.think{font-style:italic;color:var(--cyn);border-left:3px solid rgba(53,240,255,.4);
+  padding-left:11px}
+.vnFoot{display:flex;align-items:center;gap:10px;margin-top:8px}
+.vnNext{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--dim);animation:vnBlink 1.4s ease-in-out infinite}
+@keyframes vnBlink{0%,100%{opacity:.35}50%{opacity:1}}
+.vnSkip{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  background:none;border:0;color:#6b6b80;cursor:pointer;text-decoration:underline;padding:4px}
+.vnSkip:hover{color:var(--yel)}
+.vnProg{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:#44445a}
+@media (max-width:700px){
+  .vnArt{max-height:42vh}
+  .vnBox{min-height:150px;padding:10px 11px 9px}
+  .vnText{font-size:13px;line-height:1.55}
+  .vnFace{width:40px;height:40px}
+}
+@media (prefers-reduced-motion:reduce){.vnNext{animation:none}.vnArt img.sw{animation:none}}
+
+/* ================= пересадка ================= */
+/* Короткая заставка между экранами: без неё сюжет обрывается в бой встык,
+   а бой начинается прямо с чужого кадра на сетчатке. */
+.vnLoad{position:fixed;inset:0;z-index:110;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  animation:scrIn .2s}
+.vnLoad.out{opacity:0;transition:opacity .3s}
+.vnLoad .vlT{font-family:var(--disp);font-style:italic;font-size:clamp(18px,4.4vw,28px);
+  color:var(--yel);text-shadow:3px 3px 0 #000;text-align:center;padding:0 20px}
+.vnLoad .vlBar{width:min(200px,50vw);height:5px;background:#1a1a24;border:2px solid #000;overflow:hidden}
+.vnLoad .vlBar i{display:block;height:100%;width:38%;background:var(--yel);
+  animation:bootRun 1s ease-in-out infinite}
+
 /* ================= выбор героя ================= */
 #scr-hero{align-items:center;justify-content:center;padding:0}
 .hWrap{width:100%;max-width:980px;padding:18px;display:flex;flex-direction:column;
@@ -930,6 +990,24 @@ body.menuOn .infoF{display:grid}
   <div class="bootT">БАМ-БАМ<span style="color:var(--mag)">!!</span></div>
   <div class="bootBar"><i></i></div>
   <div class="bootS">каскад · загрузка</div>
+</div>
+
+<div class="screen" id="scr-story">
+  <div class="vnWrap">
+    <div class="vnArt"><img id="vnImg" src="" alt="" draggable="false"></div>
+    <div class="vnBox">
+      <div class="vnWho">
+        <div class="vnFace" id="vnFace"></div>
+        <div class="vnName" id="vnName"></div>
+      </div>
+      <div class="vnText" id="vnText"></div>
+      <div class="vnFoot">
+        <button class="vnSkip" id="vnSkip">пропустить сцену</button>
+        <span class="vnProg" id="vnProg"></span>
+        <span class="vnNext">далее ▸</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="screen" id="scr-hero">
@@ -1546,7 +1624,7 @@ function migrate(s){
    load() по catch возвращал чистый DEF — то есть каждая перезагрузка
    страницы стирала сейв. */
 const INV_CAP=20;
-const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'',
+const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'',story:0,
   gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,
   stats:{packs:0,wins:0,battles:0}};
 let S=load();
@@ -1615,6 +1693,10 @@ function go(id){
   PF.back(id!=='menu',()=>{if(CUR!=='menu')go('menu')});
   PF.guardClose(id==='battle');
   if(id==='hero')renderHero();
+  /* Заход на экран сюжета не через startStory (например из меню) — начинаем
+     сцену с начала. Условие на vnI===0 было ошибкой: после первого просмотра
+     счётчик стоит в конце, и повтор открывался сразу на последней реплике. */
+  if(id==='story'&&!vnAfter){vnI=0;vnArt=0;setTimeout(()=>vnShow(),0)}
   if(id==='menu')renderMenu();
   if(id==='gacha')renderGacha();
   if(id==='deck')renderDeck();
@@ -1623,7 +1705,86 @@ function go(id){
 }
 document.addEventListener('click',e=>{
   const ib=e.target.closest('[data-info]');if(ib){openInfo(ib.dataset.info);return}
-  const b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
+  const b=e.target.closest('[data-go]');if(b){go(b.dataset.go);return}
+  /* Любой клик по экрану сюжета листает дальше — кроме кнопки пропуска. */
+  if(CUR==='story'){
+    if(e.target.closest('#vnSkip')){
+      const after=vnAfter;vnAfter=null;S.story=1;save();
+      if(after)after();else go('menu');
+      return;
+    }
+    vnNext();
+  }});
+
+/* ================= сюжет: сцена «Последний звонок» =================
+   По вашему выбору оставлены только реплики — ремарки курсивом («Она надевает
+   гарнитуру», «Пауза», «Щелчок») выброшены, их работу берёт на себя смена
+   кадра. Короткие обмены склеены в одно окно: «Что?» / «Ничего.» и подобные.
+   Поле s: g — вслух, t — мысли, c — клиент. Поле a — номер кадра; он ходит
+   между спокойным (1) и сорванным (2) по ходу перепалки, чтобы картинка
+   отыгрывала тон реплики, а не просто менялась раз в блок. */
+const STORY=[
+{a:1,s:'g',t:'Только не сейчас...'},
+{a:1,s:'g',t:'Здравствуйте! Служба поддержки. Меня зовут {NAME}. Чем я могу вам помочь?'},
+{a:1,s:'c',t:'Наконец-то! Вы там вообще работаете?!'},
+{a:1,s:'g',t:'Приношу извинения за ожидание. Расскажите, пожалуйста, что произошло.'},
+{a:1,s:'c',t:'У меня интернет не работает уже два часа!'},
+{a:1,s:'g',t:'Понимаю. Давайте проверим соединение. Подскажите, пожалуйста, горит ли индикатор—'},
+{a:2,s:'c',t:'Да, всё горит! Я уже всё проверил!'},
+{a:1,s:'g',t:'Хорошо. Тогда давайте—'},
+{a:2,s:'c',t:'Вы вообще понимаете, что я из-за вас работу потерял?!'},
+{a:2,s:'t',t:'А я сейчас из-за тебя карту проиграю.'},
+{a:2,s:'c',t:'Вы меня слышите?!  — Да, конечно.'},
+{a:2,s:'c',t:'Тогда почему вы молчите?!'},
+{a:1,s:'g',t:'Я проверяю информацию по вашему подключению.'},
+{a:2,s:'c',t:'Вы уже десять минут её проверяете!'},
+{a:1,s:'g',t:'Прошло около двух минут.'},
+{a:2,s:'c',t:'Не надо мне рассказывать, сколько прошло!'},
+{a:2,s:'t',t:'А тебе не надо мне рассказывать, как считать время.'},
+{a:2,s:'c',t:'Что?  — Ничего.'},
+{a:1,s:'g',t:'Так. Я вижу проблему. У вас отключён роутер.'},
+{a:1,s:'c',t:'Не может быть.'},
+{a:1,s:'g',t:'Он не подключён к розетке.'},
+{a:1,s:'c',t:'Я его не отключал.  — Я понимаю.'},
+{a:1,s:'c',t:'И что мне теперь делать?'},
+{a:1,s:'g',t:'Подключить его обратно.'},
+{a:1,s:'c',t:'И интернет появится?  — Да.'},
+{a:1,s:'c',t:'...Появился.'},
+{a:1,s:'g',t:'Отлично.'},
+{a:2,s:'c',t:'А почему он вообще отключился?'},
+{a:1,s:'g',t:'Не знаю.'},
+{a:2,s:'c',t:'В смысле — не знаете?!'},
+{a:1,s:'g',t:'Причин может быть много.'},
+{a:2,s:'c',t:'А вы специалист или кто?!'},
+{a:3,s:'c',t:'Алло?!  — Да.'},
+{a:3,s:'c',t:'Так что мне делать, если это снова произойдёт?!'},
+{a:3,s:'g',t:'Позвонить нам ещё раз.'},
+{a:2,s:'c',t:'А если опять будете двадцать минут трубку не брать?!'},
+{a:3,s:'t',t:'Ох, поверь. В следующий раз я точно не возьму.'},
+{a:2,s:'c',t:'Ну?!'},
+{a:3,s:'g',t:'Всего доброго.'},
+{a:2,s:'c',t:'Подождите, я ещё—  — Всего доброго.'},
+{a:2,s:'c',t:'Но—'},
+{a:3,s:'g',t:'ВСЕГО. ДОБРОГО.'},
+{a:3,s:'g',t:'Идите нахуй.'},
+{a:3,s:'g',t:'Три года...'},
+{a:3,s:'g',t:'Три года я отвечаю на звонки людей, которые не знают, куда у них розетка.'},
+{a:4,s:'g',t:'А ведь...'},
+{a:4,s:'g',t:'Почему я вообще здесь сижу?'},
+{a:4,s:'g',t:'Я могу просто всё бросить.'},
+{a:4,s:'g',t:'Уйти с этой работы.'},
+{a:4,s:'g',t:'Играть каждый день.'},
+{a:4,s:'g',t:'Подняться в рейтинге.'},
+{a:4,s:'g',t:'Попасть на турниры.'},
+{a:4,s:'g',t:'Выиграть региональные.'},
+{a:4,s:'g',t:'Потом мировые...'},
+{a:4,s:'g',t:'А потом стать лучшей в мире.'},
+{a:4,s:'g',t:'И никогда больше не слышать слова «перезагрузите роутер».'},
+{a:4,s:'g',t:'Нет. Но для начала... надо хотя бы в местный топ попасть.'},
+{a:4,s:'g',t:'А там уже посмотрим, кто кому интернет отключит.'}
+];
+/* Лицо героини под тон реплики — те же кадры, что и в бою. */
+const STORY_MOOD={1:'calm',2:'angry',3:'angry',4:'calm'};
 
 /* ================= выбор героя =================
    Показывается один раз: пока в сейве нет hero, игра не пускает дальше.
@@ -1687,6 +1848,55 @@ function renderMenuHero(){
   document.body.classList.add(S.hero==='m'?'heroM':'heroF');
 }
 
+/* ================= показ сюжета =================
+   Кадр меняется только когда сменился его номер: перерисовывать картинку на
+   каждой реплике значит мигать ею впустую. */
+let vnI=0,vnArt=0,vnAfter=null;
+function vnShow(){
+  const b=STORY[vnI];if(!b)return vnDone();
+  if(b.a!==vnArt){
+    vnArt=b.a;
+    const im=$('#vnImg');
+    im.src=`art/story/scene${b.a}.webp`;
+    im.classList.remove('sw');void im.offsetWidth;im.classList.add('sw');
+  }
+  const face=$('#vnFace'),name=$('#vnName'),txt=$('#vnText');
+  if(b.s==='c'){
+    face.className='vnFace q';face.textContent='?';
+    name.className='vnName c';name.textContent='НЕДОВОЛЬНЫЙ КЛИЕНТ';
+  }else{
+    face.className='vnFace';
+    face.innerHTML=`<img src="art/emo/emo-f-${STORY_MOOD[b.a]||'calm'}.webp" alt="">`;
+    name.className='vnName';name.textContent=(S.name||'ОНА').toUpperCase();
+  }
+  txt.className='vnText'+(b.s==='t'?' think':'');
+  txt.textContent=b.t.replace('{NAME}',S.name||'—');
+  $('#vnProg').textContent=(vnI+1)+' / '+STORY.length;
+}
+function vnNext(){vnI++;if(vnI>=STORY.length)vnDone();else vnShow()}
+function vnDone(){
+  S.story=1;save();
+  const after=vnAfter;vnAfter=null;
+  if(after)after();else go('menu');
+}
+function startStory(after){
+  vnAfter=after||null;vnI=0;vnArt=0;
+  go('story');
+  vnShow();
+}
+/* Короткая заставка-пересадка. cb вызывается на пике затемнения, поэтому
+   смена экрана не видна игроку. */
+function vnLoad(text,ms,cb){
+  const el=document.createElement('div');el.className='vnLoad';
+  el.innerHTML=`<div class="vlT">${text}</div><div class="vlBar"><i></i></div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{
+    try{cb&&cb()}catch(e){}
+    el.classList.add('out');
+    setTimeout(()=>el.remove(),320);
+  },ms||1000);
+}
+
 /* ================= меню ================= */
 function renderMenu(){
   renderMenuHero();
@@ -1708,6 +1918,10 @@ function renderMenu(){
     <span class="tIc">${svgWrap(EMB.card)}</span>
     <span class="tT">КОЛОДА</span><span class="tS">${S.deck.length}/20 · коллекция ${Object.keys(S.inv).length}/${COLLECTIBLE.length}</span>
   </button>
+  ${S.story?`<button class="mTile" data-go="story">
+    <span class="tIc">${svgWrap(EMB.card)}</span>
+    <span class="tT">СЮЖЕТ</span><span class="tS">последний звонок · пересмотреть</span>
+  </button>`:''}
   <button class="mTile" data-go="settings">
     <span class="tIc">${svgWrap('<g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5 V5.5 M12 18.5 V21.5 M2.5 12 H5.5 M18.5 12 H21.5 M5 5 L7 7 M17 17 L19 19 M19 5 L17 7 M7 17 L5 19"/></g>')}</span>
     <span class="tT">НАСТРОЙКИ</span><span class="tS">звук · эффекты · сброс</span>
@@ -2242,7 +2456,16 @@ function renderStages(){
     const i=+el.dataset.i;
     if(i>S.stage){toast('Зачисти предыдущий Провал!',1);return}
     if(S.deck.length!==20){toast('Собери колоду — ровно 20 карт!',1);go('deck');return}
-    startBattle(i)});
+    /* Сюжет — один раз, перед первым настоящим рейдом и только за героиню:
+       сцена написана от её лица. Обучение (этап 0) сюда не попадает. */
+    if(i===1&&S.hero==='f'&&!S.story){
+      vnLoad('СЛУЖБА ПОДДЕРЖКИ',1100,()=>startStory(()=>{
+        vnLoad('КРЫСЫ ПРОВАЛА',1000,()=>startBattle(i));
+      }));
+      return;
+    }
+    vnLoad(STAGES[i].n.toUpperCase(),900,()=>startBattle(i));
+  });
 }
 
 /* ================= настроение героя =================
