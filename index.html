@@ -277,6 +277,10 @@ body.menuOn .infoF{display:grid}
 .dRow .rC{font-family:var(--disp);font-size:12px;color:var(--yel);width:16px;flex:none}
 .dRow .rN{flex:1;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dRow .rA{font-family:var(--mono);font-size:9.5px;color:var(--dim);flex:none}
+.dDust{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.dDust .dDustT{font-family:var(--mono);font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim)}
+.dCard .dCnt.extra{background:var(--grn);color:#06110a}
 .dSideB{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .dCount{font-family:var(--disp);font-size:13px;text-align:center;color:#fff}
 .dCount b{color:var(--yel)}
@@ -641,6 +645,7 @@ body.menuOn .infoF{display:grid}
   <div class="dBody">
     <div class="dColl">
       <div class="dFilters" id="dFilters"></div>
+      <div class="dDust" id="dDust"></div>
       <div class="dGrid" id="dGrid"></div>
     </div>
     <div class="dSide">
@@ -1157,7 +1162,7 @@ const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:0,done:{},tut:0,
 let S=load();
 function defaultDeck(){return CARDS.filter(c=>c.t===0&&!c.noColl).flatMap(c=>[c.id,c.id]).slice(0,20)}
 function fixS(s){
-  for(const c of CARDS){if(Number.isFinite(s.inv[c.id]))s.inv[c.id]=clamp(s.inv[c.id]|0,0,2)}
+  for(const c of CARDS){if(Number.isFinite(s.inv[c.id]))s.inv[c.id]=clamp(s.inv[c.id]|0,0,INV_CAP)}
   if(!Array.isArray(s.deck)||s.deck.length!==20)s.deck=defaultDeck();
   if(!Number.isFinite(s.stage))s.stage=0;
   return s}
@@ -1300,6 +1305,18 @@ function spellIcon(c){return{dmg:'boom',healHero:'heal',healAll:'heal',draw:'car
 /* ================= гача ================= */
 const BASE=[.7992,.1598,.0320,.0064,.0026];
 const PITY_START=55,PITY_HARD=90,ULTRA_IN=.10,PACK=100;
+/* Сколько искр даёт распыление лишней карты каждого тира.
+   Считать эти числа надо против ФАКТИЧЕСКИХ частот, а не против BASE:
+   гарант вытягивает ЛЕГЕНДУ с 0.64% до 2.03%, втрое, и подбор «на глаз» по
+   базовым ставкам промахивается в разы. При старых [30,90,260,900,2600]
+   средний пак возвращал 341 искру при цене 100 — печатал по +241 из воздуха,
+   и бои теряли смысл. Сейчас возврат ≈63 при цене 100: пак остаётся стоком,
+   искры приходят с рейдов, а распылить легенду всё ещё событие (два пака).
+   Правишь BASE или PITY_* — пересчитывай и это. */
+const DUST=[4,18,55,200,600];
+/* Больше двух копий в колоду не положить, но лишние теперь копятся в
+   коллекции, чтобы игрок распылял их сам и видел, за что пришли искры. */
+const INV_CAP=20;
 function legChance(p){if(p>=PITY_HARD)return 1;if(p<PITY_START)return BASE[4];
   return BASE[4]+(1-BASE[4])*Math.pow((p-(PITY_START-1))/(PITY_HARD-(PITY_START-1)),2.6)}
 function rollOne(){
@@ -1392,10 +1409,14 @@ function tearOff(){
     tearing=false;
     const zone=$('#gZone');
     const items=[];for(let i=0;i<5;i++)items.push(rollOne());
-    let dupSparks=0;
+    /* Карты просто ложатся в коллекцию. Раньше здесь лишние копии молча
+       превращались в искры, и счётчик прыгал ещё до того, как игрок увидел
+       хоть одну карту — «начислилось непонятно за что». Теперь искры даёт
+       только явное распыление на экране коллекции. */
     for(const c of items){
-      if((S.inv[c.id]||0)>=2){const v=[30,90,260,900,2600][c.t];dupSparks+=v;S.sparks+=v;c._dup=v}
-      else S.inv[c.id]=(S.inv[c.id]||0)+1}
+      const had=S.inv[c.id]||0;
+      c._extra=had>=2;                    /* третья и дальше — в распыл */
+      S.inv[c.id]=Math.min(INV_CAP,had+1)}
     save();$('#gTok').textContent=fmtN(S.sparks);
     /* Ушли с экрана за эти 600 мс (нативная «Назад» в Telegram, например) —
        показывать нечего, но искры уже списаны, поэтому карты всё равно
@@ -1411,13 +1432,32 @@ function tearOff(){
     holder.innerHTML=`
       <div class="gHand" id="gHand">${items.map((c,i)=>cardHTML(c,{stk:1})).join('')}</div>
       <div class="gActions">
-        <button class="btn pri" id="gAgain">ЕЩЁ ПАК ⚡${PACK}</button>
+        <button class="btn pri" id="gAll">ОТКРЫТЬ ВСЕ</button>
+        <button class="btn" id="gAgain">ЕЩЁ ПАК ⚡${PACK}</button>
         <button class="btn" id="gDone">ЗАБРАТЬ</button>
       </div>`;
     zone.replaceWith(holder);
     bang('БАМ!!');
     burst(mx,my,['#ffd52e','#ff4fd8','#35f0ff','#fff'],40,1.4);
     const cards=[...holder.querySelectorAll('.cWrap')];
+    /* Раскрытие одной карты. Вынесено, чтобы «ОТКРЫТЬ ВСЕ» проигрывало ровно
+       ту же анимацию и звук, а не свою урезанную копию. */
+    const reveal=(w,i)=>{
+      if(w.classList.contains('open'))return false;
+      w.classList.add('open');
+      const c=items[i];
+      PF.hit(c.t>=3?'heavy':c.t>=2?'medium':'light');
+      tone(220+i*90,.1,{v:.06});
+      sfx.play(c.t);
+      const rr=w.getBoundingClientRect();
+      burst(rr.left+rr.width/2,rr.top+rr.height/2,fxCols(c.t),10+c.t*8,.8+c.t*.3);
+      if(c.t>=3)bang(c.t===4?'ГРААЛЬ!!':pick(['ЛЕГЕНДА!!','ВОТ ЭТО ДРОП!!']),50,30);
+      if(c.ult){sfx.secret();shake(document.body);
+        setTimeout(()=>{burst(innerWidth/2,innerHeight/2,fxCols(4),80,2);
+          bang('ИЗ ТЬМЫ!!',50,50)},250)}
+      if(c._extra)setTimeout(()=>toast(`${c.n} — лишняя, распыли в коллекции`),400);
+      return true;
+    };
     cards.forEach((w,i)=>{
       const wr=w.getBoundingClientRect();
       const dx=mx-(wr.left+wr.width/2),dy=my-(wr.top+wr.height/2);
@@ -1427,20 +1467,12 @@ function tearOff(){
         {duration:760,delay:i*110,easing:'cubic-bezier(.22,.9,.3,1)',fill:'backwards'});
       setTimeout(()=>sfx.whip(),i*110+240);
       w.addEventListener('click',()=>{
-        if(w.classList.contains('open')){w.querySelector('.cFlip').style.transform='rotateY(0deg)';
-          w.classList.remove('open');sfx.ui();return}
-        w.classList.add('open');
-        const c=items[i];
-        PF.hit(c.t>=3?'heavy':c.t>=2?'medium':'light');
-        tone(220+i*90,.1,{v:.06});
-        sfx.play(c.t);
-        const rr=w.getBoundingClientRect();
-        burst(rr.left+rr.width/2,rr.top+rr.height/2,fxCols(c.t),10+c.t*8,.8+c.t*.3);
-        if(c.t>=3)bang(c.t===4?'ГРААЛЬ!!':pick(['ЛЕГЕНДА!!','ВОТ ЭТО ДРОП!!']),50,30);
-        if(c.ult){sfx.secret();shake(document.body);
-          setTimeout(()=>{burst(innerWidth/2,innerHeight/2,fxCols(4),80,2);
-            bang('ИЗ ТЬМЫ!!',50,50)},250)}
-        if(c._dup)setTimeout(()=>toast(`Дубликат ${c.n}: +${c._dup} искр`),400);
+        /* Закрытие снимает только класс. Раньше сюда же писался инлайновый
+           transform:rotateY(0deg), и он навсегда перебивал по специфичности
+           правило .cWrap.open .cFlip — карту после этого нельзя было открыть
+           обратно ни одним кликом. */
+        if(w.classList.contains('open')){w.classList.remove('open');sfx.ui();return}
+        reveal(w,i);
       });
     });
     setTimeout(()=>{
@@ -1449,6 +1481,12 @@ function tearOff(){
           {duration:400,easing:'ease-in',fill:'forwards'});
         setTimeout(()=>g.remove(),440)}
     },900);
+    /* Раскрываем с задержкой, а не разом: иначе пять всплесков и пять звуков
+       сливаются в кашу, и «граальный» дроп теряется в общей вспышке. */
+    $('#gAll').onclick=()=>{
+      cards.forEach((w,i)=>setTimeout(()=>reveal(w,i),i*160));
+      $('#gAll').disabled=true;
+    };
     $('#gAgain').onclick=()=>{if(S.sparks<PACK){toast('Не хватает искр!',1);return}renderGacha()};
     $('#gDone').onclick=()=>go('menu');
   },600);
@@ -1462,17 +1500,41 @@ function renderDeck(){
   $('#dFilters').innerHTML=`<button class="chip ${dFilter===-1?'on':''}" data-f="-1">ВСЕ</button>`+
     TIER_NAMES.map((n,i)=>`<button class="chip ${dFilter===i?'on':''}" data-f="${i}">${n}</button>`).join('');
   $$('#dFilters .chip').forEach(ch=>ch.onclick=()=>{dFilter=+ch.dataset.f;sfx.ui();renderDeck()});
+  const sp=surplus();
+  $('#dDust').innerHTML=sp.cards
+    ? `<button class="btn pri" id="dDustBtn">РАСПЫЛИТЬ ЛИШНИЕ · +${fmtN(sp.sparks)} ⚡</button>
+       <span class="dDustT">${sp.cards} шт · сверх двух копий · искры на паки</span>`
+    : `<span class="dDustT">лишних копий нет · искры дают рейды</span>`;
+  if(sp.cards)$('#dDustBtn').onclick=dustSurplus;
   $('#dGrid').innerHTML=COLLECTIBLE.map(c=>{
     const have=S.inv[c.id]||0,inDeck=deckCount(c.id);
     const show=dFilter<0||c.t===dFilter;
     if(!show)return '';
     return `<div class="dCard ${have?'':'locked'} ${inDeck?'sel':''}" data-id="${c.id}">
-      ${have>1?`<span class="dCnt">×${have}</span>`:''}
+      ${have>1?`<span class="dCnt ${have>2?'extra':''}">×${have}</span>`:''}
       ${inDeck?`<span class="dIn">${inDeck}</span>`:''}
       ${cardHTML(c,{open:1,noAnim:1})}
     </div>`}).join('');
   $$('#dGrid .dCard').forEach(el=>el.onclick=()=>toggleDeck(el.dataset.id));
   renderDeckSide();
+}
+/* Лишние копии — всё сверх двух: третью в колоду всё равно не положить,
+   поэтому она мертвый груз, пока её не распылят. Распыляем только излишек,
+   первые две копии не трогаем никогда — потерять играбельную карту одним
+   промахом по кнопке на телефоне было бы слишком дорого. */
+function surplus(){
+  return COLLECTIBLE.reduce((a,c)=>{
+    const n=(S.inv[c.id]||0)-2;
+    return n>0?{cards:a.cards+n,sparks:a.sparks+n*DUST[c.t]}:a},{cards:0,sparks:0});
+}
+function dustSurplus(){
+  const s=surplus();
+  if(!s.cards){toast('Лишних карт нет',1);return}
+  for(const c of COLLECTIBLE)if((S.inv[c.id]||0)>2)S.inv[c.id]=2;
+  S.sparks+=s.sparks;save();
+  sfx.sparks();PF.notify('success');
+  toast(`Распылено ${s.cards} карт: +${fmtN(s.sparks)} искр`);
+  renderDeck();
 }
 function toggleDeck(id){
   const have=S.inv[id]||0;if(!have){toast('Нет такой карты — крути паки!',1);return}
