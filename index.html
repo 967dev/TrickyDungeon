@@ -3681,8 +3681,14 @@ function unitHTML(u,side,targetable){
     data-uid="${u.uid}" style="--tc:${hex}">
     <span class="uName">${u.card.n}</span>
     <span class="uKw">${u.taunt?'<i>ТАУНТ</i>':''}${u.rush&&u.sick?'<i class="r">РАШ</i>':''}</span>
+    ${/* Только uArtImg, без uArt. Оба класса на одной картинке — ловушка:
+          .unit .uArt и .unit .uArtImg равны по весу, поэтому решает порядок в
+          файле, а в телефонной медиа-секции .uArt переопределён ниже и
+          побеждал. Арт на поле съёживался до 64% — треть ячейки пустовала
+          справа и снизу. uArt задуман для SVG-эмблемы, картинке он не нужен:
+          размер и обрезку целиком описывает uArtImg. */''}
     ${CARD_ART.has(u.card.id)
-      ? `<img class="uArt uArtImg" src="art/cards/${u.card.id}.webp" alt="" draggable="false">`
+      ? `<img class="uArtImg" src="art/cards/${u.card.id}.webp" alt="" draggable="false">`
       : `<svg class="uArt" viewBox="0 0 24 24">${EMB[u.card.el]||EMB.steel}</svg>`}
     <span class="uA">${u.atk}</span><span class="uH ${u.hp<u.maxhp?'hurt':''}">${u.hp}</span>
   </div>`;
