@@ -2293,12 +2293,32 @@ async function aiSpell(c){
 
 /* --- розыгрыш --- */
 function needTargetCard(c){return !!(c.eff&&(c.eff.tg==='any'||c.eff.tg==='ally'))}
+/* Единственное место, где решается, законна ли цель. Раньше это решали три
+   разных обработчика вразнобой, и каждый ошибался по-своему:
+   — тап по вражескому ЮНИТУ заклятием «на своего» усиливал юнита ВРАГА
+     (Гвоздь-Счастливчик делал вражеского 2/3 пятёркой за твою ману);
+   — тап по вражескому ГЕРОЮ тем же заклятием съедал карту вхолостую;
+   — тап по СВОЕМУ юниту заклятием урона бил по своему же, хотя текст карты
+     обещает «вражеский юнит или вражеский герой», да ещё и проводил урон с
+     чужой стороной ('e'), что при летальном уроне рассинхронит доски.
+   side: 'p' — свой юнит, 'e' — вражеский, 'hero' — вражеский герой. */
+function canTarget(c,side){
+  const tg=c&&c.eff&&c.eff.tg;
+  if(!tg)return false;
+  if(tg==='ally')return side==='p';
+  if(tg==='any')return side==='e'||side==='hero';
+  return false;
+}
 function playCard(i,targetUnit){
   const P=B.p,id=P.hand[i],c=byId(id);
   if(!c)return;
   if(c.ty==='u'&&P.board.length>=5){
     toast('Поле заполнено — максимум 5 юнитов',1);tone(130,.12,{v:.09});return}
   if(c.c>P.mana){tone(130,.12,{v:.09});toast('Мало маны!',1);return}
+  /* Последний рубеж: карта, которой нужна цель на своём юните, без цели
+     просто исчезала бы вместе с маной — эффект-то не к чему применять. */
+  if(c.eff&&c.eff.tg==='ally'&&!(targetUnit&&P.board.includes(targetUnit))){
+    toast('Нужен свой юнит на поле',1);tone(160,.08,{v:.06});return}
   P.mana-=c.c;P.hand.splice(i,1);
   sfx.play(c.t);
   if(c.ty==='u'){
@@ -2517,7 +2537,13 @@ function onDragUp(e){
   if(drag.srcEl)drag.srcEl.classList.remove('dragSrc');
   clearDropHi();
   if(!drag.moved){
-    if(drag.kind==='hand'){openInspector(drag.ref);return}
+    if(drag.kind==='hand'){
+      /* Повторный тап по уже выбранной карте отменяет выбор цели. Без этого
+         из режима «тапни по цели» не было выхода вообще: тап мимо ничего не
+         делал, и оставалось только завершить ход. */
+      if(B.sel&&B.sel.type==='hand'&&B.sel.i===drag.ref){
+        B.sel=null;sfx.ui();renderBattle();return}
+      openInspector(drag.ref);return}
     if(drag.kind==='unit'){onUnitTap(drag.ref);return}
     return;
   }
@@ -2571,7 +2597,9 @@ function onUnitTap(uid){
   const u=B.p.board.find(x=>x.uid===uid);if(!u)return;
   if(B.sel&&B.sel.type==='hand'){
     const c=byId(B.p.hand[B.sel.i]);
-    if(c&&c.eff&&(c.eff.tg==='any'||(c.eff.tg==='ally')))playCard(B.sel.i,u);
+    if(c&&canTarget(c,'p'))playCard(B.sel.i,u);
+    else if(c&&needTargetCard(c)){
+      toast('Эту карту бросают в ВРАГА',1);tone(160,.08,{v:.06})}
     else{B.sel=null;renderBattle()}
     return}
   if(!u.canAtk||u.atk<=0||(u.sick&&!u.rush)){tone(160,.08,{v:.06});return}
@@ -2591,9 +2619,16 @@ function onEnemyTap(uidOrHero){
     if(taunts.length&&!taunts.includes(t)){toast('Сначала таунты!',1);return}
     u.canAtk=false;B.sel=null;doAttack('p',u,t);renderBattle();return}
   if(B.sel.type==='hand'){
-    if(uidOrHero==='hero'){playCard(B.sel.i,null);return}
+    const c=byId(B.p.hand[B.sel.i]);
+    if(uidOrHero==='hero'){
+      if(c&&needTargetCard(c)&&!canTarget(c,'hero')){
+        toast('Это заклятие — на СВОЕГО юнита',1);tone(160,.08,{v:.06});return}
+      playCard(B.sel.i,null);return}
     const t=B.e.board.find(x=>x.uid===uidOrHero);
-    if(t)playCard(B.sel.i,t);
+    if(!t)return;
+    if(c&&needTargetCard(c)&&!canTarget(c,'e')){
+      toast('Это заклятие — на СВОЕГО юнита',1);tone(160,.08,{v:.06});return}
+    playCard(B.sel.i,t);
   }
 }
 
@@ -2681,7 +2716,12 @@ function updateHint(){
   if(B.phase!=='p'){h.textContent='— ход врага, наблюдай —';return}
   const playCount=B.p.hand.filter(id=>byId(id).c<=B.p.mana).length;
   if(B.sel){
-    if(B.sel.type==='hand')h.textContent='выбери цель: тапни по врагу, его юниту или панели врага';
+    if(B.sel.type==='hand'){
+      const c=byId(B.p.hand[B.sel.i]);
+      h.textContent=(c&&c.eff&&c.eff.tg==='ally')
+        ? 'выбери СВОЕГО юнита · повторный тап по карте — отмена'
+        : 'выбери цель у врага: юнит или его панель · повторный тап по карте — отмена';
+    }
     else{const u=B.p.board.find(x=>x.uid===B.sel.uid);
       if(u)h.textContent=`${u.card.n} ${u.atk}/${u.hp} — тапни врага или перетащи юнита на цель`}
   }else{
