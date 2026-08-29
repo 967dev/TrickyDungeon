@@ -575,6 +575,71 @@ body.menuOn .infoF{display:grid}
 .ghost small{display:block;font-family:var(--mono);font-size:9.5px;color:var(--yel);margin-top:4px;letter-spacing:.08em}
 
 /* ====== туториал ====== */
+/* ================= выбор героя ================= */
+#scr-hero{align-items:center;justify-content:center;padding:0}
+.hWrap{width:100%;max-width:980px;padding:18px;display:flex;flex-direction:column;
+  align-items:center;gap:16px;position:relative;z-index:1}
+.hTitle{font-family:var(--disp);font-style:italic;font-size:clamp(24px,5.4vw,40px);
+  color:var(--yel);text-shadow:3px 3px 0 #000;text-align:center;line-height:1.05}
+.hStory{max-width:620px;text-align:center;font-size:13px;line-height:1.6;color:#cfccdd}
+.hStory b{color:var(--yel)}
+.hPick{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}
+/* Вариант героя. Подсветка силуэта — drop-shadow по альфе, а не рамка вокруг
+   прямоугольника: у портретов вырезан фон, и свечение должно идти по контуру
+   кресла и ноутбука, иначе подсвечивается пустота. */
+.hOpt{position:relative;border:3px solid #2c2c38;background:rgba(14,14,20,.75);
+  padding:10px 10px 12px;cursor:pointer;transition:.16s;overflow:hidden}
+.hOpt img{width:100%;display:block;transition:filter .18s,transform .18s;
+  filter:grayscale(.55) brightness(.62) drop-shadow(0 0 0 transparent)}
+.hOpt:hover{border-color:var(--yel);transform:translate(-3px,-3px);box-shadow:9px 11px 0 rgba(0,0,0,.5)}
+.hOpt:hover img,.hOpt.on img{filter:grayscale(0) brightness(1)
+  drop-shadow(0 0 14px rgba(255,213,46,.55)) drop-shadow(0 0 34px rgba(255,213,46,.28))}
+.hOpt.on{border-color:var(--yel);background:rgba(28,24,10,.8)}
+.hOpt .hName{font-family:var(--disp);font-style:italic;font-size:16px;color:#fff;
+  text-shadow:2px 2px 0 #000;margin-top:6px;text-align:center}
+.hOpt .hDesc{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);text-align:center;margin-top:4px}
+.hOpt .hTick{position:absolute;top:8px;right:8px;width:26px;height:26px;border:2px solid #000;
+  background:var(--yel);color:#0a0a0e;font-family:var(--disp);font-size:15px;
+  display:none;align-items:center;justify-content:center}
+.hOpt.on .hTick{display:flex}
+.hRow{display:flex;gap:10px;align-items:center;width:100%;max-width:520px;flex-wrap:wrap}
+.hInput{flex:1;min-width:200px;background:#0d0d13;border:3px solid #2c2c38;color:#fff;
+  font-family:var(--disp);font-size:16px;padding:11px 13px;outline:none}
+.hInput:focus{border-color:var(--yel)}
+.hInput::placeholder{color:#4a4a5c;font-style:italic}
+.hGo{flex:0 0 auto}
+.hHint{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+@media (max-width:700px){
+  .hPick{grid-template-columns:1fr 1fr;gap:8px}
+  .hOpt{padding:6px 6px 8px}
+  .hOpt .hName{font-size:13px}
+  .hOpt .hDesc{display:none}
+  .hStory{font-size:12px;line-height:1.5}
+}
+/* ================= герой в меню ================= */
+/* Портрет стоит по краю и не должен мешать плиткам: он под ними по слою и
+   уходит совсем на узких экранах, где места нет физически. */
+.mHero{position:absolute;bottom:0;pointer-events:none;z-index:0;
+  height:min(78vh,660px);opacity:.92;
+  filter:drop-shadow(0 12px 30px rgba(0,0,0,.7)) drop-shadow(0 0 28px rgba(255,213,46,.10));
+  transition:transform .35s ease-out}
+.mHero img{height:100%;width:auto;display:block}
+/* Парень слева: у его портрета стол с ноутбуком обрезан по левому краю, и у
+   края экрана эта обрезка читается как продолжение кадра, а не как обрыв. */
+.mHero.m{left:0;transform:translate(calc(var(--mx,0)*-9px),calc(var(--my,0)*-5px))}
+.mHero.f{right:0;transform:translate(calc(var(--mx,0)*9px),calc(var(--my,0)*-5px))}
+/* Портрет и плитки делят одну середину экрана: на 1400px они перекрывались
+   почти на 400px. Сдвигаем содержимое меню в противоположную от героя
+   сторону — ровно настолько, насколько хватает ширины, и только там, где
+   портрет вообще показан во всю величину. */
+@media (min-width:1001px){
+  .heroM .mWrap{transform:translateX(clamp(0px,13vw,210px))}
+  .heroF .mWrap{transform:translateX(clamp(-210px,-13vw,0px))}
+}
+@media (max-width:1000px){.mHero{opacity:.3;height:min(58vh,460px)}}
+@media (max-width:760px){.mHero{display:none}}
+
 /* ================= тренировка: БОТ-КАРТЁЖНИК ================= */
 /* Затемнение целого экрана — только для шагов без цели, где подсвечивать
    нечего. Когда цель есть, затемнение рисует САМА рамка (см. ниже). */
@@ -786,6 +851,25 @@ body.menuOn .infoF{display:grid}
   <div class="bootS">каскад · загрузка</div>
 </div>
 
+<div class="screen" id="scr-hero">
+  <div class="menuBg"><div class="mbArt"></div><div class="mbScrim"></div></div>
+  <div class="hWrap">
+    <div class="hTitle">КТО ТЫ В ПРОВАЛЕ?</div>
+    <div class="hStory">
+      Провал сожрал полгорода и оставил вместо него рынок. Тут не платят деньгами —
+      тут платят <b>искрами</b>, а искры выбивают картами. Ты приехал сюда с колодой
+      из двадцати штук и без плана. <b>Плана всё ещё нет</b>, но колода при тебе.
+    </div>
+    <div class="hPick" id="hPick"></div>
+    <div class="hRow">
+      <input class="hInput" id="hName" maxlength="14" placeholder="как тебя звать?"
+             autocomplete="off" spellcheck="false">
+      <button class="btn pri hGo" id="hGo" disabled>В ПРОВАЛ ►</button>
+    </div>
+    <div class="hHint" id="hHint">выбери героя и впиши имя</div>
+  </div>
+</div>
+
 <div class="screen on" id="scr-menu">
   <div class="menuBg">
     <div class="mbArt"></div>
@@ -796,6 +880,7 @@ body.menuOn .infoF{display:grid}
     <div class="mbSilO l" id="mbSilL"><div class="mbSil"></div></div>
     <div class="mbSilO r" id="mbSilR"><div class="mbSil"></div></div>
     <div id="mbCry"></div>
+    <div id="mHero"></div>
   </div>
   <div class="mWrap">
     <div class="mLogo">
@@ -896,7 +981,7 @@ body.menuOn .infoF{display:grid}
       <div class="hero">
         <div class="heroIc me"><svg viewBox="0 0 24 24"><path d="M12 2 L20 6 V12 C20 17 16.5 20.6 12 22 C7.5 20.6 4 17 4 12 V6 Z" fill="currentColor"/></svg></div>
         <div class="pStats" id="pStats">
-          <div class="heroName">ТЫ</div>
+          <div class="heroName" id="pName">ТЫ</div>
           <div class="statHp"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 21 C7 16.5 3 13 3 8.8 C3 6 5.2 4 7.7 4 C9.4 4 11 5 12 6.6 C13 5 14.6 4 16.3 4 C18.8 4 21 6 21 8.8 C21 13 17 16.5 12 21 Z" fill="currentColor"/></svg><span id="pHp">30</span><small>ЗДОРОВЬЕ</small></div>
           <div class="statMana" id="pManaBox"><svg width="12" height="12" viewBox="0 0 24 24"><path d="M13 2 L4 14 H11 L10 22 L20 9 H13 Z" fill="currentColor"/></svg><b id="pManaT">0/0</b><small>МАНА</small></div>
           <div class="manaRow" id="pMana"></div>
@@ -1367,7 +1452,15 @@ function migrate(s){
    запирала бы первый рейд до своего прохождения. Обучение ещё не доделано,
    поэтому пока оно не обязательное: открыты сразу и оно, и рейд 1.
    Вернуть обязательность = поставить обратно 0. */
-const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},
+/* Больше двух копий в колоду не положить, но лишние копятся в коллекции,
+   чтобы игрок распылял их сам и видел, за что пришли искры.
+   Объявлено здесь, а НЕ рядом с прочими гача-константами: его читает fixS,
+   а fixS вызывается из load() строкой ниже. Стоя ниже по файлу, константа
+   оказывалась во временной мёртвой зоне, fixS падал с ReferenceError, и
+   load() по catch возвращал чистый DEF — то есть каждая перезагрузка
+   страницы стирала сейв. */
+const INV_CAP=20;
+const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'',
   gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,
   stats:{packs:0,wins:0,battles:0}};
 let S=load();
@@ -1377,14 +1470,30 @@ function fixS(s){
   if(!Array.isArray(s.deck)||s.deck.length!==20)s.deck=defaultDeck();
   if(!Number.isFinite(s.stage))s.stage=0;
   return s}
-function load(){try{const raw=store.get('bbduel');if(!raw)return clone(DEF);
-  const d=JSON.parse(raw);if(typeof d!=='object'||!d)throw 0;
-  const s=Object.assign(clone(DEF),d);
-  s.gacha=Object.assign({pity:0,packs:0},d.gacha||{});s.stats=Object.assign({},DEF.stats,d.stats||{});
-  /* v берём из сырых данных: Object.assign уже подставил актуальную из DEF,
-     и по ней старый сейв выглядел бы свежим. */
-  s.v=Number.isFinite(d.v)?d.v:0;
-  return fixS(migrate(s))}catch(e){return clone(DEF)}}
+function load(){
+  const raw=store.get('bbduel');
+  if(!raw)return clone(DEF);                 /* сейва нет — честно новый игрок */
+  let d=null;
+  try{d=JSON.parse(raw)}catch(e){d=null}
+  if(!d||typeof d!=='object')return clone(DEF);   /* мусор вместо сейва */
+  try{
+    const s=Object.assign(clone(DEF),d);
+    s.gacha=Object.assign({pity:0,packs:0},d.gacha||{});s.stats=Object.assign({},DEF.stats,d.stats||{});
+    /* v берём из сырых данных: Object.assign уже подставил актуальную из DEF,
+       и по ней старый сейв выглядел бы свежим. */
+    s.v=Number.isFinite(d.v)?d.v:0;
+    return fixS(migrate(s));
+  }catch(e){
+    /* Сейв прочитался, упала НАША обработка. Возвращать здесь DEF — значит
+       стереть чужой прогресс из-за собственной ошибки, молча и безвозвратно:
+       следом отработает заполнение пустого инвентаря и запишет дефолт поверх.
+       Ровно так и произошло с INV_CAP во временной мёртвой зоне. Поэтому
+       отдаём разобранные данные как есть и кричим в консоль. */
+    try{console.error('[bbduel] обработка сейва упала, данные сохранены как есть',e)}catch(_){}
+    try{crash(e)}catch(_){}
+    return Object.assign(clone(DEF),d);
+  }
+}
 function save(){try{store.set('bbduel',JSON.stringify(S))}catch(e){}}
 if(!store.ok)setTimeout(()=>toast('Хранилище недоступно — сейв до перезагрузки',1),900);
 if(!S.inv||!Object.keys(S.inv).length){
@@ -1409,8 +1518,9 @@ function go(id){
   document.body.classList.toggle('menuOn',id==='menu');
   /* В TMA: нативная кнопка «Назад» вместо экранной на всех экранах кроме меню,
      и подтверждение закрытия во время боя, чтобы не потерять рейд. */
-  PF.back(id!=='menu',()=>{if(CUR!=='menu')go('menu')});
+  PF.back(id!=='menu'&&id!=='hero',()=>{if(CUR!=='menu'&&CUR!=='hero')go('menu')});
   PF.guardClose(id==='battle');
+  if(id==='hero')renderHero();
   if(id==='menu')renderMenu();
   if(id==='gacha')renderGacha();
   if(id==='deck')renderDeck();
@@ -1421,8 +1531,69 @@ document.addEventListener('click',e=>{
   const ib=e.target.closest('[data-info]');if(ib){openInfo(ib.dataset.info);return}
   const b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
 
+/* ================= выбор героя =================
+   Показывается один раз: пока в сейве нет hero, игра не пускает дальше.
+   Старые сейвы это поле не имеют, поэтому спросим и у них — миграция не
+   нужна, отсутствие поля само по себе означает «ещё не выбирал». */
+const HEROES={
+  m:{n:'ДИЗЕЛЬ',d:'сидит за ноутом · считает чужие колоды',art:'art/hero-m.webp'},
+  f:{n:'АЯ',    d:'сидит в кресле · тасует не глядя',      art:'art/hero-f.webp'}
+};
+let heroPick=null;
+function renderHero(){
+  heroPick=S.hero||null;
+  /* Парень слева, девушка справа — тот же порядок, что и в меню потом,
+     чтобы выбор не перескакивал местами после подтверждения. */
+  $('#hPick').innerHTML=['m','f'].map(k=>`
+    <div class="hOpt ${heroPick===k?'on':''}" data-h="${k}">
+      <span class="hTick">✓</span>
+      <img src="${HEROES[k].art}" alt="${HEROES[k].n}" draggable="false">
+      <div class="hName">${HEROES[k].n}</div>
+      <div class="hDesc">${HEROES[k].d}</div>
+    </div>`).join('');
+  $$('#hPick .hOpt').forEach(el=>el.onclick=()=>{
+    heroPick=el.dataset.h;sfx.ui();
+    $$('#hPick .hOpt').forEach(x=>x.classList.toggle('on',x===el));
+    heroReady();
+  });
+  const inp=$('#hName');
+  inp.value=S.name||'';
+  inp.oninput=heroReady;
+  inp.onkeydown=e=>{if(e.key==='Enter'&&!$('#hGo').disabled)$('#hGo').click()};
+  $('#hGo').onclick=()=>{
+    const nm=inp.value.trim().slice(0,14);
+    if(!heroPick||!nm)return;
+    S.hero=heroPick;S.name=nm;save();
+    sfx.sparks();PF.notify('success');
+    go('menu');
+    toast(`${nm}, добро пожаловать в Провал`);
+  };
+  heroReady();
+}
+function heroReady(){
+  const nm=$('#hName').value.trim();
+  const ok=!!heroPick&&!!nm;
+  $('#hGo').disabled=!ok;
+  $('#hHint').textContent=ok?'жми — и понеслось'
+    :(!heroPick?'выбери героя':'впиши имя');
+}
+/* Портрет выбранного героя в меню. Сторона зависит от героя: парень слева,
+   потому что у его портрета стол обрезан по левому краю и у края экрана это
+   читается как продолжение кадра. */
+function renderMenuHero(){
+  const box=$('#mHero');if(!box)return;
+  const h=S.hero&&HEROES[S.hero];
+  box.className='';box.innerHTML='';
+  document.body.classList.remove('heroM','heroF');
+  if(!h)return;
+  box.className='mHero '+S.hero;
+  box.innerHTML=`<img src="${h.art}" alt="" draggable="false">`;
+  document.body.classList.add(S.hero==='m'?'heroM':'heroF');
+}
+
 /* ================= меню ================= */
 function renderMenu(){
+  renderMenuHero();
   const doneN=Object.keys(S.done).length;
   $('#mTiles').innerHTML=`
   <button class="mTile" data-go="stages">
@@ -1563,9 +1734,6 @@ const PITY_START=55,PITY_HARD=90,ULTRA_IN=.10,PACK=100;
    искры приходят с рейдов, а распылить легенду всё ещё событие (два пака).
    Правишь BASE или PITY_* — пересчитывай и это. */
 const DUST=[4,18,55,200,600];
-/* Больше двух копий в колоду не положить, но лишние теперь копятся в
-   коллекции, чтобы игрок распылял их сам и видел, за что пришли искры. */
-const INV_CAP=20;
 function legChance(p){if(p>=PITY_HARD)return 1;if(p<PITY_START)return BASE[4];
   return BASE[4]+(1-BASE[4])*Math.pow((p-(PITY_START-1))/(PITY_HARD-(PITY_START-1)),2.6)}
 function rollOne(){
@@ -2073,6 +2241,7 @@ function dressBattle(st){
   $('#eIc').innerHTML=svgWrap(EMB[st.ic]||EMB.skull);
   $('#eIc').style.borderColor=st.boss?'#ff3355':'#2c2c38';
   $('#silP').innerHTML=SIL.aya;
+  { const n=$('#pName'); if(n)n.textContent=(S.name||'ТЫ').toUpperCase(); }
   const variant=st.boss?'boss':(st.ic==='ghost'?'wraith':'thug');
   $('#silE').innerHTML=SIL[variant];
   $('#silEO').classList.toggle('boss',!!st.boss);
@@ -3275,6 +3444,9 @@ setInterval(()=>{
 PF.init();
 renderMenu();
 document.body.classList.add('menuOn');
+/* Герой не выбран — первым делом спрашиваем. Проверка по полю, а не по
+   «новый ли сейв»: так же спросим и у тех, кто играл до появления выбора. */
+if(!S.hero){$('#scr-menu').classList.remove('on');go('hero')}
 document.querySelector('#mbSilL .mbSil').innerHTML=SIL.diesel;
 document.querySelector('#mbSilR .mbSil').innerHTML=SIL.aya;
 sprinkleCrystals($('#mbCry'),9,['#ffd52e','#35f0ff','#ff4fd8']);
