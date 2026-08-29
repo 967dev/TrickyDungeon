@@ -331,6 +331,22 @@ body.menuOn .infoF{display:grid}
 .cfStars{font-size:9px;letter-spacing:1px;color:var(--tc);text-shadow:0 0 6px currentColor;align-self:center}
 .cfArt{position:relative;flex:1;display:grid;place-items:center;min-height:0;z-index:1}
 .cfArt svg{width:74%;height:74%;color:var(--tc);filter:drop-shadow(0 0 9px currentColor) drop-shadow(0 4px 4px rgba(0,0,0,.6))}
+/* Нарисованный арт вместо эмблемы. Картинка квадратная, а карта 5:7 — кладём
+   её во всю ширину от верхнего края: квадрат занимает ровно верхние 71%
+   высоты, и низ остаётся под имя, текст и статы. Так не нужно кадрировать,
+   а кадрировать было бы жалко: у «Гончей» по бокам доберманы, у «Огнемётчика»
+   струя огня — при обрезке под 5:7 срезало бы по 14% с каждой стороны. */
+.cFront.art .cfArtImg{position:absolute;left:0;right:0;top:0;aspect-ratio:1/1;
+  background-position:center top;background-size:100% 100%;background-repeat:no-repeat;z-index:0}
+/* Растворение низа арта в фон карты, чтобы текст лежал на ровном, а не на
+   картинке. Идёт до самого низа: карта маленькая, и резкая граница на ней
+   читается как склейка. */
+.cFront.art .cfArtImg::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 42%,rgba(11,11,17,.72) 76%,#0b0b11 100%)}
+.cFront.art .cfArt{z-index:1}
+.cFront.art .cfArt svg{display:none}
+/* Имя поверх арта нуждается в подложке — иначе тонет в светлых местах. */
+.cFront.art .cfName{text-shadow:0 2px 6px #000,0 0 12px rgba(0,0,0,.9)}
 .cfName{position:relative;z-index:2;font-family:var(--disp);font-size:11.5px;line-height:1.2;color:#fff;
   text-align:center;text-shadow:2px 2px 0 #000;margin:6px 0 4px;min-height:2.4em;display:flex;align-items:center;justify-content:center}
 .cfText{position:relative;z-index:2;font-size:9.5px;line-height:1.35;color:#cfccdd;text-align:center;
@@ -1489,6 +1505,7 @@ function cardHTML(c,opts={}){
     eff=`${names[e.k]||''} ${e.v||''}${e.a?` (+${e.a}/+${e.h})`:''}`.trim()}
   const atkHp=c.ty==='u'?`<div class="cfAtkHp"><b class="a">${c.a}</b><b class="h">${c.h}</b></div>`:'';
   const holo=S.foil?`<div class="holo"></div><div class="cShine"></div>`:'';
+  const art=CARD_ART.has(c.id);
   return `<div class="cWrap t${c.t}${c.ult?' sec':''}${opts.open?' open':''}" ${opts.noAnim?'style="animation:none"':''}>
    <div class="cFlip">
     <div class="cFace cBack">
@@ -1496,7 +1513,8 @@ function cardHTML(c,opts={}){
       <span class="bStar"><svg viewBox="0 0 100 100"><path d="M50 8 L60 37 L91 38 L66 57 L75 88 L50 69 L25 88 L34 57 L9 38 L40 37 Z"/></svg></span>
       <span class="bT">БАМ-БАМ!!</span>
     </div>
-    <div class="cFace cFront" style="--tc:${hex}">
+    <div class="cFace cFront${art?' art':''}" style="--tc:${hex}">
+      ${art?`<div class="cfArtImg" style="background-image:url(art/cards/${c.id}.webp)"></div>`:''}
       ${holo}
       <div class="cfHead"><span class="cfCost">${c.c}</span><span class="cfStars">${stars}</span></div>
       <div class="cfArt">${svgWrap(c.ty==='u'?(EMB[c.el]||EMB.steel):(EMB[spellIcon(c)]||EMB.boom))}</div>
@@ -1509,6 +1527,11 @@ function cardHTML(c,opts={}){
    </div>
   </div>`;
 }
+/* Карты, для которых нарисован арт. Остальные 27 продолжают рисоваться
+   эмблемой — проверка по этому списку, а не попытка загрузить файл и
+   обработать ошибку: несуществующий файл в background-image просто молча
+   не покажется, и вместо карты был бы пустой прямоугольник. */
+const CARD_ART=new Set(['r01','r02','r03','r04','r05','r06','r07','r08','s01','s02']);
 function spellIcon(c){return{dmg:'boom',healHero:'heal',healAll:'heal',draw:'card',buff:'up',buffAll:'up',aoe:'boom',weaken:'skull',drain:'skull',mana:'up'}[c.eff.k]||'boom'}
 
 /* ================= гача ================= */
