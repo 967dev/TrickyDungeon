@@ -52,10 +52,23 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:95;
 .btn.danger{border-color:var(--red);color:var(--red)}
 .btn.big{font-size:15px;padding:15px 22px}
 .hz{height:9px;background:repeating-linear-gradient(-45deg,var(--yel) 0 12px,#0a0a0e 12px 24px);
-  animation:hzCrawl 1.4s linear infinite;opacity:.85;flex:none}
+  animation:hzCrawl 1.4s linear infinite;opacity:.85;flex:none;
+  /* Позиционирование только ради слоя: .menuBg — absolute, и без этого он
+     накрывает ленты, потому что позиционированное рисуется поверх обычного
+     потока. С появлением непрозрачной фоновой картинки ленты просто пропали. */
+  position:relative;z-index:2}
 .hz.rev{animation-direction:reverse}
 @keyframes hzCrawl{to{background-position:33.94px 0}}
-.ticker{background:var(--yel);color:#0a0a0e;overflow:hidden;border-top:3px solid #000;border-bottom:3px solid #000;flex:none}
+/* Жёлтая бегущая лента. Лежит в body, а экраны — position:fixed;inset:0;z-index:2,
+   поэтому раньше она просто просвечивала сквозь прозрачный экран меню. С
+   непрозрачной фоновой картинкой просвечивать стало нечему, и лента пропала —
+   поэтому теперь она явно над экранами.
+   Только в меню: на остальных экранах фиксированная полоса сверху накрыла бы
+   topbar с кнопкой «МЕНЮ». */
+.ticker{position:fixed;top:0;left:0;right:0;z-index:3;display:none;
+  padding-top:env(safe-area-inset-top,0px);
+  background:var(--yel);color:#0a0a0e;overflow:hidden;border-bottom:3px solid #000;flex:none}
+.menuOn .ticker{display:block}
 .tkIn{display:flex;align-items:center;width:max-content;padding:6px 0;font-family:var(--disp);font-size:12px;white-space:nowrap;will-change:transform}
 .tkIn>span{padding:0 4px}
 .tkHi{background:#0a0a0e;color:var(--yel);padding:2px 12px;margin:0 13px}
@@ -81,20 +94,72 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:95;
 /* ====== меню ====== */
 #scr-menu{align-items:center;justify-content:center;gap:0}
 .menuBg{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none}
-.mbRays{position:absolute;left:34%;top:36%;width:900px;height:900px;transform:translate(-50%,-50%);
-  background:repeating-conic-gradient(from 0deg,rgba(255,213,46,.05) 0 2deg,transparent 2deg 11deg);
-  -webkit-mask:radial-gradient(circle,#000 10%,transparent 62%);mask:radial-gradient(circle,#000 10%,transparent 62%);
-  animation:mbSpin 70s linear infinite}
-@keyframes mbSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 .mbWord{position:absolute;right:-3%;bottom:-7%;font-family:var(--disp);font-style:italic;
   font-size:min(27vw,360px);line-height:1;color:transparent;-webkit-text-stroke:2px rgba(255,213,46,.065);
   transform:rotate(-4deg);white-space:nowrap}
 .mbStripes{position:absolute;inset:0}
+/* Ленты заданы шириной 64%, поэтому их дальний конец приходится на середину
+   экрана и раньше обрывался прямым срезом — на широком мониторе это читалось
+   как недорисованный элемент. Маска растворяет ОБА конца: у каждой ленты один
+   конец уходит за край экрана (там затухание не видно), а второй — тот самый
+   обрыв. Симметричная маска закрывает оба случая и не зависит от того, какой
+   конец окажется на виду при другой ширине окна. */
 .mbStripes i{position:absolute;background:repeating-linear-gradient(-45deg,rgba(255,213,46,.05) 0 10px,transparent 10px 26px);
-  animation:stripeCrawl 7s linear infinite}
+  animation:stripeCrawl 7s linear infinite;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16%,#000 84%,transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0,#000 16%,#000 84%,transparent 100%)}
 .mbStripes i:first-child{top:9%;left:-6%;width:64%;height:56px;transform:rotate(-6deg)}
 .mbStripes i:last-child{bottom:7%;right:-6%;width:64%;height:46px;transform:rotate(-6deg);animation-direction:reverse;opacity:.7}
 @keyframes stripeCrawl{to{background-position:36.8px 0}}
+/* Фоновая иллюстрация меню. cover, а не contain: исходник 16:9, а основная
+   платформа — телефон в портрете, где 16:9 «вписанный» превратился бы в
+   узкую полоску посреди пустоты. Центр композиции (силуэт и свечение)
+   при обрезке по бокам сохраняется. */
+.mbArt{position:absolute;inset:0;background:url(art/menu-bg.webp) center/cover no-repeat;
+  pointer-events:none;
+  transform:translate(calc(var(--mx,0)*-10px),calc(var(--my,0)*-6px)) scale(1.06);
+  transition:transform .35s ease-out}
+/* Затемнение под интерфейсом: без него жёлтый заголовок и плитки тонут в
+   свечении карт на самой картинке. */
+.mbScrim{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 55% at 50% 52%,rgba(10,10,15,.30) 0,rgba(10,10,15,.72) 100%),
+             linear-gradient(180deg,rgba(10,10,15,.62) 0,rgba(10,10,15,.18) 34%,rgba(10,10,15,.66) 100%)}
+/* Живое свечение за картами. Центр и разброс вымерены по самой картинке
+   (50.4% / 59.3%), поэтому пульсация ложится ровно на нарисованную дугу, а
+   не светит куда-то мимо. screen — чтобы добавлять свет, а не красить. */
+.mbGlow{position:absolute;left:50.4%;top:59.3%;width:76%;height:64%;
+  transform:translate(-50%,-50%);pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(ellipse at center,rgba(255,213,46,.34) 0,rgba(255,190,20,.14) 38%,transparent 70%);
+  animation:mbGlowPulse 5.5s ease-in-out infinite}
+@keyframes mbGlowPulse{
+  0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(.94)}
+  50%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}}
+@media (prefers-reduced-motion:reduce){.mbGlow{animation:none;opacity:.75}}
+/* Иллюстрация уже несёт свой силуэт и крупную надпись — наши перестают
+   помогать и начинают спорить с ней. Правила оставлены: вернуть можно
+   удалением одной строки. */
+.menuOn .mbSilO,.menuOn .mbWord{display:none}
+/* Экран загрузки. Появился не для красоты: раньше грузить было нечего, а
+   теперь фон меню — это отдельный файл, и без заставки первый кадр меню
+   успевал моргнуть голым. Заставка снимается по декодированию картинки, но
+   ЖЁСТКО не позже BOOT_MAX — иначе сеть, которая не отдаёт файл, оставила
+   бы игрока перед вечной заставкой вместо играбельной игры. */
+#boot{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:20px;background:var(--bg);
+  transition:opacity .45s ease}
+#boot.out{opacity:0;pointer-events:none}
+#boot .bootStar{width:96px;animation:bootSpin 2.6s ease-in-out infinite}
+#boot .bootStar svg{width:100%;fill:var(--yel);stroke:#0a0a0e;stroke-width:5;paint-order:stroke;
+  filter:drop-shadow(0 0 26px rgba(255,213,46,.45))}
+@keyframes bootSpin{0%,100%{transform:rotate(-6deg) scale(.96)}50%{transform:rotate(6deg) scale(1.06)}}
+#boot .bootT{font-family:var(--disp);font-style:italic;font-size:clamp(26px,6vw,40px);
+  color:var(--yel);text-shadow:3px 3px 0 #000}
+#boot .bootS{font-family:var(--mono);font-size:9.5px;letter-spacing:.24em;
+  text-transform:uppercase;color:var(--dim)}
+#boot .bootBar{width:min(220px,54vw);height:5px;background:#1a1a24;border:2px solid #000;overflow:hidden}
+#boot .bootBar i{display:block;height:100%;width:40%;background:var(--yel);
+  animation:bootRun 1.1s ease-in-out infinite}
+@keyframes bootRun{0%{transform:translateX(-110%)}100%{transform:translateX(320%)}}
 .mbSilO{position:absolute;bottom:0;pointer-events:none;transition:transform .35s ease-out}
 .mbSilO.l{left:1%;height:min(64vh,540px);transform:translate(calc(var(--mx,0)*-12px),calc(var(--my,0)*-7px))}
 .mbSilO.r{right:2%;height:min(72vh,600px);transform:translate(calc(var(--mx,0)*14px),calc(var(--my,0)*8px))}
@@ -105,11 +170,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:95;
 #mbCry{position:absolute;inset:0}
 .mWrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:20px;width:100%;max-width:900px;position:relative;z-index:1}
 .mLogo{display:flex;align-items:center;gap:20px;transform:rotate(-2deg);position:relative}
-.mLogoRays{position:absolute;inset:-46%;border-radius:50%;z-index:-1;
-  background:repeating-conic-gradient(from 0deg,rgba(255,213,46,.15) 0 3deg,transparent 3deg 12deg);
-  -webkit-mask:radial-gradient(circle,#000 18%,transparent 68%);mask:radial-gradient(circle,#000 18%,transparent 68%);
-  animation:logoSpin 15s linear infinite}
-@keyframes logoSpin{to{transform:rotate(360deg)}}
 .mStar{width:86px;height:86px;animation:mStarBob 3s ease-in-out infinite}
 @keyframes mStarBob{0%,100%{transform:rotate(-9deg) translateY(0)}50%{transform:rotate(-6deg) translateY(-8px)}}
 .mStar svg{width:100%;height:100%;filter:drop-shadow(5px 7px 0 rgba(0,0,0,.5))}
@@ -161,22 +221,29 @@ body.menuOn .infoF{display:grid}
   -webkit-mask:radial-gradient(circle,#000 12%,transparent 62%);mask:radial-gradient(circle,#000 12%,transparent 62%);
   animation:spin 40s linear infinite}
 @keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
-.pack{position:relative;width:min(320px,82vw);border:3px solid var(--yel);background:#12121a;cursor:pointer;
+/* Пачка — тот же рендер, что играет в ролике, с вырезанным фоном.
+   Соотношение 640:1013 взято из самого файла: задать его вручную значит
+   рано или поздно разъехаться с картинкой.
+   Тень — drop-shadow, а не box-shadow: у пачки неровный контур (мятая
+   плёнка, зубцы по краям), и прямоугольная тень за ним торчала бы углами.
+   drop-shadow идёт по альфе. */
+.pack{position:relative;width:min(320px,82vw);aspect-ratio:640/1013;
+  border:0;background:none;cursor:pointer;
   /* Перспектива нужна полосе: без неё rotateX/rotateY схлопываются в плоское
      сжатие и «скручивания в воздухе» не видно вообще. */
   perspective:900px;perspective-origin:50% 12%;
-  padding:58px 0 20px;text-align:center;color:var(--ink);
-  box-shadow:8px 10px 0 rgba(255,213,46,.16),0 34px 60px rgba(0,0,0,.6);
   transition:transform .2s;animation:packPulse 2.4s ease-in-out infinite}
-@keyframes packPulse{0%,100%{box-shadow:8px 10px 0 rgba(255,213,46,.14),0 34px 60px rgba(0,0,0,.6)}
-  50%{box-shadow:8px 10px 0 rgba(255,213,46,.3),0 0 46px rgba(255,213,46,.14),0 34px 60px rgba(0,0,0,.6)}}
+.pack::after{content:'';position:absolute;inset:0;background:url(art/pack.webp) 0 0/100% 100% no-repeat}
+@keyframes packPulse{
+  0%,100%{filter:drop-shadow(7px 9px 0 rgba(255,213,46,.16)) drop-shadow(0 22px 34px rgba(0,0,0,.6))}
+  50%{filter:drop-shadow(7px 9px 0 rgba(255,213,46,.32)) drop-shadow(0 0 26px rgba(255,213,46,.2)) drop-shadow(0 22px 34px rgba(0,0,0,.6))}}
 .pack:not(:disabled):hover{transform:rotate(-1.5deg) translateY(-6px) scale(1.03)}
 .pack:disabled{cursor:not-allowed;opacity:.5;animation:none}
 /* Зев вскрывается слева направо вслед за отрывом, а не появляется целиком.
    Раскрытие идёт через clip-path:inset, а не через анимацию кастомного
    свойства в маске: --rev без работающей регистрации @property не
    интерполируется вовсе и держит 0% на всём протяжении — проверено. */
-.pMouth{position:absolute;top:9px;left:10px;right:10px;height:24px;z-index:1;
+.pMouth{position:absolute;top:3.5%;left:7%;right:7%;height:9%;z-index:1;
   background:linear-gradient(180deg,#05050a,#17171f);opacity:0;transition:opacity .2s;
   clip-path:inset(0 100% 0 0)}
 .pMouth.on{opacity:1;animation:mouthGlow .5s ease-in-out infinite alternate}
@@ -186,31 +253,45 @@ body.menuOn .infoF{display:grid}
    концом, а правый до последнего держится за пачку.
    backface-visibility:visible — при перевороте в воздухе должна быть видна
    изнанка полосы, иначе она мигает пустотой на каждом полуобороте. */
-.pTear{position:absolute;top:-2px;left:-3px;right:-3px;height:46px;z-index:3;
+/* Отрывная полоса — верхние 14.4% той же картинки, встык с пачкой под ней:
+   пока она не поехала, шва не видно. Доля вымерена по исходнику — линия
+   отрыва проходит сразу под печатным ярлыком «ТЯНИ!», чтобы он уезжал
+   вместе с полосой, а не оставался на вскрытой пачке. */
+.pTear{position:absolute;top:0;left:0;right:0;height:14.4%;z-index:3;
   transform-origin:100% 50%;transform-style:preserve-3d;backface-visibility:visible;
-  background:repeating-linear-gradient(-45deg,var(--yel) 0 14px,#0a0a0e 14px 28px);animation:tapeCrawl 9s linear infinite}
-@keyframes tapeCrawl{to{background-position:39.6px 0}}
-.pTab{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  font-family:var(--disp);font-size:9.5px;background:#0a0a0e;color:var(--yel);padding:3px 9px;
-  border:2px solid #000;pointer-events:auto;cursor:grab;touch-action:none}
-.pMark{position:absolute;font-family:var(--disp);font-style:italic;font-size:32px;color:var(--yel);text-shadow:3px 3px 0 #000;pointer-events:none}
-.pMark.tl{top:58px;left:12px;transform:rotate(-14deg)}
-.pMark.br{bottom:14px;right:12px;transform:rotate(9deg)}
-.pStar{display:block;width:110px;margin:0 auto 12px;animation:pBob 3s ease-in-out infinite}
-@keyframes pBob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-8px) rotate(3deg)}}
-.pStar svg{width:100%;fill:var(--yel);stroke:#0a0a0e;stroke-width:5;paint-order:stroke;filter:drop-shadow(5px 7px 0 rgba(0,0,0,.45))}
-.pT{display:block;font-family:var(--disp);font-style:italic;font-size:29px;color:#fff;
-  text-shadow:3px 3px 0 #000,6px 6px 0 rgba(255,213,46,.5);margin-bottom:8px}
-.pS{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--dim);margin-bottom:16px}
-.pP{display:inline-flex;align-items:center;gap:8px;font-family:var(--disp);font-size:15px;background:var(--yel);
-  color:#0a0a0e;padding:8px 16px;border:2px solid #000;box-shadow:4px 4px 0 rgba(0,0,0,.5)}
+  background:url(art/pack.webp) 0 0/100% 694.44% no-repeat}
+/* 694.44% = 100/14.4: картинка внутри полосы обязана быть ровно того же
+   размера, что и под ней, иначе на стыке видна ступенька. Меняешь высоту
+   полосы — пересчитывай и это. */
+/* «ТЯНИ!» теперь напечатан на самой пачке, поэтому здесь только зона
+   захвата: прозрачная, но крупная — пальцем на 375px по мелкому ярлыку не
+   попасть. Сидит ровно поверх печатного ярлыка (12.9% высоты пачки). */
+.pTab{position:absolute;left:50%;top:89%;transform:translate(-50%,-50%);
+  width:46%;height:44%;font-size:0;background:none;border:0;color:transparent;
+  pointer-events:auto;cursor:grab;touch-action:none}
 .gHint{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
 .gPity{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.08em}
 .gPity b{color:var(--red)}
 .gHand{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,184px));gap:20px;justify-content:center;padding:8px 0;perspective:1200px;width:100%}
+/* Ролик вскрытия. Размер и положение считаются в JS так, чтобы пачка ВНУТРИ
+   кадра легла точно на статичную пачку: замерено, что она занимает
+   13.16%..87.96% по ширине и 5.17%..93.74% по высоте кадра, а пропорции у
+   неё те же (0.6332 против 0.6318) — значит стыкуется без искажения.
+   Края кадра гасим маской, а не режем рамкой: жёсткая граница на почти
+   чёрном фоне всё равно видна ступенькой, а растворённая — нет. Полоски и
+   вспышка, уходящие за край, при этом красиво тают, а не обрубаются.
+   Проценты маски подобраны так, чтобы затухание не задело саму пачку. */
+.pVid{position:absolute;z-index:7;background:none;cursor:pointer;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 6%,#000 94%,transparent 100%),
+                     linear-gradient(to bottom,transparent 0,#000 4%,#000 96%,transparent 100%);
+  mask-image:linear-gradient(to right,transparent 0,#000 6%,#000 94%,transparent 100%),
+             linear-gradient(to bottom,transparent 0,#000 4%,#000 96%,transparent 100%);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+.pVidSkip{position:absolute;left:50%;bottom:-30px;transform:translateX(-50%);
+  font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dim);white-space:nowrap;pointer-events:none}
 .packGhost{position:absolute;z-index:6;pointer-events:none}
-.packGhost .pack{animation:none;box-shadow:8px 10px 0 rgba(255,213,46,.16),0 34px 60px rgba(0,0,0,.6)}
-.packGhost .pStar{animation:none}
+.packGhost .pack{animation:none;filter:drop-shadow(7px 9px 0 rgba(255,213,46,.16)) drop-shadow(0 22px 34px rgba(0,0,0,.6))}
 .gActions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
 
 /* ====== карточки ====== */
@@ -478,15 +559,75 @@ body.menuOn .infoF{display:grid}
 .ghost small{display:block;font-family:var(--mono);font-size:9.5px;color:var(--yel);margin-top:4px;letter-spacing:.08em}
 
 /* ====== туториал ====== */
-.tutOv{position:fixed;inset:0;z-index:65;background:rgba(6,6,10,.8);animation:scrIn .25s}
-.tutFrame{position:fixed;z-index:66;border:4px solid var(--yel);border-radius:12px;pointer-events:none;
-  box-shadow:0 0 30px rgba(255,213,46,.55);transition:all .3s cubic-bezier(.2,1,.3,1)}
-.tutCard{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:67;width:min(480px,92vw);
-  background:#101017;border:3px solid var(--yel);padding:18px 20px;box-shadow:6px 8px 0 rgba(0,0,0,.6)}
-.tutCard h4{font-family:var(--disp);font-style:italic;color:var(--yel);font-size:15px;margin-bottom:8px}
-.tutCard p{font-size:13px;line-height:1.6;color:#d8d5e2;margin-bottom:14px}
-.tutBtns{display:flex;gap:10px;justify-content:flex-end;align-items:center}
-.tutStep{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.14em;margin-right:auto}
+/* ================= тренировка: БОТ-КАРТЁЖНИК ================= */
+/* Затемнение. pointer-events:none — оно только красит. Ввод режет отдельный
+   перехватчик в JS: пытаться «прорезать дырку» в оверлее под подсвеченный
+   элемент пришлось бы либо clip-path'ом (ломается на не-прямоугольниках),
+   либо подъёмом цели по z-index (а она лежит в чужом контексте наложения). */
+.trOv{position:fixed;inset:0;z-index:70;pointer-events:none;
+  background:rgba(4,4,8,.72);animation:scrIn .3s}
+/* Рамка вокруг того, на что можно нажать. */
+.trRing{position:fixed;z-index:72;pointer-events:none;border:3px solid var(--yel);
+  border-radius:10px;box-shadow:0 0 0 4px rgba(255,213,46,.18),0 0 26px rgba(255,213,46,.5);
+  transition:left .28s cubic-bezier(.2,1,.3,1),top .28s cubic-bezier(.2,1,.3,1),
+             width .28s cubic-bezier(.2,1,.3,1),height .28s cubic-bezier(.2,1,.3,1);
+  animation:trRingPulse 1.5s ease-in-out infinite}
+@keyframes trRingPulse{0%,100%{box-shadow:0 0 0 4px rgba(255,213,46,.16),0 0 20px rgba(255,213,46,.4)}
+  50%{box-shadow:0 0 0 7px rgba(255,213,46,.30),0 0 34px rgba(255,213,46,.75)}}
+.trRing.off{display:none}
+/* Подсвеченный элемент поднимаем над затемнением, чтобы он читался. */
+.trLit{position:relative;z-index:71}
+
+/* Бот. Прижат к нижнему краю, пузырь над ним; на узком экране бот мельче,
+   иначе он и пузырь вдвоём съедают пол-экрана. */
+.trBot{position:fixed;z-index:74;left:10px;bottom:10px;width:132px;
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.7)) drop-shadow(0 0 18px rgba(53,240,255,.18));
+  animation:trBotIn .45s cubic-bezier(.2,1.4,.35,1) backwards;
+  transition:left .35s ease,bottom .35s ease}
+.trBot.top{bottom:auto;top:10px}
+.trBot.right{left:auto;right:10px}
+@keyframes trBotIn{from{opacity:0;transform:translateY(40px) scale(.86)}}
+.trBotArt{position:relative;width:100%}
+.trBotArt>img{width:100%;display:block}
+/* Глаза-масти мигают попеременно: центры вымерены по самой картинке
+   (39.83%/32.58% и 58.93%/31.94%), поэтому свечение ложится точно на них.
+   screen — добавляем свет к уже нарисованным глазам, а не красим поверх. */
+.trEye{position:absolute;width:17%;height:17%;transform:translate(-50%,-50%);
+  pointer-events:none;mix-blend-mode:screen;border-radius:50%}
+.trEye.sp{left:39.83%;top:32.58%;background:radial-gradient(circle,rgba(255,60,80,.95) 0,rgba(255,40,60,.35) 45%,transparent 72%);
+  animation:trBlink 2.2s ease-in-out infinite}
+.trEye.cl{left:58.93%;top:31.94%;background:radial-gradient(circle,rgba(70,255,250,.95) 0,rgba(40,220,235,.35) 45%,transparent 72%);
+  animation:trBlink 2.2s ease-in-out infinite;animation-delay:1.1s}
+@keyframes trBlink{0%,100%{opacity:0}18%{opacity:1}42%{opacity:.85}60%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.trEye{animation:none;opacity:.5}
+  .trRing{animation:none}}
+
+/* Реплика. */
+.trSay{position:fixed;z-index:74;left:150px;bottom:22px;width:min(430px,calc(100vw - 168px));
+  background:#101017;border:3px solid var(--yel);box-shadow:6px 7px 0 rgba(0,0,0,.6);
+  padding:14px 16px 12px;animation:trSayIn .3s cubic-bezier(.2,1.3,.3,1) backwards;
+  transition:left .35s ease,bottom .35s ease,top .35s ease}
+.trSay.top{bottom:auto;top:22px}
+@keyframes trSayIn{from{opacity:0;transform:translateY(14px)}}
+.trSay::after{content:'';position:absolute;left:-13px;bottom:26px;width:0;height:0;
+  border:7px solid transparent;border-right-color:var(--yel)}
+.trSay .trWho{font-family:var(--disp);font-style:italic;font-size:12px;color:var(--cyn);
+  letter-spacing:.04em;margin-bottom:6px}
+.trSay .trTxt{font-size:13.5px;line-height:1.62;color:#e6e3f0}
+.trSay .trTxt b{color:var(--yel)}
+.trSay .trTxt .kw{color:var(--cyn);font-family:var(--disp);font-style:italic}
+.trSay .trBtns{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.trStep{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--dim);margin-left:auto}
+.trQuit{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  background:none;border:0;color:#6b6b80;cursor:pointer;text-decoration:underline;padding:4px}
+.trQuit:hover{color:var(--red)}
+/* Рука/поле в тренировке иногда попадают под пузырь — на низких экранах
+   двигаем его наверх (класс .top ставится из JS по факту пересечения). */
+@media (max-width:560px){
+  .trBot{width:96px;left:6px;bottom:6px}
+  .trSay{left:108px;width:calc(100vw - 118px);bottom:12px;padding:11px 12px 10px}
+  .trSay .trTxt{font-size:12.5px;line-height:1.55}
+}
 
 /* ====== справка / инспектор ====== */
 .iWrap{position:fixed;inset:0;z-index:75;display:flex;align-items:center;justify-content:center;
@@ -611,10 +752,18 @@ body.menuOn .infoF{display:grid}
 <button class="infoF" data-info="battle" aria-label="Справка">?</button>
 
 <!-- ===== МЕНЮ ===== -->
+<div id="boot">
+  <span class="bootStar"><svg viewBox="0 0 100 100"><path d="M50 5 L61 38 L95 38 L67 59 L78 92 L50 71 L22 92 L33 59 L5 38 L39 38 Z"/></svg></span>
+  <div class="bootT">БАМ-БАМ<span style="color:var(--mag)">!!</span></div>
+  <div class="bootBar"><i></i></div>
+  <div class="bootS">каскад · загрузка</div>
+</div>
+
 <div class="screen on" id="scr-menu">
-  <div class="hz"></div>
   <div class="menuBg">
-    <div class="mbRays"></div>
+    <div class="mbArt"></div>
+    <div class="mbGlow"></div>
+    <div class="mbScrim"></div>
     <div class="mbWord">БАМ!!</div>
     <div class="mbStripes"><i></i><i></i></div>
     <div class="mbSilO l" id="mbSilL"><div class="mbSil"></div></div>
@@ -623,7 +772,6 @@ body.menuOn .infoF{display:grid}
   </div>
   <div class="mWrap">
     <div class="mLogo">
-      <div class="mLogoRays"></div>
       <span class="mStar"><svg viewBox="0 0 100 100"><path d="M50 5 L61 38 L95 38 L67 59 L78 92 L50 71 L22 92 L33 59 L5 38 L39 38 Z" fill="#ffd52e" stroke="#0a0a0e" stroke-width="5" paint-order="stroke"/></svg></span>
       <div>
         <div class="mTitle">БАМ-БАМ<em>!!</em></div>
@@ -1065,6 +1213,7 @@ const TIER_HEX=['#aab6bf','#35f0ff','#ff4fd8','#ffd52e','#ff3355'];
 
 /* ================= этапы ================= */
 const STAGES=[
+{n:'Тренировка',d:'БОТ-КАРТЁЖНИК покажет, как это работает.',hp:14,pool:0,reward:120,ic:'card',tutorial:1},
 {n:'Крысы Провала',d:'Кто-то жрёт эхо прямо из кристаллов.',hp:16,pool:0,reward:60,ic:'skull'},
 {n:'Гопники Террасы',d:'«Слышь, за проход — плати.»',hp:20,pool:0,reward:70,ic:'ghost'},
 {n:'Новички-стримеры',d:'Снимают прохождение. Снимут и тебя.',hp:22,pool:1,reward:80,ic:'ghost'},
@@ -1157,13 +1306,28 @@ function shake(el){if(!S.shk)return;el.classList.remove('shake');void el.offsetW
 /* Версия схемы сейва. Поднимать на единицу при любом изменении, которое
    старые данные не переживут сами: переименование id карты, смена структуры
    inv/deck, перенос поля. */
-const SCHEMA=1;
+const SCHEMA=2;
 /* Ступени миграции: MIGRATE[n] поднимает состояние с версии n-1 на n, поэтому
    сейв любого возраста доезжает до актуального цепочкой. Сейчас ступеней нет —
    ценность в самом механизме: без него первое же переименование id молча
    ломает чужие сохранения, а обнаружится это уже у игрока.
    MIGRATE[2]=s=>{...} — так будет выглядеть следующая. */
-const MIGRATE={};
+const MIGRATE={
+  /* v2: перед рейдами вставлена «Тренировка» нулевым этапом. Прогресс хранится
+     по индексу этапа, поэтому без сдвига у игрока «зачищенными» оказались бы
+     соседние рейды, а не его собственные. Тренировку сразу помечаем пройденной:
+     человек уже играл, гнать его через обучение задним числом — грубо. */
+  2:s=>{
+    const done={};
+    for(const k of Object.keys(s.done||{})){
+      const i=parseInt(k,10);
+      if(Number.isFinite(i))done[i+1]=1;
+    }
+    done[0]=1;
+    s.done=done;
+    s.stage=(Number.isFinite(s.stage)?s.stage:0)+1;
+  }
+};
 function migrate(s){
   let v=Number.isFinite(s.v)?s.v:0;
   /* Сейв из более новой сборки (прилетел из облака после отката версии):
@@ -1172,7 +1336,11 @@ function migrate(s){
   while(v<SCHEMA){const step=MIGRATE[v+1];if(step)step(s);v++}
   s.v=SCHEMA;return s;
 }
-const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:0,done:{},tut:0,
+/* stage:1, а не 0 — «Тренировка» стоит нулевым этапом, и при stage:0 она
+   запирала бы первый рейд до своего прохождения. Обучение ещё не доделано,
+   поэтому пока оно не обязательное: открыты сразу и оно, и рейд 1.
+   Вернуть обязательность = поставить обратно 0. */
+const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},
   gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,
   stats:{packs:0,wins:0,battles:0}};
 let S=load();
@@ -1249,13 +1417,38 @@ function renderMenu(){
   const el=document.createElement('div');el.className='ticker';
   const inEl=document.createElement('div');inEl.className='tkIn';el.appendChild(inEl);
   document.body.appendChild(el);
-  const segs=['БАМ-БАМ: КАСКАД','ТАП ПО КАРТЕ — КРУПНЫЙ ВИД','ТЯНИ КАРТУ НА ПОЛЕ — ИГРАЙ','СОБЕРИ КОЛОДУ ИЗ 20 КАРТ','ЛЕГЕНДЫ ЖДУТ В КРУТКАХ','ЗАЧИСТИ ВСЕ 10 ПРОВАЛОВ'];
+  /* Чётные идут обычным начертанием, нечётные — подсветкой (см. half ниже),
+     поэтому порядок влияет на вид: соседние фразы всегда контрастны. */
+  const segs=['БАМ БАМ','КАКОЙ КОЗЫРЬ?','МОЖЕТ В ДУРАЧКА?','ВДОХНОВИЛСЯ HS','PVP ИЛИ ...?','У НЕГО КАРТЫ МЕЧЁНЫЕ!'];
   const half=seg=>
     seg.map((s,i)=>i%2?`<span class="tkHi">${s}</span>`:`<span>${s}</span>`).join('<span class="tkSep">★</span>')+'<span class="tkSep">★</span>';
-  const h=half(segs);inEl.innerHTML=h+h;
-  const w=inEl.scrollWidth/2||600;let x=0,last=performance.now();
+  /* Бесшовная прокрутка требует, чтобы ОДНА копия была не уже экрана: сдвиг
+     ходит в диапазоне [0,w), и видимое окно достаёт до x+innerWidth, поэтому
+     содержимого нужно минимум w+innerWidth. Двух копий не хватало — при 868px
+     на копию и экране 1920 справа открывалась дыра в 222px.
+     Второй промах был в шаге петли: он считался как scrollWidth/2 = 1102 при
+     реальной копии в 868, из-за чего лента ещё и дёргалась на стыке. Теперь
+     копия меряется отдельно, до размножения. */
+  const seg=half(segs),MAX_COPIES=40;   /* потолок на всякий случай */
+  let w=0,copies=0,x=0,last=performance.now();
+  function fit(){
+    /* Пока лента скрыта (а на старте она скрыта — menuOn выставляется позже),
+       scrollWidth равен нулю: мерить нечего, пробуем на следующем кадре. */
+    if(!w){
+      inEl.innerHTML=seg;w=inEl.scrollWidth;
+      /* Абсурдно малый замер (шрифт ещё не готов, контейнер схлопнут) нельзя
+         принимать: из него получится n в сотни копий, и построение такого DOM
+         прямо в кадре анимации подвесит вкладку. Сбрасываем и пробуем позже. */
+      if(w<120){w=0;return false}
+    }
+    const n=Math.min(MAX_COPIES,Math.max(2,Math.ceil(innerWidth/w)+1));
+    if(copies!==n){copies=n;inEl.innerHTML=seg.repeat(n)}
+    return true;
+  }
+  addEventListener('resize',()=>{copies=0});
   (function loop(t){const dt=Math.min((t-last)/1000,.1);last=t;
-    x=(x+70*dt)%w;inEl.style.transform=`translateX(${-x}px)`;requestAnimationFrame(loop)})(last);
+    if(fit()){x=(x+70*dt)%w;inEl.style.transform=`translateX(${-x}px)`}
+    requestAnimationFrame(loop)})(last);
 })();
 
 /* ================= описания эффектов ================= */
@@ -1351,25 +1544,50 @@ function renderGacha(){
   $('#gBody').innerHTML=`
   <div class="gZone" id="gZone">
     <div class="pkRays"></div>
-    <button class="pack" id="pack" ${broke?'disabled':''}>
+    <button class="pack" id="pack" ${broke?'disabled':''}
+            aria-label="Вскрыть БАМ-ПАК за ${PACK} искр">
       <span class="pMouth"></span>
-      <span class="pTear" id="pTear"><span class="pTab" id="pTab">▼ ТЯНИ!</span></span>
-      <span class="pMark tl">!!</span><span class="pMark br">!?</span>
-      <span class="pStar"><svg viewBox="0 0 100 100"><path d="M50 5 L61 38 L95 38 L67 59 L78 92 L50 71 L22 92 L33 59 L5 38 L39 38 Z"/></svg></span>
-      <span class="pT">БАМ-ПАК</span>
-      <span class="pS">5 КАРТ · ЭХО-СЕРИЯ</span>
-      <span class="pP">⚡ ${PACK}</span>
+      <span class="pTear" id="pTear"><span class="pTab" id="pTab">ТЯНИ</span></span>
     </button>
     ${broke?'<div class="gHint">мало искр — зачисти рейд!</div>':'<div class="gHint">дёрни крышку или просто кликни</div>'}
     <div class="gPity">гарант: <b>${S.gacha.pity}/${PITY_HARD}</b>${S.gacha.pity>=PITY_START?' · шанс растёт!':''}</div>
   </div>`;
-  const tear=$('#pTear');
-  let pts='0% 0%, 100% 0%';for(let k=0;k<=16;k++)pts+=`, ${(100-k*6.25).toFixed(2)}% ${k%2?100:58}%`;
-  tear.style.clipPath=`polygon(${pts})`;
+  /* Зубцы по нижнему краю полосы больше не рисуем clip-path'ом: он режет и
+     попадание указателя, а зона захвата ярлыка заходит под нижнюю кромку —
+     часть её переставала нажиматься. Зубчатую кромку и так несёт сам рендер
+     по верху пачки. */
+  primePackVideo();
   wirePack();
 }
 /* Единый порядок функций трансформа для полосы: и перетаскивание, и кадры
    анимации строят строку только через него. */
+/* ================= ролик вскрытия =================
+   Единственный бинарный ассет в проекте. Всё вокруг него построено так, что
+   его отсутствие ничего не ломает: не загрузился, не декодируется, лежит на
+   медленной сети — вскрытие просто идёт прежней CSS-анимацией.
+   Момент склейки — 4.6с: к этой секунде вспышка из проёма заливает верх
+   кадра, и переход к картам прячется в засветке, а не выглядит обрывом. */
+const PACK_VIDEO='art/pack-open.mp4', PACK_VIDEO_CUT=4.6;
+let packVid=null,packVidDead=false;
+function primePackVideo(){
+  if(packVid)return;
+  const v=document.createElement('video');
+  v.src=PACK_VIDEO;
+  v.muted=true;                 /* у ролика своя дорожка, но звук у нас свой,
+                                   процедурный, и он завязан на настройку S.snd */
+  v.playsInline=true;v.preload='auto';v.setAttribute('playsinline','');
+  v.className='pVid';v.style.display='none';
+  v.addEventListener('error',()=>{packVidDead=true});
+  packVid=v;
+}
+/* Готовность спрашиваем у элемента, а не храним флаг, взведённый по
+   canplaythrough. Это событие можно попросту не поймать — оно одноразовое и
+   браузер вправе выстрелить им до навешивания слушателя или придержать в
+   фоновой вкладке. Один пропуск — и ролик не включится уже никогда, молча.
+   readyState>=3 (HAVE_FUTURE_DATA) отвечает по факту в любой момент. */
+function packVidReady(){
+  return !!(packVid&&!packVidDead&&!packVid.error&&packVid.readyState>=3);
+}
 function tearT(x,y,rz,rx,ry,sc){
   return `translate(${x}px,${y}px) rotateZ(${rz}deg) rotateX(${rx}deg) rotateY(${ry}deg) scale(${sc})`;
 }
@@ -1420,8 +1638,15 @@ function tearOff(){
   const r=pk.getBoundingClientRect(),mx=r.left+r.width/2,my=r.top+20;
   burst(mx,my,['#ffd52e','#fff','#ffe063'],26,1.1);
   const mouth=pk.querySelector('.pMouth');if(mouth)mouth.classList.add('on');
+  const useVid=!!(packVidReady()&&$('#gZone'));
+  const mouthEl=pk.querySelector('.pMouth');
+  /* Зев вскрывается ровно за первую фазу — синхронно с ходом разрыва.
+     Нужен на обоих путях: на видеопуть пачка потом переезжает в «призрак»
+     уже вскрытой, и закрытый зев там смотрелся бы нераспечатанным. */
+  if(mouthEl)mouthEl.animate([{clipPath:'inset(0 100% 0 0)'},{clipPath:'inset(0 0% 0 0)'}],
+    {duration:400,easing:'cubic-bezier(.4,0,.5,1)',fill:'forwards'});
   const tear=$('#pTear');
-  if(tear){tear.style.animation='none';
+  if(tear&&!useVid){tear.style.animation='none';
     /* Три фазы, как рвут по-настоящему.
        1. 0→35%: разрыв идёт по перфорации слева направо. Полоса ещё висит на
           правом крае (transform-origin:100% 50%), левый конец задирается и
@@ -1442,15 +1667,11 @@ function tearOff(){
       {transform:tearT(250,180,260,760,470,.82),offset:.86},
       {transform:tearT(330,560,400,1080,620,.72),opacity:1,offset:.94},
       {transform:tearT(350,660,430,1180,660,.7),opacity:0,offset:1}],
-      {duration:1150,easing:'cubic-bezier(.3,.05,.6,1)',fill:'forwards'});
-    /* Зев вскрывается ровно за первую фазу — синхронно с ходом разрыва. */
-    const mouthEl=pk.querySelector('.pMouth');
-    if(mouthEl)mouthEl.animate([{clipPath:'inset(0 100% 0 0)'},{clipPath:'inset(0 0% 0 0)'}],
-      {duration:400,easing:'cubic-bezier(.4,0,.5,1)',fill:'forwards'});}
-  pk.animate([{transform:'none'},{transform:'translateY(8px) scale(1.06,.88)'},{transform:'none'}],
+      {duration:1150,easing:'cubic-bezier(.3,.05,.6,1)',fill:'forwards'});}
+  if(!useVid)pk.animate([{transform:'none'},{transform:'translateY(8px) scale(1.06,.88)'},{transform:'none'}],
     {duration:320,easing:'ease-out'});
-  setTimeout(()=>sfx.whoosh(),300);
-  setTimeout(()=>{
+  setTimeout(()=>sfx.whoosh(),useVid?2100:300);   /* в ролике полоса рвётся к 2.1с */
+  const openPack=()=>{
     tearing=false;
     const zone=$('#gZone');
     const items=[];for(let i=0;i<5;i++)items.push(rollOne());
@@ -1534,7 +1755,91 @@ function tearOff(){
     };
     $('#gAgain').onclick=()=>{if(S.sparks<PACK){toast('Не хватает искр!',1);return}renderGacha()};
     $('#gDone').onclick=()=>go('menu');
-  },600);
+  };
+  if(useVid)playPackVideo(pk,r,openPack);
+  else setTimeout(openPack,600);
+}
+/* Проигрывает ролик поверх пачки и зовёт done() на склейке. Любая осечка —
+   недоступный decoder, отклонённый play(), зависшая загрузка — обязана
+   привести к тому же done(): искры уже списаны, оставить игрока перед
+   застывшей картинкой нельзя. */
+function playPackVideo(pk,r,done){
+  const zone=$('#gZone');
+  if(!zone){done();return}
+  const v=packVid,zr=zone.getBoundingClientRect();
+  /* Пачка занимает 74.80% ширины кадра и начинается на 13.16% — растягиваем
+     кадр так, чтобы эти 74.80% стали шириной статичной пачки, и сдвигаем
+     влево-вверх на её отступы внутри кадра. Тогда переход со статики на
+     ролик происходит без единого пикселя смещения. */
+  /* Соотношение берём у самого файла, а не константой: ролик уже один раз
+     пережали (1246x1662 -> 720x960), и зашитое число пережило бы это молча,
+     разъехавшись с вёрсткой. Доли положения пачки в кадре от разрешения не
+     зависят, поэтому их пережатие не трогает. */
+  const ar=(v.videoWidth&&v.videoHeight)?v.videoWidth/v.videoHeight:0.75;
+  const VW=r.width/0.7480, VH=VW/ar;
+  v.style.display='';v.style.width=VW+'px';v.style.height=VH+'px';
+  v.style.left=(r.left-zr.left-0.1316*VW)+'px';
+  v.style.top=(r.top-zr.top-0.0517*VH)+'px';
+  try{v.currentTime=0}catch(e){}
+  zone.appendChild(v);
+  pk.style.visibility='hidden';
+  const skip=document.createElement('div');
+  skip.className='pVidSkip';skip.textContent='тап — пропустить';
+  skip.style.left=(r.left-zr.left+r.width/2)+'px';
+  skip.style.top=(r.top-zr.top+r.height+10)+'px';
+  skip.style.bottom='auto';
+  zone.appendChild(skip);
+  let fired=false,cleanup=null;
+  const finish=()=>{
+    if(fired)return;fired=true;
+    clearInterval(watch);if(cleanup)cleanup();
+    try{v.pause()}catch(e){}
+    v.remove();skip.remove();v.style.display='none';
+    /* Видимость пачке НЕ возвращаем: ролик заканчивается вспышкой, и
+       вернувшаяся статичная пачка мелькала одним кадром перед самыми
+       картами — тот самый топорный рывок. */
+    done();
+  };
+  /* Склейка по currentTime, а не по 'ended': последние 0.4с ролика — уже
+     полностью засвеченный кадр, ждать их значит держать паузу впустую.
+     Тот же таймер сторожит простой. Webview ставит медиа на паузу, когда
+     приложение уходит в фон, — а в Telegram это происходит постоянно. Без
+     сторожа игрок вернулся бы к застывшему кадру навсегда: искры списаны,
+     карт нет, следующий пак заблокирован флагом tearing. Пробуем снять с
+     паузы один раз, и если время всё равно не пошло — показываем карты. */
+  let last=-1,stall=0,armed=false;
+  const t0=performance.now();
+  /* Абсолютный предел поверх счётчика простоя. Без него дёрганое
+     воспроизведение растягивает ожидание как угодно долго: каждая попытка
+     снять с паузы чуть двигает время, счётчик простоя обнуляется, и цикл
+     начинается заново — замерено 7.7с вместо ожидаемых двух. Ролик обязан
+     уложиться в свою длительность с запасом, иначе показываем карты. */
+  const DEADLINE=(PACK_VIDEO_CUT+2.5)*1000;
+  const watch=setInterval(()=>{
+    const el=performance.now()-t0;
+    if(el>DEADLINE){finish();return}
+    /* Пока не убедились, что перемотка в ноль применилась, проверять порог
+       склейки нельзя: элемент один на все паки, и со второго раза currentTime
+       ещё держит значение с прошлого показа — сторож видел «уже досмотрено» и
+       рубил ролик через 60мс. Взводимся, только увидев время в начале. */
+    if(!armed){if(v.currentTime<.5)armed=true;else return}
+    if(v.currentTime>=PACK_VIDEO_CUT){finish();return}
+    /* Совсем не стартовал за полторы секунды — считаем ролик нерабочим и не
+       держим игрока до общего предела. */
+    if(el>1500&&v.currentTime<.1){finish();return}
+    if(v.currentTime>last+.01){last=v.currentTime;stall=0;return}
+    stall++;
+    if(stall===12){const p=v.play();if(p&&p.catch)p.catch(()=>{})}   /* ~0.7с простоя */
+    if(stall>=34)finish();                                            /* ~2с подряд — сдаёмся */
+  },60);
+  v.addEventListener('ended',finish,{once:true});
+  v.addEventListener('click',finish);
+  /* Отдельно ловим возврат из фона: не ждать сторожа лишнюю секунду. */
+  const onVis=()=>{if(!document.hidden&&!fired&&v.paused){const p=v.play();if(p&&p.catch)p.catch(()=>{})}};
+  document.addEventListener('visibilitychange',onVis);
+  cleanup=()=>document.removeEventListener('visibilitychange',onVis);
+  const pr=v.play();
+  if(pr&&pr.catch)pr.catch(()=>finish());
 }
 
 /* ================= колода ================= */
@@ -1653,6 +1958,10 @@ function mkUnit(card){return{uid:UID++,card,atk:card.a||0,hp:card.h||0,maxhp:car
 const BSNAP='bbduel_battle';
 function snapBattle(){
   if(!B||B.over||B.phase!=='p')return;
+  /* Тренировку не сохраняем: в снимке нет ни номера шага, ни позиции в
+     сценарии врага, и восстановление вернуло бы игрока в сценарный бой без
+     ведущего — тупик. Прерванная тренировка просто начинается заново. */
+  if(B.train){dropBattleSnap();return}
   const side=P=>({hp:P.hp,max:P.max,mana:P.mana,mmax:P.mmax,fatigue:P.fatigue,
     deck:P.deck,hand:P.hand,
     board:P.board.map(u=>({id:u.card.id,uid:u.uid,atk:u.atk,hp:u.hp,maxhp:u.maxhp,
@@ -1722,19 +2031,47 @@ function dressBattle(st){
   const cry=$('#bCry');cry.innerHTML='';
   sprinkleCrystals(cry,5,['#ffd52e','#35f0ff','#ff4fd8']);
 }
+/* ================= сценарий тренировки =================
+   Рука, колода и каждый ход врага заданы заранее. Иначе обучение невозможно
+   вести по шагам: подсказка «сыграй Гончую» бессмысленна, если Гончей в руке
+   не оказалось, а «атакуй его юнита» — если враг ничего не выставил.
+   Расклад подобран так, чтобы по дороге встретились ТАУНТ, РАШ, боевой клич,
+   заклятие, размен и удар в лицо. */
+const TRAIN={
+  hand:['zC0','r01','r06','s01','r04'],     /* Перезарядка, Гончая, Стрелок(РАШ), Искра, Курсант */
+  deck:['r03','r08','s02','r02','r07','r05','r04','r01'],
+  /* Ходы врага по номеру его хода. play — что выставляет, face — урон в лицо
+     игроку (эмулируем атаку, не завися от того, что стоит на доске). */
+  script:[
+    {play:'r02'},                            /* 1: Патрульный 2/3 ТАУНТ — стена */
+    {play:'r01',face:2},                     /* 2: Гончая 2/1 и щелчок по герою */
+    {face:3},                                /* 3: просто бьёт */
+    {}                                       /* дальше ничего — бой уже кончится */
+  ]
+};
 function startBattle(si){
   dropBattleSnap();
   const st=STAGES[si];
   const pool=CARDS.filter(c=>!c.noColl&&c.t<=st.pool&&(c.ty==='u'||c.ty==='s'));
   const aiDeck=[];
   while(aiDeck.length<20){const c=pick(pool);if(aiDeck.filter(x=>x===c.id).length<2)aiDeck.push(c.id)}
-  B={si,st,phase:'player',over:false,
+  B={si,st,phase:'player',over:false,train:!!st.tutorial,eTurn:0,
     skill:clamp(.15+si*.09,0,1), /* 0.15 на первом рейде → 0.96 на финале */
-    p:{hp:30,max:30,mana:0,mmax:0,deck:shuffle([...S.deck]),hand:[],board:[],fatigue:0},
-    e:{hp:st.hp,max:st.hp,mana:0,mmax:0,deck:shuffle(aiDeck),hand:[],board:[],fatigue:0},
+    p:{hp:30,max:30,mana:0,mmax:0,
+       deck:st.tutorial?[...TRAIN.deck].reverse():shuffle([...S.deck]),
+       hand:[],board:[],fatigue:0},
+    e:{hp:st.hp,max:st.hp,mana:0,mmax:0,deck:st.tutorial?[]:shuffle(aiDeck),hand:[],board:[],fatigue:0},
     sel:null};
   go('battle');
   dressBattle(st);
+  if(B.train){
+    B.p.hand=[...TRAIN.hand];
+    $('#bEnd').onclick=endTurn;$('#bEnd').disabled=false;$('#bGiveUp').onclick=askGiveUp;
+    renderBattle();
+    turnBanner('ТРЕНИРОВКА');
+    setTimeout(()=>{startTurn('p');startTraining()},600);
+    return;
+  }
   for(let i=0;i<3;i++)drawCard('p',true);
   if(B.p.hand.every(id=>byId(id).c>2)){
     const cheapIdx=B.p.deck.findIndex(id=>byId(id).c<=2);
@@ -1753,7 +2090,6 @@ function startBattle(si){
   renderBattle();
   turnBanner('ТВОЙ ХОД!');
   setTimeout(()=>{startTurn('p')},600);
-  if(!S.tut)setTimeout(startTut,1100);
 }
 function drawCard(who,silent){
   const P=B[who];
@@ -1806,6 +2142,23 @@ function turnBanner(t){
   const b=document.createElement('div');b.className='bTurn';b.textContent=t;
   $('#bWrap').appendChild(b);setTimeout(()=>b.remove(),1150);
 }
+/* Ход врага в тренировке: строго по списку, без ИИ и без случайности. */
+async function trainEnemyTurn(){
+  const step=TRAIN.script[B.eTurn++]||{};
+  await sleep(700);
+  if(step.play&&B.e.board.length<5){
+    const c=byId(step.play);
+    if(c){enemyBanner(c);await sleep(600);
+      B.e.board.push(mkUnit(c));renderBattle()}
+  }
+  if(step.face){await sleep(600);damageHero('p',step.face)}
+  /* Хвост тот же, что у настоящего хода ИИ: смерти и проверка победы
+     разрешаются внутри damageHero/doAttack, отдельного «подведения итогов»
+     в этой боёвке нет. */
+  if(B.over)return;
+  await sleep(350);
+  startTurn('p');
+}
 async function endTurn(){
   if(B.phase!=='p'||B.over)return;
   sfx.ui();B.phase='wait';$('#bEnd').disabled=true;
@@ -1814,6 +2167,7 @@ async function endTurn(){
   startTurn('e');
 }
 async function aiTurn(){
+  if(B.train){return trainEnemyTurn()}
   const E=B.e,P=B.p,sk=B.skill;
   await sleep(500);
   /* ранние враги мешкают и играют что попало; финальные — идеальную кривую */
@@ -2270,6 +2624,7 @@ function renderBattle(){
   });
   updateHint();
   snapBattle();
+  if(TR)trCheck();
 }
 function updateHint(){
   const h=$('#bHint');if(!h||!B)return;
@@ -2313,7 +2668,10 @@ function finish(win,forfeit){
   let gained=0;
   if(win){
     S.stats.wins++;
-    gained=B.st.reward;
+    /* Тренировка идёт по сценарию и выигрывается гарантированно, поэтому
+       платить за неё повторно — открытая дыра в экономике: перезаходи и
+       получай искры сколько угодно. Награда строго за первый раз. */
+    gained=(B.st.tutorial&&S.done[B.si])?0:B.st.reward;
     if(!S.done[B.si]){S.done[B.si]=1;gained=Math.round(gained*1.5);
       if(B.si+1>S.stage)S.stage=B.si+1;
       toast('Провал зачищен! Бонус первой зачистки ×1,5')}
@@ -2344,38 +2702,199 @@ function finish(win,forfeit){
   },900);
 }
 
-/* ================= туториал ================= */
-function startTut(){
-  if(CUR!=='battle')return;
-  const steps=[
-    {sel:'#bHand',t:'1/4 · РУКА',
-     d:'Карты уже открыты. <b>Тап по карте — крупный вид и кнопка «Разыграть»</b>. А можно просто <b>перетащить карту на своё поле</b> внизу. Жёлтая рамка = маны хватает. В первый ход у тебя есть «Перезарядка» за 0 маны — сыграй её!'},
-    {sel:'#pStats',t:'2/4 · МАНА И ЗДОРОВЬЕ',
-     d:'Жёлтая плашка — <b>мана</b>: 1 в первый ход, дальше +1 за ход (до 10), восстанавливается целиком. Сердце — <b>здоровье</b>: ноль = проигрыш. Поле вмещает <b>5 юнитов</b> — счётчик ПОЛЕ 0/5 под маной.'},
-    {sel:'#rowP',t:'3/4 · АТАКА',
-     d:'Твои юниты — снизу, враги — сверху. <b>Перетащи своего юнита на врага</b> — удар! (или тапни своего, потом врага). Свежий юнит атакует со следующего хода, кроме <span class="kw">РАШ</span>. <span class="kw">ТАУНТ</span> — пока жив, бить можно только его. Панель врага сверху = удар в лицо.'},
-    {sel:'#bEnd',t:'4/4 · КОНЕЦ ХОДА',
-     d:'Наигрался — жми кнопку, ход перейдёт врагу. Кнопка <b>«?»</b> слева — правила и стратегии в любой момент. Погнали — БАМ!'},
-  ];
-  const ov=document.createElement('div');ov.className='tutOv';
-  const fr=document.createElement('div');fr.className='tutFrame';
-  const card=document.createElement('div');card.className='tutCard';
-  document.body.append(ov,fr,card);
-  let i=0;
-  const show=()=>{
-    const st=steps[i],el=$(st.sel);
-    if(el){const r=el.getBoundingClientRect();
-      fr.style.left=(r.left-6)+'px';fr.style.top=(r.top-6)+'px';
-      fr.style.width=(r.width+12)+'px';fr.style.height=(r.height+12)+'px'}
-    else fr.style.cssText='';
-    card.innerHTML=`<h4>${st.t}</h4><p>${st.d}</p>
-      <div class="tutBtns"><span class="tutStep">шаг ${i+1} из ${steps.length}</span>
-      <button class="btn pri" id="tutNext">${i<steps.length-1?'ДАЛЬШЕ':'ПОНЯЛ!'}</button></div>`;
-    $('#tutNext').onclick=()=>{sfx.ui();i++;if(i<steps.length)show();else{
-      ov.remove();fr.remove();card.remove();S.tut=1;save()}};
-  };
-  show();
+/* ================= тренировка: режиссёр =================
+   Шаг описывает: что говорит бот, что подсвечено и по какому условию шаг
+   считается выполненным. Условие — предикат по состоянию боя, а не
+   подписка на клик: игрок может добиться того же разными путями (перетащить
+   карту или тапнуть и нажать «Разыграть»), и обучение не должно от этого
+   зависеть. Предикат проверяется после каждой перерисовки боя — renderBattle
+   и так зовётся после любого изменения состояния.
+   Ввод режем перехватчиком в фазе всплытия-вниз (capture): всё, что вне
+   подсвеченного элемента и кнопки выхода, гасится. Это надёжнее «дырки» в
+   оверлее — не зависит от контекстов наложения и работает с drag'ом. */
+let TR=null;
+const TR_GATED=['pointerdown','mousedown','touchstart','click'];
+
+/* Индекс карты в руке по id — рука меняется, номера плывут, привязываться
+   к позиции нельзя. */
+function trHand(id){return B?B.p.hand.indexOf(id):-1}
+function trCard(id){const i=trHand(id);return i<0?null:document.querySelector(`#bHand .hCard[data-i="${i}"]`)}
+function trOnBoard(id){return B&&B.p.board.some(u=>u.card.id===id)}
+
+function trSteps(){return [
+{t:'Так. Ты <b>новенький</b>. Я — <b>БОТ-КАРТЁЖНИК</b>, раздаю в этом Провале с тех пор, как тут ещё был свет. Сядь ровно, покажу правила за один бой.',btn:'ДАВАЙ'},
+
+{t:'Вот <b>ты</b>. Сердце — здоровье, у тебя <b>30</b>. Опустится до нуля — бой проигран. Ничего сложного.',at:'#pStats'},
+
+{t:'А вот <b>он</b>. У него всего <b>14</b> — я подобрал тебе соперника попроще. Твоя задача ровно одна: <b>сбить эту цифру до нуля</b>.',at:'#bTop'},
+
+{t:'Жёлтые ромбы — <b>мана</b>. Ей платят за карты. Сейчас у тебя <b>1</b>, и каждый ход будет на одну больше — до десяти. Поэтому в начале играют дёшево, а к концу выкладывают тяжёлое.',at:'#pManaBox'},
+
+{t:'Это <b>рука</b>. Жёлтая рамка на карте = маны хватает, серая = не потянешь. Тапни <b>«Перезарядку»</b> — покажу, как смотреть карту вблизи.',
+ at:()=>trCard('zC0'),until:()=>!!document.querySelector('.insCard')},
+
+{t:'Крупный вид. Тут цена в левом верхнем углу, а внизу — что карта делает. <b>Перезарядка</b> стоит 0 и даёт <b>+1 маны прямо сейчас</b>. Жми <b>«РАЗЫГРАТЬ»</b>.',
+ /* Подсвечиваем весь инспектор, а не .insCard: кнопки лежат в соседнем
+    .insBtns, и при подсветке одной карточки нажать «РАЗЫГРАТЬ» было нельзя. */
+ at:'.insView',until:()=>B&&B.p.mana>=2&&trHand('zC0')<0},
+
+{t:'Видишь? Ромбов стало <b>два</b>. Ход первый, а играть можно как на втором — вот из-за таких мелочей и выигрывают.',at:'#pManaBox'},
+
+{t:'Теперь по-взрослому. <b>Перетащи «Гончую Террас»</b> из руки вниз, на своё поле. Тащить — быстрее, чем тапать; привыкай сразу.',
+ at:()=>trCard('r01'),until:()=>trOnBoard('r01')},
+
+{t:'Стоит. Но <b>атаковать она сегодня не будет</b> — юнит в ход выхода отдыхает, поэтому и выглядит тускло. Со следующего хода — свободен.',at:'#rowP'},
+
+{t:'Мана кончилась, делать нечего. Жми <b>«КОНЕЦ ХОДА»</b> и смотри, что он выкинет.',
+ at:'#bEnd',until:()=>B&&B.eTurn>=1},
+
+{t:'Выставил <b>Патрульного</b>, 2 атаки / 3 здоровья, и на нём <span class="kw">ТАУНТ</span>. Это стена: <b>пока он жив, бить можно только его</b> — ни мимо, ни в лицо. Запомни, на этом ломаются все новички.',at:'#rowE'},
+
+{t:'Ломать стену будем правильно. <b>Сыграй «Стрелка Сирен»</b> — 2 маны, 3 атаки, 1 здоровья.',
+ at:()=>trCard('r06'),until:()=>trOnBoard('r06')},
+
+{t:'На нём <span class="kw">РАШ</span> — он <b>бьёт в тот же ход, когда вышел</b>. Единственное исключение из правила отдыха.',at:'#rowP'},
+
+{t:'<b>Перетащи Стрелка на Патрульного.</b> Оба погибнут: он снимет 3 и добьёт, а получит 2 при одном здоровье. Это <b>размен</b> — ты отдал двухманового, чтобы убрать стену. Честная сделка.',
+ at:()=>document.querySelector('#rowP .unit'),until:()=>B&&B.e.board.length===0},
+
+{t:'Стены нет — дорога открыта. <b>Тащи Гончую прямо на его панель наверху.</b> Это удар в лицо, минус 2 здоровья.',
+ at:()=>document.querySelector('#rowP .unit'),until:()=>B&&B.e.hp<=12},
+
+{t:'<b>12.</b> Вот так это и работает: ставишь дешёвое, меняешь по-умному, а лишний урон уходит в героя. Заканчивай ход.',
+ at:'#bEnd',until:()=>B&&B.eTurn>=2},
+
+{t:'Он огрызнулся. Ничего, у тебя <b>три маны</b>. <b>Сыграй «Курсанта Аркадия»</b> — 3/3, крепкий парень без фокусов.',
+ at:()=>trCard('r04'),until:()=>trOnBoard('r04')},
+
+{t:'Последнее, что стоит знать: <b>эхо-заклятия</b>. Они не встают на поле, а срабатывают и уходят. <b>«Искра»</b> за 1 ману — <b>2 урона в любую цель</b>. Брось её <b>прямо в его панель</b>.',
+ at:()=>trCard('s01'),until:()=>B&&B.e.hp<=10},
+
+{t:'Вот теперь ты знаешь всё, что нужно: <b>мана растёт, юниты отдыхают ход, ТАУНТ держит, РАШ бьёт сразу, заклятия летят куда скажешь</b>. Дальше — сам.',
+ btn:'ДОБИТЬ ЕГО'},
+
+{t:'Добивай. Я не мешаю — жми что хочешь. Как закончишь, забирай <b>искры</b> и иди в настоящий рейд.',btn:'ПОНЯЛ'},
+]}
+
+
+function trEl(sel){return typeof sel==='function'?sel():(sel?document.querySelector(sel):null)}
+
+function trBlock(e){
+  if(!TR||!TR.armed)return;
+  const t=e.target;
+  if(t.closest&&(t.closest('.trSay')||t.closest('.trBot')))return;   /* пузырь свой */
+  const allow=TR.allow&&trEl(TR.allow);
+  /* Ровно два условия: сам разрешённый элемент или что-то внутри него.
+     Раньше тут была ещё склейка селектора по id, и на элементе без id
+     получалось невалидное «# » — closest бросал исключение, перехватчик
+     падал и пропускал ВСЁ. Блокировка не работала вообще. */
+  if(allow&&(t===allow||allow.contains(t)))return;
+  e.stopPropagation();e.preventDefault();
 }
+
+function trPaint(){
+  if(!TR)return;
+  const st=TR.steps[TR.i];if(!st)return;
+  const say=TR.say,ring=TR.ring;
+  say.querySelector('.trTxt').innerHTML=st.t;
+  say.querySelector('.trStep').textContent=`${TR.i+1} / ${TR.steps.length}`;
+  const btns=say.querySelector('.trBtns');
+  btns.querySelector('.btn')?.remove();
+  if(!st.until){                       /* информационный шаг — ведём кнопкой */
+    const b=document.createElement('button');
+    b.className='btn pri';b.textContent=st.btn||'ДАЛЬШЕ ►';
+    b.onclick=()=>{sfx.ui();trNext()};
+    btns.insertBefore(b,btns.firstChild);
+  }
+  const el=st.at?trEl(st.at):null;
+  if(TR.lit&&TR.lit!==el)TR.lit.classList.remove('trLit');
+  if(el){
+    const r=el.getBoundingClientRect();
+    ring.classList.remove('off');
+    ring.style.left=(r.left-6)+'px';ring.style.top=(r.top-6)+'px';
+    ring.style.width=(r.width+12)+'px';ring.style.height=(r.height+12)+'px';
+    el.classList.add('trLit');TR.lit=el;
+    /* Пузырь не должен закрывать то, на что показывает. */
+    const low=r.top>innerHeight*.55;
+    say.classList.toggle('top',low);TR.bot.classList.toggle('top',low);
+  }else{ring.classList.add('off');TR.lit=null}
+  TR.allow=st.until?st.at:null;
+}
+
+function trNext(){
+  if(!TR)return;
+  const st=TR.steps[TR.i];
+  if(st&&st.go)try{st.go()}catch(e){}
+  TR.i++;
+  if(TR.i>=TR.steps.length){trFinish();return}
+  trPaint();
+  trCheck();
+}
+
+/* Шаг с условием может оказаться уже выполненным (игрок опередил подсказку) —
+   тогда проматываем сразу, иначе обучение зависнет на готовом требовании. */
+function trCheck(){
+  if(!TR||TR.done)return;
+  const st=TR.steps[TR.i];
+  if(!st||!st.until)return;
+  let ok=false;try{ok=!!st.until()}catch(e){ok=false}
+  if(ok)setTimeout(()=>{if(TR&&TR.steps[TR.i]===st)trNext()},st.pause||520);
+  else trPaint();
+}
+
+function startTraining(){
+  stopTraining(true);
+  const ov=document.createElement('div');ov.className='trOv';
+  const ring=document.createElement('div');ring.className='trRing off';
+  const bot=document.createElement('div');bot.className='trBot';
+  bot.innerHTML=`<div class="trBotArt">
+      <img src="art/bot.webp" alt="БОТ-КАРТЁЖНИК" draggable="false">
+      <span class="trEye sp"></span><span class="trEye cl"></span>
+    </div>`;
+  const say=document.createElement('div');say.className='trSay';
+  say.innerHTML=`<div class="trWho">БОТ-КАРТЁЖНИК · DEALER UNIT-07</div>
+    <div class="trTxt"></div>
+    <div class="trBtns"><button class="trQuit">покинуть тренировку</button>
+      <span class="trStep"></span></div>`;
+  document.body.append(ov,ring,bot,say);
+  say.querySelector('.trQuit').onclick=()=>{
+    sfx.ui();
+    if(confirm('Выйти из тренировки? Бой прервётся.')){stopTraining();finish(false,true)}
+  };
+  TR={steps:trSteps(),i:0,armed:true,allow:null,lit:null,ov,ring,bot,say,done:false,tick:0};
+  /* renderBattle зовётся только на изменение состояния боя, а часть условий
+     смотрит на интерфейс (открылся ли инспектор). Такие шаги без опроса
+     висли бы вечно. 200мс — незаметно на глаз и дёшево. */
+  TR.tick=setInterval(()=>{if(TR)trCheck()},200);
+  /* Гасим только то, что НАЧИНАЕТ взаимодействие. pointerup/pointermove
+     трогать нельзя: драг вешает их на window и получает целью то, над чем
+     отпустили палец, а не карту — заблокировав их, мы бы сломали как раз
+     перетаскивание карты на поле, которому и учим. Начать запрещённое
+     действие всё равно нечем, а click гасится отдельно: блокировка
+     pointerdown его не отменяет. */
+  for(const ev of TR_GATED)document.addEventListener(ev,trBlock,true);
+  addEventListener('resize',trPaint);
+  trPaint();trCheck();
+}
+
+function stopTraining(silent){
+  if(!TR)return;
+  TR.done=true;TR.armed=false;
+  if(TR.tick)clearInterval(TR.tick);
+  for(const ev of TR_GATED)document.removeEventListener(ev,trBlock,true);
+  removeEventListener('resize',trPaint);
+  if(TR.lit)TR.lit.classList.remove('trLit');
+  for(const n of [TR.ov,TR.ring,TR.bot,TR.say])if(n&&n.parentNode)n.remove();
+  TR=null;
+  if(!silent)closeInspector();
+}
+
+function trFinish(){
+  /* Последний шаг отработал — снимаем блокировку и отдаём бой игроку.
+     Добивание он делает сам, победа приходит обычным путём. */
+  stopTraining();
+}
+
 
 /* ================= справка ================= */
 function catalogHTML(){
@@ -2558,6 +3077,20 @@ document.addEventListener('pointerdown',()=>{const c=ac();if(c&&c.state==='suspe
 
 /* Прерванный бой — вернуть игрока прямо в него, минуя меню. */
 restoreBattle();
+
+/* Снять заставку: по готовности фоновой картинки, но не позже потолка. */
+(()=>{
+  const el=$('#boot');if(!el)return;
+  let done=false;
+  const drop=()=>{if(done)return;done=true;
+    el.classList.add('out');setTimeout(()=>el.remove(),500)};
+  const BOOT_MAX=2600;
+  setTimeout(drop,BOOT_MAX);
+  const img=new Image();
+  img.onload=()=>setTimeout(drop,260);   /* чуть придержать, чтобы не мигало */
+  img.onerror=drop;
+  img.src='art/menu-bg.webp';
+})();
 
 /* Подтянуть облачный сейв. Локальный уже загружен и игра работает — облако
    лишь догоняет, если на другом устройстве прогресс дальше. Сравниваем по
