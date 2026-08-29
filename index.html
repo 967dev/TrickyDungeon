@@ -2896,6 +2896,14 @@ function trSteps(){return [
 function trEl(sel){return typeof sel==='function'?sel():(sel?document.querySelector(sel):null)}
 
 function trBlock(e){
+  /* Любая ошибка внутри должна ПРОПУСКАТЬ событие, а не глотать его. Один
+     раз здесь уже был невалидный селектор, обработчик падал — и именно
+     поэтому блокировка не работала. Но симметричная беда хуже: если он
+     упадёт после stopPropagation, заблокированным окажется всё приложение.
+     Поэтому вся логика в try, а на исключении — молча пропускаем. */
+  try{ trBlockInner(e) }catch(err){ try{console.warn('[bbduel] шлюз обучения',err)}catch(_){} }
+}
+function trBlockInner(e){
   if(!TR||!TR.armed)return;
   const t=e.target;
   if(t.closest&&(t.closest('.trSay')||t.closest('.trBot')))return;   /* пузырь свой */
@@ -3029,7 +3037,11 @@ function startTraining(){
   /* renderBattle зовётся только на изменение состояния боя, а часть условий
      смотрит на интерфейс (открылся ли инспектор). Такие шаги без опроса
      висли бы вечно. 200мс — незаметно на глаз и дёшево. */
-  TR.tick=setInterval(()=>{if(TR)trCheck()},200);
+  TR.tick=setInterval(()=>{
+    /* Исключение в предикате шага или в раскладке не должно ни ронять тик,
+       ни оставлять обучение с навешенным шлюзом: ловим и идём дальше. */
+    try{ if(TR)trCheck() }catch(e){ try{console.warn('[bbduel] тик обучения',e)}catch(_){} }
+  },200);
   /* Гасим только то, что НАЧИНАЕТ взаимодействие. pointerup/pointermove
      трогать нельзя: драг вешает их на window и получает целью то, над чем
      отпустили палец, а не карту — заблокировав их, мы бы сломали как раз
@@ -3226,6 +3238,38 @@ function bindParallax(el){
     el.style.setProperty('--my',(((e.clientY-r.top)/r.height)-.5).toFixed(3));
   });
 }
+
+/* ================= сторож боя =================
+   Точечные заплатки закрывают только те причины, которые мы придумали.
+   Здесь проверяется следствие: пока идёт бой, игрок обязан иметь возможность
+   действовать. Откуда взялся затык — исключение, неучтённая ветка, гонка
+   таймеров, будущая правка — сторожу безразлично.
+   Два инварианта:
+   1. Фаза игрока → кнопка «конец хода» не может быть заблокирована.
+   2. Не фаза игрока → это не может длиться бесконечно.
+   Пороги с большим запасом: ход ИИ с полной доской и анимациями идёт до
+   десяти секунд, и ложное срабатывание тут хуже самого затыка. */
+const WD_BTN_MS=3000, WD_TURN_MS=20000;
+let wdPhase=null, wdSince=0;
+setInterval(()=>{
+  try{
+    if(!B||B.over||CUR!=='battle'){wdPhase=null;return}
+    if(B.phase!==wdPhase){wdPhase=B.phase;wdSince=Date.now();return}
+    const stuck=Date.now()-wdSince;
+    const btn=$('#bEnd');
+    if(B.phase==='p'){
+      if(btn&&btn.disabled&&stuck>WD_BTN_MS){
+        btn.disabled=false;
+        try{console.warn('[bbduel] сторож: разблокировал конец хода')}catch(e){}
+      }
+    }else if(stuck>WD_TURN_MS){
+      try{console.warn('[bbduel] сторож: ход завис на фазе',B.phase)}catch(e){}
+      toast('Ход завис — возвращаю тебе',1);
+      wdPhase=null;
+      startTurn('p');
+    }
+  }catch(e){}
+},2000);
 
 /* ================= запуск ================= */
 PF.init();
