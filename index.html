@@ -338,8 +338,21 @@ body.menuOn .infoF{display:grid}
 /* ====== карточки ====== */
 .cWrap{outline:none;cursor:pointer;position:relative;perspective:1100px;animation:flyIn .6s cubic-bezier(.2,1.2,.3,1) backwards}
 @keyframes flyIn{from{transform:translateY(90px) rotate(6deg) scale(.5);opacity:0}}
-.cWrap.t0{--tc:#aab6bf}.cWrap.t1{--tc:#35f0ff}.cWrap.t2{--tc:#ff4fd8}.cWrap.t3{--tc:#ffd52e}.cWrap.t4{--tc:#fff}
-.cWrap.sec{--tc:#ff3355}
+/* Лестница «крутости» по тирам. Всё, чем тир отличается от тира, собрано в
+   переменные на одной строке — раньше это была одна лишь прозрачность радуги,
+   а блик светил одинаково и на рекруте, и на легенде. Держать эффекты рядом
+   важнее аккуратности: разбредись они по файлу, следующая правка рассогласует
+   их между собой и лестница перестанет читаться как лестница.
+     --ho  сила радуги      --hoT её период     --hoS масштаб полос
+     --sh  яркость блика    --shW его полуширина внутри полосы
+     --shT период блика     --gl  свечение по внутреннему краю */
+.cWrap{--ho:.3;--hoT:5.5s;--hoS:240%;--sh:.34;--shW:24%;--shT:5.4s;--gl:0}
+.cWrap.t0{--tc:#aab6bf;--ho:0;   --sh:.20;--shW:14%;--shT:7.0s;--gl:0}
+.cWrap.t1{--tc:#35f0ff;--ho:.16;--hoT:6.2s;--hoS:265%;--sh:.32;--shW:19%;--shT:6.0s;--gl:.16}
+.cWrap.t2{--tc:#ff4fd8;--ho:.30;--hoT:5.2s;--hoS:230%;--sh:.46;--shW:24%;--shT:5.0s;--gl:.32}
+.cWrap.t3{--tc:#ffd52e;--ho:.42;--hoT:4.2s;--hoS:200%;--sh:.64;--shW:29%;--shT:4.0s;--gl:.50}
+.cWrap.t4{--tc:#fff;   --ho:.60;--hoT:3.6s;--hoS:185%;--sh:.74;--shW:32%;--shT:3.4s;--gl:.62}
+.cWrap.sec{--tc:#ff3355;--ho:.65;--hoT:3.2s;--hoS:170%;--sh:.82;--shW:34%;--shT:3.0s;--gl:.72}
 .cFlip{position:relative;width:100%;aspect-ratio:5/7;transform-style:preserve-3d;transition:transform .75s cubic-bezier(.2,1.25,.3,1)}
 .cWrap.open .cFlip{transform:rotateY(180deg)}
 .cFace{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:12px;overflow:hidden}
@@ -355,21 +368,56 @@ body.menuOn .infoF{display:grid}
   display:flex;flex-direction:column;padding:9px}
 .cFront::before{content:'';position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--tc) 18%,transparent),transparent 68%)}
+/* Третья ступень лестницы — свечение по внутреннему краю в цвет тира.
+   Статичное, то есть бесплатное: растрируется один раз. При --gl:0 радиус
+   размытия нулевой и тени попросту нет, поэтому рекрут остаётся чистым. */
+.cFront{box-shadow:inset 0 0 calc(var(--gl) * 22px) color-mix(in srgb,var(--tc) 45%,transparent)}
+/* Верхним двум тирам свечение ещё и дышит. Анимируем прозрачность отдельного
+   слоя, а не сам box-shadow: тень пришлось бы пересчитывать каждый кадр —
+   ровно та ошибка, на которой у нас умирал экран круток. */
+.cFront::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;
+  box-shadow:inset 0 0 24px color-mix(in srgb,var(--tc) 55%,transparent)}
+/* Пульс — часть голографии, поэтому и гаснет вместе с ней. Слои радуги и
+   блика просто не попадают в разметку при выключенной настройке, а пульс
+   живёт на псевдоэлементе и без этой привязки продолжал бы дышать у того,
+   кто эффекты как раз отключил. */
+.cWrap.foil.t3 .cFront::after,.cWrap.foil.t4 .cFront::after,.cWrap.foil.sec .cFront::after{
+  animation:tierPulse 2.6s ease-in-out infinite}
+@keyframes tierPulse{0%,100%{opacity:.2}50%{opacity:.9}}
+
 .cFront.sec{background:linear-gradient(180deg,#1a0f14,#0d0709)}
-.holo{position:absolute;inset:-40%;pointer-events:none;mix-blend-mode:color-dodge;opacity:.34;
+/* Радуга ездит трансформом, а не background-position. Смещение фона — это
+   перерисовка слоя каждый кадр, и делать её пришлось бы ЕЩЁ и сквозь filter,
+   который тут же рядом. Трансформ браузер применяет к уже готовому растру.
+   Разница не косметическая: в коллекции таких карточек под сорок сразу, а
+   именно на вечных перерисовках у нас недавно умирала страница на iPhone.
+   Слой шире карты на 40% с каждой стороны, поэтому ход в ±9% её не оголяет. */
+.holo{position:absolute;inset:-40%;pointer-events:none;mix-blend-mode:color-dodge;opacity:var(--ho);
   background:repeating-linear-gradient(115deg,#ff0044 0 12.5%,#ff9500 12.5% 25%,#f8ff2e 25% 37.5%,#2bff77 37.5% 50%,#00cfff 50% 62.5%,#8a5cff 62.5% 75%,#ff4fd8 75% 87.5%,#ff0044 87.5% 100%);
-  background-size:240% 240%;filter:saturate(1.4) brightness(1.35);animation:holoOsc 5.5s ease-in-out infinite}
-.cWrap.t0 .holo{opacity:.08}.cWrap.t1 .holo{opacity:.18}.cWrap.t2 .holo{opacity:.3}.cWrap.t3 .holo{opacity:.42}.cWrap.t4 .holo{opacity:.6}.cWrap.sec .holo{opacity:.65}
-@keyframes holoOsc{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  background-size:var(--hoS) var(--hoS);filter:saturate(1.4) brightness(1.35);
+  animation:holoOsc var(--hoT) ease-in-out infinite}
+/* У рекрута радуги нет вовсе — по замыслу, у него только блик. Прячем слой
+   целиком, а не гасим прозрачностью: невидимый слой всё равно анимировался бы,
+   а рекрутов в коллекции 11 из 38. */
+.cWrap.t0 .holo{display:none}
+@keyframes holoOsc{0%,100%{transform:translate3d(-9%,0,0)}50%{transform:translate3d(9%,0,0)}}
+/* Ширину блика задаём остановками градиента, а не шириной элемента. Путь в
+   keyframes измеряется в процентах от самой полосы, так что узкая полоса не
+   доезжала бы до правого края карты — блик обрывался бы на середине. */
 .cShine{position:absolute;top:-30%;bottom:-30%;left:-70%;width:50%;pointer-events:none;mix-blend-mode:screen;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);
-  animation:shineS 3.8s cubic-bezier(.3,.1,.3,1) infinite}
+  background:linear-gradient(90deg,transparent calc(50% - var(--shW)),
+             rgba(255,255,255,var(--sh)) 50%,transparent calc(50% + var(--shW)));
+  animation:shineS var(--shT) cubic-bezier(.3,.1,.3,1) infinite}
 @keyframes shineS{0%,55%{transform:translateX(0) rotate(22deg)}88%,100%{transform:translateX(340%) rotate(22deg)}}
 .cfHead{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:2}
 .cfCost{font-family:var(--disp);font-size:19px;width:32px;height:32px;display:grid;place-items:center;
   background:var(--yel);color:#0a0a0e;border:2px solid #000;transform:rotate(-4deg);
   box-shadow:2px 2px 0 rgba(0,0,0,.5);flex:none}
-.cfStars{font-size:9px;letter-spacing:1px;color:var(--tc);text-shadow:0 0 6px currentColor;align-self:center}
+/* Звёзды разгораются вместе с тиром: именно по ним игрок читает редкость, и
+   без этого лестница держалась бы на одном переливе. Свечение вписано прямо
+   сюда — отдельным правилом выше по файлу его перебивало бы это же. */
+.cfStars{font-size:9px;letter-spacing:1px;color:var(--tc);align-self:center;
+  text-shadow:0 0 calc(4px + var(--gl) * 11px) currentColor}
 .cfArt{position:relative;flex:1;display:grid;place-items:center;min-height:0;z-index:1}
 .cfArt svg{width:74%;height:74%;color:var(--tc);filter:drop-shadow(0 0 9px currentColor) drop-shadow(0 4px 4px rgba(0,0,0,.6))}
 /* Нарисованный арт вместо эмблемы. Картинка квадратная, а карта 5:7 — кладём
@@ -2238,7 +2286,7 @@ function cardHTML(c,opts={}){
   const atkHp=c.ty==='u'?`<div class="cfAtkHp"><b class="a">${c.a}</b><b class="h">${c.h}</b></div>`:'';
   const holo=S.foil?`<div class="holo"></div><div class="cShine"></div>`:'';
   const art=CARD_ART.has(c.id);
-  return `<div class="cWrap t${c.t}${c.ult?' sec':''}${opts.open?' open':''}" ${opts.noAnim?'style="animation:none"':''}>
+  return `<div class="cWrap t${c.t}${c.ult?' sec':''}${S.foil?' foil':''}${opts.open?' open':''}" ${opts.noAnim?'style="animation:none"':''}>
    <div class="cFlip">
     <div class="cFace cBack">
       <span class="bTape"></span>
