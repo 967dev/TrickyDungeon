@@ -552,6 +552,34 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .dDust .dDustT{font-family:var(--mono);font-size:9px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--dim)}
 .dCard .dCnt.extra{background:var(--grn);color:#06110a}
+/* Кнопка «в колоду» прямо на карточке. Она и решает главный вопрос: клик по
+   самой карте открывает её крупно, а набор колоды остаётся в ОДНО касание —
+   иначе собрать двадцать карт стоило бы шестидесяти нажатий.
+   Снизу справа, потому что верхние углы уже заняты счётчиками копий. */
+.dAdd{position:absolute;right:-6px;bottom:-6px;z-index:7;width:30px;height:30px;
+  display:grid;place-items:center;cursor:pointer;
+  font-family:var(--disp);font-size:19px;line-height:1;
+  background:var(--yel);color:#0a0a0e;border:2px solid #000;
+  box-shadow:2px 2px 0 rgba(0,0,0,.55);transition:transform .12s}
+.dAdd.rem{background:var(--red);color:#fff}
+.dAdd:active{transform:translate(2px,2px);box-shadow:0 0 0 rgba(0,0,0,.55)}
+.dCard.locked .dAdd{display:none}
+
+/* ---- крупный просмотр карты ---- */
+.cvBd{position:fixed;inset:0;z-index:120;background:rgba(5,5,9,.82);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  opacity:0;transition:opacity .18s;padding:20px}
+.cvBd.on{opacity:1}
+/* touch-action:none — иначе палец, ведущий по карте, прокручивал бы страницу
+   вместо наклона, а в Telegram ещё и тянул бы вниз закрытие приложения. */
+.cvCard{width:min(330px,78vw,58vh);touch-action:none;
+  transform:scale(.86);transition:transform .22s cubic-bezier(.2,1.1,.3,1)}
+.cvBd.on .cvCard{transform:scale(1)}
+/* Здесь размах наклона самый большой: карта крупная, и это её витрина. */
+.cvCard .cWrap{--tilt:13;--dep:26}
+.cvBtns{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.cvNote{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--dim);
+  text-transform:uppercase;text-align:center}
 
 /* ================= превью карты при наведении =================
    Только для мыши. Карта не увеличивается на месте: .dColl — контейнер с
@@ -1992,7 +2020,7 @@ function go(id){
   sfx.ui();
   /* Игрок сам ушёл с боя — значит рейд брошен осознанно. Снимок держим
      только для аварийных случаев (свернули приложение, упал webview). */
-  if(CUR==='deck'&&id!=='deck')dPrevHide();
+  if(CUR==='deck'&&id!=='deck'){dPrevHide();closeCardView(true)}
   if(CUR==='battle'&&id!=='battle'){
     dropBattleSnap();
     /* И обязательно снять обучение. Иначе оно продолжает жить на другом
@@ -2795,18 +2823,27 @@ function renderDeck(){
     const have=S.inv[c.id]||0,inDeck=deckCount(c.id);
     const show=dFilter<0||c.t===dFilter;
     if(!show)return '';
+    const full=inDeck>=Math.min(have,2);
     return `<div class="dCard ${have?'':'locked'} ${inDeck?'sel':''}" data-id="${c.id}">
       ${have>1?`<span class="dCnt ${have>2?'extra':''}">×${have}</span>`:''}
       ${inDeck?`<span class="dIn">${inDeck}</span>`:''}
       ${cardHTML(c,{open:1,noAnim:1})}
+      ${have?`<button class="dAdd ${full?'rem':''}" data-add="${c.id}"
+        aria-label="${full?'Убрать из колоды':'В колоду'}">${full?'−':'+'}</button>`:''}
     </div>`}).join('');
   $$('#dGrid .dCard').forEach(el=>{
-    el.onclick=()=>toggleDeck(el.dataset.id);
-    /* Наведение показывает карту крупно по центру. Клик по-прежнему кладёт её
-       в набор — превью не должно отнимать основное действие и превращать
-       сборку колоды в два клика вместо одного. */
+    /* Клик по карте открывает её крупно, а не кладёт в колоду. Режим
+       «просмотр/выбор» для этого не нужен: набор колоды переехал на кнопку
+       в углу карточки, и оба действия остались по одному касанию — просто
+       у каждого своя цель. Режим пришлось бы помнить, и половина нажатий
+       уходила бы «не туда». */
+    el.onclick=()=>openCardView(el.dataset.id);
     el.onmouseenter=()=>dPrevShow(el.dataset.id);
     el.onmouseleave=dPrevHide;
+  });
+  $$('#dGrid .dAdd').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();          /* иначе следом откроется просмотр */
+    toggleDeck(b.dataset.add);
   });
   renderDeckSide();
 }
@@ -2828,6 +2865,86 @@ function dustSurplus(){
   toast(`Распылено ${s.cards} карт: +${fmtN(s.sparks)} искр`);
   renderDeck();
 }
+/* ================= крупный просмотр карты =================
+   Открывается кликом по карточке в коллекции. Наклон здесь работает и пальцем
+   тоже — в отличие от сетки, где касание означает прокрутку, а не осмотр.
+   Кнопка колоды живёт и здесь: разглядев карту, естественно тут же решить её
+   судьбу, не закрывая и не выискивая ту же карточку обратно в сетке. */
+let cvEl=null,cvId=null;
+function openCardView(id){
+  const c=byId(id); if(!c)return;
+  const have=S.inv[id]||0;
+  if(!have){toast('Нет такой карты — крути паки!',1);return}
+  dPrevHide();
+  closeCardView(true);
+  cvId=id;
+  cvEl=document.createElement('div');
+  cvEl.className='cvBd';
+  cvEl.innerHTML=`<div class="cvCard">${cardHTML(c,{open:1,noAnim:1})}</div>
+    <div class="cvBtns">
+      <button class="btn pri" id="cvDeck"></button>
+      <button class="btn" id="cvClose">ЗАКРЫТЬ</button>
+    </div>
+    <div class="cvNote" id="cvNote"></div>`;
+  document.body.appendChild(cvEl);
+  requestAnimationFrame(()=>cvEl&&cvEl.classList.add('on'));
+  cvSync();
+  /* Клик по фону закрывает, по самой карте — нет: иначе осмотр обрывался бы
+     на первом же движении, ради которого его и открыли. */
+  cvEl.onclick=e=>{if(e.target===cvEl)closeCardView()};
+  $('#cvClose').onclick=()=>closeCardView();
+  $('#cvDeck').onclick=()=>{toggleDeck(cvId);cvSync()};
+  cvWireTilt(cvEl.querySelector('.cvCard'));
+  sfx.ui();
+}
+/* Подпись и кнопка пересобираются после каждой правки колоды, а не при
+   открытии: иначе, добавив карту, игрок видел бы прежнюю надпись. */
+function cvSync(){
+  if(!cvEl)return;
+  const have=S.inv[cvId]||0, inDeck=deckCount(cvId);
+  const full=inDeck>=Math.min(have,2);
+  const b=$('#cvDeck');
+  b.textContent=full?'УБРАТЬ ИЗ КОЛОДЫ':'В КОЛОДУ';
+  b.classList.toggle('danger',full);
+  $('#cvNote').textContent=`в колоде ${inDeck} · у тебя ${have} · всего ${S.deck.length}/20`;
+}
+function closeCardView(now){
+  if(!cvEl)return;
+  const el=cvEl; cvEl=null; cvId=null;
+  if(now){el.remove();return}
+  el.classList.remove('on');
+  setTimeout(()=>el.remove(),200);
+}
+/* Наклон в просмотре — свой обработчик, а не общий по документу: тот нарочно
+   отбрасывает касания, потому что в сетке палец означает прокрутку. Здесь
+   прокручивать нечего, и наклон пальцем как раз нужен — на телефоне это
+   единственный способ его увидеть. */
+function cvWireTilt(box){
+  if(!box||!gfx().tilt)return;
+  const w=box.querySelector('.cWrap'); if(!w)return;
+  w.classList.add('tilt','rest');
+  const set=e=>{
+    const r=box.getBoundingClientRect(); if(!r.width)return;
+    w.classList.remove('rest');
+    w.style.setProperty('--tx',(((e.clientX-r.left)/r.width)*2-1).toFixed(3));
+    w.style.setProperty('--ty',(((e.clientY-r.top)/r.height)*2-1).toFixed(3));
+  };
+  const rest=()=>{w.classList.add('rest');
+    w.style.setProperty('--tx',0);w.style.setProperty('--ty',0)};
+  box.addEventListener('pointerdown',e=>{
+    try{box.setPointerCapture(e.pointerId)}catch(err){}
+    set(e);
+  });
+  box.addEventListener('pointermove',e=>{
+    /* Мышь наклоняет по наведению, палец — только пока держит: иначе карта
+       так и осталась бы завалившейся после того, как палец убрали. */
+    if(e.pointerType==='mouse'||e.buttons)set(e);
+  });
+  box.addEventListener('pointerup',rest);
+  box.addEventListener('pointercancel',rest);
+  box.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')rest()});
+}
+
 /* Превью карты при наведении. Один переиспользуемый слой, а не узел на карту:
    в коллекции их под сорок, и держать сорок скрытых копий разметки незачем. */
 let dPrevEl=null,dPrevBd=null,dPrevId=null;
@@ -4555,6 +4672,8 @@ function wireCardTilt(){
 }
 wireCardTilt();
 applyGfx();
+/* Escape закрывает просмотр — на десктопе это первое, что жмут. */
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&cvEl)closeCardView()});
 
 pullCloud();
 
