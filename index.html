@@ -2183,7 +2183,7 @@ function startTurn(who){
   B.phase=who;B.sel=null;
   renderBattle();
   if(who==='e'){turnBanner('ХОД ВРАГА');$('#bEnd').disabled=true;
-    setTimeout(aiTurn,1000)}
+    setTimeout(safeEnemyTurn,1000)}
   else{$('#bEnd').disabled=false}
 }
 function turnBanner(t){
@@ -2213,6 +2213,26 @@ async function endTurn(){
   B.sel=null;renderBattle();
   await sleep(200);
   startTurn('e');
+}
+/* Ход врага в обёртке. На время хода кнопка «конец хода» выключена, и любое
+   исключение внутри оставляло бой мёртвым навсегда: фаза так и висела на
+   враге, игрок не мог ни походить, ни завершить ход. Аварийная плашка при
+   этом появлялась, то есть игрок видел, что сломалось, но партия была
+   потеряна. Ловим и возвращаем ход.
+   Вторая проверка — на молчаливый затык: если ИИ вышел, не передав ход
+   (ранний return по неучтённой ветке), это так же насмерть, но без
+   исключения, и никакой обработчик ошибок такое не заметит. */
+async function safeEnemyTurn(){
+  try{ await aiTurn() }
+  catch(e){
+    try{console.error('[bbduel] ход врага упал',e)}catch(_){}
+    if(B&&!B.over&&B.phase!=='p'){toast('Сбой у врага — ход возвращён тебе',1);startTurn('p')}
+    return;
+  }
+  if(B&&!B.over&&B.phase!=='p'){
+    try{console.warn('[bbduel] ход врага завершился, не передав ход')}catch(_){}
+    startTurn('p');
+  }
 }
 async function aiTurn(){
   if(B.train){return trainEnemyTurn()}
