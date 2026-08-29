@@ -436,7 +436,11 @@ body.menuOn .infoF{display:grid}
 .actHead .actN{font-family:var(--disp);font-style:italic;font-size:22px;color:var(--yel);
   width:46px;flex:none;text-align:center;text-shadow:2px 2px 0 #000}
 .actHead .actC{flex:1;min-width:0}
-.actHead .actT{font-family:var(--disp);font-size:14.5px;color:#fff}
+/* В одну строку с обрезкой: при выезде кнопки заголовок сужается, и на
+   переносе ряд подрастал — на наведении это читалось как прыжок. */
+.actHead .actT{font-family:var(--disp);font-size:14.5px;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actHead .actS{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .actHead .actS{font-family:var(--mono);font-size:9px;color:#5a5a6e;margin-top:5px;
   letter-spacing:.1em;text-transform:uppercase}
 .actHead .actArrow{font-size:13px;color:var(--yel);flex:none;transition:transform .22s}
@@ -451,6 +455,31 @@ body.menuOn .infoF{display:grid}
 .actBadge{font-family:var(--disp);font-style:italic;font-size:12px;background:var(--red);color:#fff;
   padding:5px 11px;border:2px solid #000;transform:rotate(-4deg);flex:none;
   box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+/* Ряд акта: заголовок и выезжающая кнопка сюжета.
+   Кнопка держится отрицательным margin и «выталкивается» при наведении, а
+   заголовок на flex:1 сам отдаёт ей место — отсюда ощущение, что он слетает
+   влево. Анимировать margin, а не width: ширина заставляет пересчитывать
+   раскладку содержимого кнопки на каждом кадре.
+   overflow:hidden прячет её, пока она за краем. */
+.actRow{display:flex;align-items:stretch;overflow:hidden}
+.actRow .actHead{flex:1;min-width:0}
+.actStory{width:158px;flex:none;margin-right:-158px;opacity:0;
+  transition:margin-right .26s cubic-bezier(.2,.9,.3,1),opacity .2s;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;
+  border:3px solid var(--cyn);border-left:0;background:linear-gradient(160deg,rgba(10,30,36,.95),rgba(12,14,20,.95));
+  padding:10px 12px;cursor:pointer;text-align:left;box-shadow:5px 6px 0 rgba(0,0,0,.5)}
+.actRow:hover .actStory,.actRow:focus-within .actStory{margin-right:0;opacity:1}
+.actStory:hover{background:linear-gradient(160deg,rgba(14,44,52,.98),rgba(14,18,26,.98))}
+.actStory .asT{font-family:var(--disp);font-style:italic;font-size:12.5px;color:var(--cyn);
+  text-shadow:2px 2px 0 #000;line-height:1.1}
+.actStory .asS{font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:#4f6f77}
+/* На тач-экранах наведения нет — кнопка просто стоит на месте. */
+@media (hover:none){
+  .actStory{margin-right:0;opacity:1;width:120px}
+  .actStory .asS{display:none}
+}
+@media (prefers-reduced-motion:reduce){.actStory{transition:none}}
+
 /* Список боёв акта. Схлопнут по высоте, поэтому раскрытие видно как выезд. */
 .actBody{display:flex;flex-direction:column;gap:12px;overflow:hidden;
   max-height:0;opacity:0;transition:max-height .34s cubic-bezier(.2,.9,.3,1),opacity .22s,margin .34s}
@@ -1969,10 +1998,6 @@ function renderMenu(){
     <span class="tIc">${svgWrap(EMB.card)}</span>
     <span class="tT">КОЛОДА</span><span class="tS">${S.deck.length}/20 · коллекция ${Object.keys(S.inv).length}/${COLLECTIBLE.length}</span>
   </button>
-  ${S.story?`<button class="mTile" data-go="story">
-    <span class="tIc">${svgWrap(EMB.card)}</span>
-    <span class="tT">СЮЖЕТ</span><span class="tS">последний звонок · пересмотреть</span>
-  </button>`:''}
   <button class="mTile" data-go="settings">
     <span class="tIc">${svgWrap('<g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5 V5.5 M12 18.5 V21.5 M2.5 12 H5.5 M18.5 12 H21.5 M5 5 L7 7 M17 17 L19 19 M19 5 L17 7 M7 17 L5 19"/></g>')}</span>
     <span class="tT">НАСТРОЙКИ</span><span class="tS">звук · эффекты · сброс</span>
@@ -2498,6 +2523,22 @@ function autoDeck(){
    вопрос текущего сеанса, и переживать перезагрузку ему незачем. Зато при
    возврате из боя акт остаётся открытым, а не схлопывается каждый раз. */
 let act1Open=false;
+/* Сюжеты по актам. Одна запись — один акт: флаг в сейве, за кого играет сцена
+   и как её показать. Появится второй акт со своей сценой — добавляется строка,
+   и кнопка выедет из его заголовка сама, ничего больше править не нужно. */
+const ACT_STORY={
+  1:{flag:'story',hero:'f',title:'ПОСЛЕДНИЙ ЗВОНОК',sub:'сцена · пересмотреть',
+     run:()=>vnLoad('СЛУЖБА ПОДДЕРЖКИ',900,()=>startStory(()=>go('stages')))}
+};
+function actStoryHTML(n){
+  const st=ACT_STORY[n];
+  /* Кнопка появляется только когда сцену уже видели: до этого она играет сама
+     перед первым боем акта, и предлагать её заранее — спойлер. */
+  if(!st||S.hero!==st.hero||!S[st.flag])return '';
+  return `<button class="actStory" data-story="${n}">
+    <span class="asT">${st.title}</span><span class="asS">${st.sub}</span>
+  </button>`;
+}
 /* num — что показать в кружке. Раньше это был сквозной индекс этапа, и внутри
    акта бои нумеровались с двойки: тренировка занимает нулевой индекс. Теперь
    номер передаётся явно, у акта своя нумерация с единицы. */
@@ -2518,23 +2559,31 @@ function renderStages(){
   const body=acts.map((i,n)=>stNodeHTML(STAGES[i],i,n+1)).join('');
   $('#stMap').innerHTML=`
     ${trainHTML}
-    <button class="actHead ${act1Open?'open':''}" id="act1Head">
-      <span class="actN">I</span>
-      <div class="actC">
-        <div class="actT">ПЕРВЫЙ АКТ · ПРОВАЛ</div>
-        <div class="actS">${acts.length} боёв · ${doneN}/${acts.length} зачищено</div>
-      </div>
-      <span class="actArrow">▼</span>
-    </button>
+    <div class="actRow">
+      <button class="actHead ${act1Open?'open':''}" id="act1Head">
+        <span class="actN">I</span>
+        <div class="actC">
+          <div class="actT">ПЕРВЫЙ АКТ · ПРОВАЛ</div>
+          <div class="actS">${acts.length} боёв · ${doneN}/${acts.length} зачищено</div>
+        </div>
+        <span class="actArrow">▼</span>
+      </button>
+      ${actStoryHTML(1)}
+    </div>
     <div class="actBody ${act1Open?'open':''}" id="act1Body">${body}</div>
-    <div class="actHead soon" aria-disabled="true">
+    <div class="actRow"><div class="actHead soon" aria-disabled="true">
       <span class="actN">II</span>
       <div class="actC">
         <div class="actT">ВТОРОЙ АКТ · ???</div>
         <div class="actS">ещё не открыт</div>
       </div>
       <span class="actBadge">SOON!</span>
-    </div>`;
+    </div></div>`;
+  $$('#stMap .actStory').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const st=ACT_STORY[+b.dataset.story];
+    if(st){sfx.ui();st.run()}
+  });
   $('#act1Head').onclick=()=>{
     act1Open=!act1Open;sfx.ui();
     $('#act1Head').classList.toggle('open',act1Open);
