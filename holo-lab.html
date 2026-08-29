@@ -18,16 +18,17 @@
   h1{font-family:Impact,'Arial Black',sans-serif;font-size:22px;letter-spacing:.04em;margin:0 0 4px}
   .sub{color:#8d8da0;font-size:12.5px;margin:0 0 18px;line-height:1.5}
   .stage{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;
-    padding:26px 14px;border:1px solid #1e1e2a;border-radius:14px;background:#0a0a10}
-  .col{width:210px}
+    padding:34px 14px;border:1px solid #1e1e2a;border-radius:14px;background:#0a0a10;
+    position:relative;overflow:hidden;touch-action:none}
+  /* Перспектива живёт на колонке, а не на карте: карта сама наклоняется, и
+     без внешней перспективы поворот выглядел бы плоским сжатием. */
+  .col{width:210px;perspective:900px}
   .cap{font:11px ui-monospace,Consolas,monospace;color:#8d8da0;text-align:center;
     margin-top:9px;letter-spacing:.06em;text-transform:uppercase}
   .cap b{color:#ffd52e;font-weight:400}
 
-  /* ---- сетка позади карт: по ней видно, что стекло действительно прозрачно.
-         Без чего-то структурного за картой «прозрачность» неотличима от
-         «просто тёмного». ---- */
-  .stage{position:relative;overflow:hidden}
+  /* Сетка позади карт: по ней видно, что стекло действительно прозрачно.
+     Без чего-то структурного за картой «прозрачное» неотличимо от «тёмного». */
   .stage::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
     background:
       repeating-linear-gradient(0deg,rgba(90,150,220,.09) 0 1px,transparent 1px 26px),
@@ -37,23 +38,83 @@
   .stage>*{position:relative}
 
   /* ================= НОВЫЙ ЭФФЕКТ ================= */
-  /* Всё живёт под .hgx, чтобы не задеть игровые правила, приехавшие из
-     index.html. Ручки сверху — их и будем крутить. */
   .hgx{
-    --irid:.42;      /* сила переливов */
-    --iridT:9s;      /* их период */
-    --glow:.5;       /* внешнее свечение */
-    --scan:.05;      /* строчки развёртки */
-    --grain:.05;     /* зерно */
-    --spec:.14;      /* бегущий блик */
-    --specT:6s;
-    --edge:.30;      /* цветное расслоение по кромке */
-    --glass:6px;     /* размытие фона за стеклом (0 = выключено) */
-    --tint:.55;      /* плотность самого стекла */
+    --irid:.43;   --iridT:3s;
+    --spec:.11;   --specT:6s;
+    --glow:.85;   --edge:.46;
+    --scan:.085;  --grain:.11;
+    --tint:.8;    --glass:0px;
+    --tilt:9;     /* размах наклона в градусах */
+    --dep:14;     /* расхождение слоёв в пикселях на краю наклона */
+    --tx:0; --ty:0;   /* положение указателя, -1..1 — их пишет скрипт */
   }
 
-  /* 1. Стекло. Тёмное и полупрозрачное, а не сплошная заливка: сквозь карту
-        должна читаться сетка позади — иначе это не проекция. */
+  /* Наклон самой карты. Возврат к нулю плавный, а слежение за пальцем —
+     почти мгновенное: длинный переход на слежении ощущается как задержка. */
+  .hgx{transform:rotateY(calc(var(--tx) * var(--tilt) * 1deg))
+                 rotateX(calc(var(--ty) * var(--tilt) * -1deg));
+       transition:transform .10s linear}
+  .hgx.rest{transition:transform .5s cubic-bezier(.2,.9,.3,1)}
+
+  /* --- ПАРАЛАКС ---
+     Слои разъезжаются НЕ через transform, а через отдельное свойство
+     translate. Так они не спорят с анимациями переливов и блика, которые
+     заняли transform: браузер применяет translate и transform к одному
+     элементу независимо, и не нужно плодить обёртки под каждый слой. */
+
+  /* Арт — верхний план: уходит против наклона и заметнее всех. Небольшое
+     увеличение обязательно, иначе на сдвиге у края вылезала бы пустая рамка. */
+  .hgx .cfArtImg{
+    translate:calc(var(--tx) * var(--dep) * -1px) calc(var(--ty) * var(--dep) * -1px);
+    scale:calc(1 + var(--dep) / 90);
+    transition:translate .10s linear}
+  /* Развёртка и зерно — нижний план: едут ЗА наклоном, то есть навстречу
+     арту. Именно встречное движение и читается как глубина; будь они
+     неподвижны, карта осталась бы плоской наклеенной картинкой. */
+  .hgx .hgScan,.hgx .hgGrain{
+    translate:calc(var(--tx) * var(--dep) * .5px) calc(var(--ty) * var(--dep) * .5px);
+    transition:translate .10s linear}
+  /* Текст и цифры — ближе к зрителю, поэтому чуть уходят против наклона,
+     но втрое слабее арта: сдвинь их сильно, и карта начнёт разваливаться. */
+  .hgx .cfHead,.hgx .cfName,.hgx .cfText,.hgx .cfAtkHp,.hgx .cfFoot{
+    translate:calc(var(--tx) * var(--dep) * -.3px) calc(var(--ty) * var(--dep) * -.3px);
+    transition:translate .10s linear}
+  /* Блик — сама поверхность стекла: ходит сильнее всего и по наклону.
+     Это то, что превращает наклон в «отражение», а не в сдвиг картинки. */
+  .hgx .hgSpec{
+    translate:calc(var(--tx) * var(--dep) * 1.6px) calc(var(--ty) * var(--dep) * 1.6px);
+    transition:translate .10s linear}
+  .hgx.rest .cfArtImg,.hgx.rest .hgScan,.hgx.rest .hgGrain,.hgx.rest .hgSpec,
+  .hgx.rest .cfHead,.hgx.rest .cfName,.hgx.rest .cfText,.hgx.rest .cfAtkHp,.hgx.rest .cfFoot{
+    transition:translate .5s cubic-bezier(.2,.9,.3,1)}
+
+  /* --- РАЗДЕЛЕНИЕ ПЕРСОНАЖА И ФОНА ---
+     Арт у нас плоская картинка: персонаж на почти чёрном фоне. Двигать её
+     целиком — это возить наклейку, глубины не будет, что бы вокруг ни ездило.
+     Поэтому включаем арту mix-blend-mode:screen. Screen осветляет: чёрное
+     становится прозрачным, светлое остаётся. Тёмный фон картинки исчезает,
+     персонаж повисает над тем, что под ним, — ровно то разделение, которого
+     не давала маска: вырезать по яркости через mask-mode:luminance браузеры
+     поддерживают вразнобой, а screen работает везде и даром.
+     Побочный эффект нам на руку: персонаж не закрывает заднюю плиту, а
+     просвечивает — настоящая проекция себя так и ведёт. */
+  .hgx.split .cfArtImg{mix-blend-mode:screen}
+  /* Задняя плита — тот самый «нижний слой». Ездит ЗА наклоном, навстречу
+     персонажу. Лежит в DOM перед артом и с тем же z-index, поэтому и
+     оказывается позади без гонки z-index'ов. */
+  .hgx .hgBack{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;
+    background:
+      radial-gradient(ellipse at 50% 36%,rgba(90,200,255,.22),transparent 62%),
+      repeating-linear-gradient(0deg,rgba(120,200,255,.10) 0 1px,transparent 1px 13px),
+      repeating-linear-gradient(90deg,rgba(120,200,255,.07) 0 1px,transparent 1px 13px),
+      linear-gradient(180deg,#0a1322 0%,#070a14 100%);
+    translate:calc(var(--tx) * var(--dep) * .75px) calc(var(--ty) * var(--dep) * .75px);
+    scale:calc(1 + var(--dep) / 70);
+    transition:translate .10s linear}
+  .hgx.split .hgBack{opacity:1}
+  .hgx.rest .hgBack{transition:translate .5s cubic-bezier(.2,.9,.3,1)}
+
+  /* 1. Стекло. Тёмное и полупрозрачное, а не сплошная заливка. */
   .hgx .cFront{
     background:linear-gradient(160deg,
       rgba(18,26,42,var(--tint)) 0%,
@@ -62,58 +123,52 @@
     -webkit-backdrop-filter:blur(var(--glass)) saturate(1.25);
     backdrop-filter:blur(var(--glass)) saturate(1.25);
     border:1px solid rgba(150,215,255,.30) !important;
-    /* Свечение снаружи в двух тонах — голубом и фиолетовом. Один тон читается
-       как неон, два дают ощущение преломления. */
     box-shadow:
       0 0 calc(var(--glow) * 26px) rgba(80,190,255,calc(var(--glow) * .38)),
       0 0 calc(var(--glow) * 62px) rgba(150,90,255,calc(var(--glow) * .22)),
       inset 0 0 calc(var(--glow) * 30px) rgba(120,200,255,calc(var(--glow) * .13)),
-      /* 5. Хроматическое расслоение: кромка двоится в голубой и пурпурный.
-            Ровно 1px и без размытия — иначе это уже глитч, а не проекция. */
+      /* Хроматическое расслоение: кромка двоится в голубой и пурпурный.
+         Ровно 1px и без размытия — иначе это уже глитч, а не проекция. */
       inset 1px 0 0 rgba(255,80,200,var(--edge)),
       inset -1px 0 0 rgba(90,225,255,var(--edge)) !important;
   }
-  /* Игровая радиальная подсветка тира здесь только мешает: она красит стекло
-     в цвет редкости и съедает прозрачность. */
   .hgx .cFront::before{display:none !important}
   .hgx .cFront::after{display:none !important}
 
-  /* 2. Переливы. Держим маску и движение на РАЗНЫХ элементах: маска обязана
-        стоять на месте (центр карты остаётся чистым и читаемым), а градиент
-        под ней — ехать. На одном элементе дырка ездила бы вместе с ним. */
+  /* 2. Переливы. Маска стоит на неподвижной обёртке, а градиент едет ВНУТРИ:
+        будь маска на том же элементе, чистая середина ездила бы вместе с ним. */
   .hgx .hgIrid{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;
     -webkit-mask-image:radial-gradient(ellipse at 50% 44%,transparent 6%,#000 72%);
     mask-image:radial-gradient(ellipse at 50% 44%,transparent 6%,#000 72%)}
   .hgx .hgIrid i{position:absolute;inset:-45%;display:block;
-    /* Только холодная часть спектра: голубой, синий, фиолетовый, пурпурный.
-       Стоит добавить жёлтый с зелёным — и это мгновенно снова фольга. */
+    /* Только холодная часть спектра. Добавь жёлтый с зелёным — снова фольга. */
     background:linear-gradient(114deg,
       rgba(0,240,255,0) 0%, rgba(0,225,255,.85) 14%, rgba(60,130,255,.9) 30%,
       rgba(150,90,255,.85) 46%, rgba(240,90,220,.8) 60%, rgba(90,200,255,.85) 76%,
       rgba(0,240,255,0) 100%);
-    /* soft-light вместо color-dodge. Именно dodge выбивал карту в неон:
-       он делит на инверсию подложки и на светлых местах уходит в белое. */
+    /* soft-light вместо color-dodge: dodge делит на инверсию подложки и на
+       светлых местах уходит в белое — от него карта и выгорала в неон. */
     mix-blend-mode:soft-light;opacity:var(--irid);
     animation:hgSlide var(--iridT) ease-in-out infinite}
   @keyframes hgSlide{0%,100%{transform:translate3d(-14%,-4%,0)}50%{transform:translate3d(14%,4%,0)}}
+  /* Перелив тоже отзывается на наклон — сильнее всех прочих слоёв, потому что
+     в настоящей голограмме первым на поворот отвечает именно спектр. */
+  .hgx .hgIrid i{translate:calc(var(--tx) * var(--dep) * 1.1px) 0}
 
-  /* 4. Строчки развёртки. Тонкие и почти невидимые — это подпись «проекция»,
-        а не декоративная полоска. Медленно сползают: неподвижные читаются
-        как текстура бумаги. */
+  /* 4. Строчки развёртки: тонкие и почти невидимые, это подпись «проекция». */
   .hgx .hgScan{position:absolute;inset:-2px 0;pointer-events:none;z-index:1;
     background:repeating-linear-gradient(0deg,
       rgba(190,235,255,var(--scan)) 0 1px, transparent 1px 3px);
     animation:hgScanMove 7s linear infinite}
   @keyframes hgScanMove{to{transform:translate3d(0,3px,0)}}
 
-  /* Зерно. Статичная картинка из feTurbulence, а не анимация: шевелящееся
-     зерно сразу читается как помеха, да и перерисовывалось бы каждый кадр. */
+  /* Зерно статично: шевелящееся читается как помеха и перерисовывалось бы
+     каждый кадр. */
   .hgx .hgGrain{position:absolute;inset:0;pointer-events:none;z-index:1;
     opacity:var(--grain);mix-blend-mode:overlay;
     background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 
-  /* 3+5. Зеркальный блик, идущий по диагонали. Узкий и мягкий: широкая
-          белая полоса — это глянец на пластике, а не свет в проекции. */
+  /* 3. Зеркальный блик по диагонали: узкий и мягкий. */
   .hgx .hgSpec{position:absolute;inset:-40%;pointer-events:none;z-index:1;
     background:linear-gradient(114deg,
       transparent 42%, rgba(215,245,255,var(--spec)) 50%, transparent 58%);
@@ -122,15 +177,20 @@
   @keyframes hgSpec{0%{transform:translate3d(-42%,-18%,0)}
                     62%,100%{transform:translate3d(42%,18%,0)}}
 
-  /* Содержимое карты — поверх всех слоёв, иначе переливы съедают текст. */
   .hgx .cfHead,.hgx .cfArt,.hgx .cfName,.hgx .cfText,.hgx .cfAtkHp,.hgx .cfFoot{
     position:relative;z-index:3}
-  /* Старые слои фольги в новом варианте не участвуют. */
   .hgx .holo,.hgx .cShine{display:none !important}
+
+  /* Левой карте даём тот же наклон — иначе сравнивали бы движущееся с
+     неподвижным, и новое выигрывало бы просто потому, что живое. */
+  .old{transform:rotateY(calc(var(--tx,0) * var(--tilt,9) * 1deg))
+                rotateX(calc(var(--ty,0) * var(--tilt,9) * -1deg));
+       transition:transform .10s linear}
+  .old.rest{transition:transform .5s cubic-bezier(.2,.9,.3,1)}
 
   /* ---- ручки ---- */
   .knobs{margin:22px auto 0;max-width:560px;display:grid;
-    grid-template-columns:132px 1fr 52px;gap:9px 12px;align-items:center}
+    grid-template-columns:150px 1fr 56px;gap:9px 12px;align-items:center}
   .knobs label{font:12px ui-monospace,Consolas,monospace;color:#b9b9c8}
   .knobs input[type=range]{width:100%;accent-color:#35f0ff}
   .knobs output{font:12px ui-monospace,Consolas,monospace;color:#ffd52e;text-align:right}
@@ -145,6 +205,7 @@
     border:1px solid #2c2c38;border-radius:8px;padding:7px 12px;cursor:pointer}
   button.sw[aria-pressed=true]{border-color:#35f0ff;color:#35f0ff}
   .bar{display:flex;gap:8px;justify-content:center;margin:16px 0 0;flex-wrap:wrap}
+  .hint{text-align:center;color:#8d8da0;font:12px ui-monospace,Consolas,monospace;margin:12px 0 0}
 </style>
 </head>
 <body>
@@ -155,10 +216,13 @@
      Сетка позади нужна нарочно: по ней видно, что стекло действительно прозрачно.</p>
 
   <div class="stage" id="stage"><div style="color:#8d8da0;font:13px monospace">загружаю стили игры…</div></div>
+  <p class="hint" id="hint">веди мышью по площадке — карта наклонится</p>
 
   <div class="bar">
-    <button class="sw" id="bCard" aria-pressed="false">карта: без арта</button>
-    <button class="sw" id="bGlass" aria-pressed="true">стекло: размывает фон</button>
+    <button class="sw" id="bCard" aria-pressed="true">карта: с артом</button>
+    <button class="sw" id="bGlass" aria-pressed="false">стекло: без размытия</button>
+    <button class="sw" id="bSplit" aria-pressed="true">персонаж отдельно: да</button>
+    <button class="sw" id="bGyro" aria-pressed="false">датчик наклона: выкл</button>
     <button class="sw" id="bPause" aria-pressed="false">анимация: идёт</button>
   </div>
 
@@ -168,18 +232,23 @@
   <p class="note">
     <b>Про «стекло: размывает фон».</b> Это <code>backdrop-filter</code>. Он даёт настоящую
     прозрачность, но стоит дорого: браузер копирует и размывает всё, что за картой,
-    и делает это заново на каждый кадр. В коллекции таких карт под сорок сразу,
-    а мы только что чинили iPhone, где страница умирала именно от вечных
-    перерисовок. Поглядите с ним и без — если разница невелика, лучше без.
+    заново на каждый кадр. В коллекции таких карт под сорок сразу, а мы только что
+    чинили iPhone, где страница умирала именно от вечных перерисовок. Сейчас он выключен.
+  </p>
+  <p class="note">
+    <b>Про датчик наклона.</b> На айфоне доступ к нему браузер даёт только по нажатию
+    кнопки — поэтому она здесь и есть. Если датчика нет или в доступе отказано,
+    карта всё равно наклоняется пальцем.
   </p>
 </div>
 
 <script>
-/* Стили и карту берём из index.html — так примерочная показывает ровно ту
-   карту, что в игре, и не расходится с ней при следующей правке. */
 const KNOBS=[
+  ['--tilt','наклон (°)',0,20,.5],
+  ['--dep','глубина слоёв',0,40,1],
+  ['sep'],
   ['--irid','переливы',0,1,.01],
-  ['--iridT','их период',3,20,.5,'s'],
+  ['--iridT','их период',1,20,.5,'s'],
   ['--spec','блик',0,.5,.01],
   ['--specT','период блика',2,14,.5,'s'],
   ['sep'],
@@ -191,9 +260,10 @@ const KNOBS=[
   ['--tint','плотность стекла',.15,1,.05],
   ['--glass','размытие фона',0,16,1,'px'],
 ];
-const DEF={'--irid':.42,'--iridT':9,'--spec':.14,'--specT':6,'--glow':.5,
-           '--edge':.30,'--scan':.05,'--grain':.05,'--tint':.55,'--glass':6};
-let CARDS=null, withArt=false, glassOn=true, paused=false;
+/* Значения, которые вы выбрали в прошлый заход; наклон и глубина — новые. */
+const DEF={'--tilt':9,'--dep':14,'--irid':.43,'--iridT':3,'--spec':.11,'--specT':6,
+           '--glow':.85,'--edge':.46,'--scan':.085,'--grain':.11,'--tint':.8,'--glass':0};
+let CARDS=null, withArt=true, glassOn=false, paused=false, gyro=false, split=true;
 
 function cardMarkup(c,cls){
   const stars='★'.repeat(c.t+1);
@@ -201,14 +271,16 @@ function cardMarkup(c,cls){
   const HEX=['#aab6bf','#35f0ff','#ff4fd8','#ffd52e','#ff3355'];
   const hex=c.ult?'#ff3355':HEX[c.t];
   const atkHp=c.ty==='u'?`<div class="cfAtkHp"><b class="a">${c.a}</b><b class="h">${c.h}</b></div>`:'';
-  const art=c.artUrl?`<div class="cfArtImg" style="background-image:url(${c.artUrl})"></div>`:'';
-  /* Слои нового эффекта добавляются только справа; слева остаются игровые. */
+  const art=c.artUrl
+    ? `<div class="hgBack"></div><div class="cfArtImg" style="background-image:url(${c.artUrl})"></div>`
+    : '';
   const layers=cls==='hgx'
     ? `<div class="hgIrid"><i></i></div><div class="hgSpec"></div><div class="hgScan"></div><div class="hgGrain"></div>`
     : `<div class="holo"></div><div class="cShine"></div>`;
-  return `<div class="cWrap t${c.t} foil open ${cls}" style="animation:none">
+  const back=(cls==='hgx')?art:art.replace(/<div class="hgBack"><\/div>/,'');
+  return `<div class="cWrap t${c.t} foil open ${cls} rest${cls==='hgx'&&split?' split':''}" style="animation:none">
    <div class="cFlip"><div class="cFace cFront${c.artUrl?' art':''}" style="--tc:${hex}">
-     ${art}${layers}
+     ${back}${layers}
      <div class="cfHead"><span class="cfCost">${c.c}</span><span class="cfStars">${stars}</span></div>
      <div class="cfArt"></div>
      <div class="cfName">${c.n}</div>
@@ -223,7 +295,54 @@ function draw(){
   document.getElementById('stage').innerHTML=
     `<div class="col">${cardMarkup(c,'old')}<div class="cap">как <b>сейчас</b></div></div>
      <div class="col">${cardMarkup(c,'hgx')}<div class="cap">как <b>предлагаю</b></div></div>`;
-  apply();
+  apply(); setTilt(0,0,true);
+}
+
+/* Наклон пишем переменными на обеих картах: считать позиции в скрипте на
+   каждый кадр незачем — браузер сам пересчитает calc() при смене переменной. */
+function setTilt(tx,ty,rest){
+  document.querySelectorAll('.stage .cWrap').forEach(el=>{
+    el.style.setProperty('--tx',tx.toFixed(3));
+    el.style.setProperty('--ty',ty.toFixed(3));
+    el.classList.toggle('rest',!!rest);
+  });
+}
+
+function wireTilt(){
+  const st=document.getElementById('stage');
+  const from=e=>{
+    const r=st.getBoundingClientRect();
+    const x=(e.clientX-r.left)/r.width*2-1, y=(e.clientY-r.top)/r.height*2-1;
+    setTilt(Math.max(-1,Math.min(1,x)),Math.max(-1,Math.min(1,y)),false);
+  };
+  st.addEventListener('pointermove',e=>{if(!gyro)from(e)});
+  st.addEventListener('pointerdown',e=>{if(!gyro)from(e)});
+  st.addEventListener('pointerleave',()=>{if(!gyro)setTilt(0,0,true)});
+}
+
+/* Гироскоп. gamma — крен влево-вправо, beta — наклон вперёд-назад. Делим на
+   комфортный размах, а не на полный: держать телефон боком под 90° никто не
+   станет, поэтому интересный диапазон — примерно ±25°. */
+function wireGyro(btn){
+  const on=ev=>{
+    if(!gyro)return;
+    const g=(ev.gamma||0)/25, b=((ev.beta||0)-35)/25;
+    setTilt(Math.max(-1,Math.min(1,g)),Math.max(-1,Math.min(1,b)),false);
+  };
+  btn.onclick=async()=>{
+    if(gyro){gyro=false;btn.setAttribute('aria-pressed',false);
+      btn.textContent='датчик наклона: выкл';setTilt(0,0,true);return}
+    try{
+      const D=window.DeviceOrientationEvent;
+      if(D&&typeof D.requestPermission==='function'){
+        const res=await D.requestPermission();
+        if(res!=='granted'){btn.textContent='датчик: отказано';return}
+      }else if(!D){btn.textContent='датчика нет';return}
+      window.addEventListener('deviceorientation',on);
+      gyro=true;btn.setAttribute('aria-pressed',true);btn.textContent='датчик наклона: вкл';
+      document.getElementById('hint').textContent='наклоняй телефон';
+    }catch(e){btn.textContent='датчик недоступен'}
+  };
 }
 
 function apply(){
@@ -235,6 +354,9 @@ function apply(){
     el.style.setProperty(k[0], inp.value + (k[5]||''));
   }
   if(!glassOn)el.style.setProperty('--glass','0px');
+  /* Наклон нужен обеим картам, иначе сравнение нечестное. */
+  const tilt=document.getElementById('k--tilt').value;
+  document.querySelectorAll('.stage .cWrap').forEach(n=>n.style.setProperty('--tilt',tilt));
   document.querySelectorAll('.hgx *').forEach(n=>
     n.getAnimations().forEach(a=>paused?a.pause():a.play()));
   report();
@@ -269,37 +391,40 @@ function buildKnobs(){
   });
 }
 
-/* Тянем игровые стили и пару карт прямо из index.html: дублировать их здесь
-   значило бы сравнивать эффект на карте, которой в игре нет. */
+/* Стили и карты тянем из index.html: дублировать их здесь значило бы
+   сравнивать эффект на карте, которой в игре нет. */
 (async()=>{
   const src=await (await fetch('index.html',{cache:'no-store'})).text();
   const css=[...src.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m=>m[1]).join('\n');
   const st=document.createElement('style'); st.textContent=css;
   document.head.insertBefore(st, document.head.querySelector('style'));
 
-  /* Берём настоящие карты из базы: одну с нарисованным артом, одну без. */
-  const grab=re=>{const m=src.match(re);return m?m[0]:null};
   const mk=(id,n,t,ty,c,a,h,fl,artUrl)=>({id,n,t,ty,c,a,h,fl,artUrl});
   const line=id=>{
     const m=src.match(new RegExp("\\{id:'"+id+"'[^}]*\\}"));
     if(!m)return null;
     const g=k=>{const x=m[0].match(new RegExp(k+":('([^']*)'|(\\d+))"));return x?(x[2]!==undefined?x[2]:x[3]):''};
-    return mk(id,g('n'),+g('t'),g('ty'),+g('c'),+g('a'),+g('h'),g('fl'), null);
+    return mk(id,g('n'),+g('t'),g('ty'),+g('c'),+g('a'),+g('h'),g('fl'),null);
   };
   const art=line('r05')||mk('r05','Огнемётчик',0,'u',3,2,4,'Пламя подчиняется бровям.',null);
   art.artUrl='art/cards/r05.webp';
-  const plain=line('g04')||(()=>{
-    const m=[...src.matchAll(/\{id:'([a-z]\d\d)',n:'([^']*)',t:(\d)/g)].find(x=>x[3]==='2');
-    return m?line(m[1]):mk('x','Карта',2,'u',3,3,3,'Пример.',null);
-  })();
+  let plain=null;
+  const m2=[...src.matchAll(/\{id:'([a-z]\d\d)',n:'([^']*)',t:(\d)/g)].find(x=>x[3]==='2');
+  if(m2)plain=line(m2[1]);
   CARDS={art,plain:plain||art};
 
   buildKnobs();
   draw();
+  wireTilt();
+  wireGyro(document.getElementById('bGyro'));
 
   document.getElementById('bCard').onclick=e=>{
     withArt=!withArt; e.target.setAttribute('aria-pressed',withArt);
     e.target.textContent='карта: '+(withArt?'с артом':'без арта'); draw();
+  };
+  document.getElementById('bSplit').onclick=e=>{
+    split=!split; e.target.setAttribute('aria-pressed',split);
+    e.target.textContent='персонаж отдельно: '+(split?'да':'нет'); draw();
   };
   document.getElementById('bGlass').onclick=e=>{
     glassOn=!glassOn; e.target.setAttribute('aria-pressed',glassOn);
