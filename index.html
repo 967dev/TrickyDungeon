@@ -1233,11 +1233,20 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .chWrap[hidden]{display:none}
 /* Телефон рамкой всегда, а не только на десктопе: по бокам теперь стоят герои,
    и без рамки чат растёкся бы на весь экран, закрыв их целиком. */
+/* Телефон уже, чем раньше: он ездит по рельсе между героями, и запас по бокам
+   нужен, иначе при сдвиге текст уезжал бы за край экрана. */
 .chFrame{position:relative;z-index:2;display:flex;flex-direction:column;overflow:hidden;
-  width:min(392px,90vw);height:min(720px,82vh);border-radius:34px;border:8px solid #16161c;
+  width:min(384px,80vw);height:min(720px,82vh);border-radius:34px;border:8px solid #16161c;
   background:#0b0b11;box-shadow:0 0 0 2px #2c2c38,0 26px 64px rgba(0,0,0,.8);
-  transform:translateY(26px) scale(.94);transition:transform .34s cubic-bezier(.2,1.12,.3,1)}
+  transform:translateY(26px) scale(.94);
+  transition:transform .42s cubic-bezier(.3,.9,.25,1)}
 .chWrap.on .chFrame{transform:none}
+/* Рельса: герой — телефон — собеседник. Телефон отъезжает ОТ говорящего и
+   тем открывает его. На узком экране это единственный способ показать лицо:
+   ширины на двоих рядом с читаемым чатом просто нет, поэтому недостающее
+   место занимаем не пикселями, а временем. */
+.chWrap.on.sayL .chFrame{transform:translateX(9%)}
+.chWrap.on.sayR .chFrame{transform:translateX(-9%)}
 
 /* Герои выезжают из-за краёв: слева всегда мы, справа собеседник. Прижаты к
    низу и заходят ЗА телефон — на узком экране иначе их просто некуда деть,
@@ -1250,6 +1259,13 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .chHero.r{right:0;transform:translateX(46%) scaleX(-1)}
 .chWrap.on .chHero.l{opacity:1;transform:translateX(-16%)}
 .chWrap.on .chHero.r{opacity:1;transform:translateX(16%) scaleX(-1)}
+/* Говорящий остаётся на месте, отступает МОЛЧАЩИЙ. Сначала я двигал вперёд
+   говорящего — и стало хуже: он подавался навстречу телефону и уходил под
+   него, потому что лицо у него посередине кадра, а телефон в это же время
+   ехал в ту же сторону. Просвет открывает именно телефон; герою достаточно
+   стоять. */
+.chWrap.on.sayL .chHero.r{transform:translateX(28%) scaleX(-1)}
+.chWrap.on.sayR .chHero.l{transform:translateX(-28%)}
 /* Говорящий подсвечивается, молчащий уходит в тень — иначе на двух портретах
    сразу непонятно, чья реплика. */
 .chHero{filter:drop-shadow(0 0 40px rgba(0,0,0,.9)) brightness(.42) saturate(.6)}
@@ -1259,16 +1275,28 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
    кадрируются по лицу: видно головы над перепиской, тела уходят за телефон.
    Показывать ноги сбоку, как выходило при contain, — хуже, чем не показывать
    ничего: узнать героя по коленям нельзя. */
+/* На узком экране герои кадрируются по лицу и стоят во всю высоту: рельса
+   открывает их достаточно, чтобы лицо читалось, а показывать ноги, как выходило
+   при contain, бессмысленно — по коленям героя не узнать. */
 @media (max-width:560px){
-  .chFrame{height:min(640px,72vh)}
-  .chHero{width:52vw;height:34vh;max-height:none;bottom:auto;top:2vh;
-    object-fit:cover;object-position:50% 12%;
-    -webkit-mask-image:linear-gradient(180deg,#000 62%,transparent 100%);
-    mask-image:linear-gradient(180deg,#000 62%,transparent 100%)}
-  .chHero.l{left:0}
-  .chHero.r{right:0}
-  .chWrap.on .chHero.l{transform:translateX(-18%)}
-  .chWrap.on .chHero.r{transform:translateX(18%) scaleX(-1)}
+  .chFrame{width:78vw;height:min(660px,76vh)}
+  .chHero{width:70vw;height:72vh;max-height:none;bottom:2vh;
+    object-fit:cover;object-position:50% 14%;
+    -webkit-mask-image:linear-gradient(180deg,#000 74%,transparent 100%);
+    mask-image:linear-gradient(180deg,#000 74%,transparent 100%)}
+  .chWrap.on .chHero.l{transform:translateX(-34%)}
+  .chWrap.on .chHero.r{transform:translateX(34%) scaleX(-1)}
+  /* 13%, а не больше: при 15% телефон краем уходил за границу экрана, и
+     сообщение обрезалось ровно тогда, когда его надо читать. */
+  .chWrap.on.sayL .chFrame{transform:translateX(13%)}
+  .chWrap.on.sayR .chFrame{transform:translateX(-13%)}
+  .chWrap.on.sayL .chHero.r{transform:translateX(56%) scaleX(-1)}
+  .chWrap.on.sayR .chHero.l{transform:translateX(-56%)}
+}
+/* Системное «меньше движения» — рельсу выключаем: она самая заметная качка на
+   экране, а читать переписку это не мешает. */
+@media (prefers-reduced-motion:reduce){
+  .chWrap.on.sayL .chFrame,.chWrap.on.sayR .chFrame{transform:none}
 }
 .chHead{flex:none;display:flex;align-items:center;gap:11px;padding:12px 14px;
   background:#101017;border-bottom:1px solid #23232e;position:relative;z-index:2}
@@ -3438,6 +3466,12 @@ function chFace(side,emo){
   if(src&&!el.src.endsWith(src))el.src=src;
   $('#chHeroL').classList.toggle('say',side==='m');
   $('#chHeroR').classList.toggle('say',side!=='m');
+  /* Кто говорит — тем и решается, куда отъедет телефон. Классы на обёртке, а
+     не стили на элементах: так рельса целиком описана в CSS и её можно
+     выключить одним медиазапросом при «меньше движения». */
+  const w=$('#chWrap');
+  w.classList.toggle('sayL',side==='m');
+  w.classList.toggle('sayR',side!=='m');
 }
 function openChat(si,part,after){
   const c=chatFor(si,part); if(!c)return false;
@@ -3452,6 +3486,7 @@ function openChat(si,part,after){
   $('#chHeroL').src=CHAT_FACE.g.calm;
   $('#chHeroR').src=(CHAT_FACE[c.foe||'a']||CHAT_FACE.a).calm;
   $('#chHeroL').classList.remove('say');$('#chHeroR').classList.remove('say');
+  $('#chWrap').classList.remove('sayL','sayR');   /* рельса в середине */
   const w=$('#chWrap'); w.hidden=false;
   requestAnimationFrame(()=>w.classList.add('on'));
   $('#chBack').onclick=()=>chatDone(true);
