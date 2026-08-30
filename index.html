@@ -1219,6 +1219,112 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .noMana{font-family:var(--mono);font-size:10.5px;color:var(--red);letter-spacing:.1em}
 
 /* ====== настройки ====== */
+/* ================= БАМ-ЧАТ =================
+   Переписка с соперником перед боем. Рамку телефона рисуем только на широком
+   экране: на самом телефоне она съедала бы по два десятка пикселей ширины с
+   каждой стороны ради шутки, которую там всё равно не видно — там чат просто
+   ЕСТЬ телефон, и это честнее любой рамки. */
+#scr-chat{background:#0a0a0f;align-items:center;justify-content:center}
+.chFrame{display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;position:relative}
+@media (min-width:760px){
+  .chFrame{width:390px;height:min(780px,94vh);border-radius:38px;border:9px solid #16161c;
+    box-shadow:0 0 0 2px #2c2c38,0 30px 70px rgba(0,0,0,.75)}
+}
+.chHead{flex:none;display:flex;align-items:center;gap:11px;padding:12px 14px;
+  background:#101017;border-bottom:1px solid #23232e;position:relative;z-index:2}
+.chBack,.chDots{background:none;border:0;color:var(--yel);font-size:20px;line-height:1;
+  cursor:pointer;padding:4px 6px;flex:none}
+.chDots{color:var(--dim);font-size:17px}
+.chAva{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  border:2px solid var(--yel);background:#15151e}
+.chAva svg{width:20px;fill:var(--yel)}
+.chWho{flex:1;min-width:0}
+.chT{font-family:var(--disp);font-style:italic;font-size:16px;color:var(--yel);line-height:1.1}
+.chS{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--dim);
+  text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Обои рисуем сами, а не картинкой: звёзды, молнии и косые ленты у нас уже
+   есть в языке игры, а так это ноль килобайт и любой размер экрана. */
+.chBody{flex:1;overflow-y:auto;padding:14px 12px 18px;display:flex;flex-direction:column;
+  gap:8px;scrollbar-width:thin;position:relative;background:#0b0b11}
+.chBody::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:
+    repeating-linear-gradient(-45deg,rgba(255,213,46,.05) 0 10px,transparent 10px 30px),
+    repeating-linear-gradient(38deg,rgba(255,255,255,.022) 0 2px,transparent 2px 26px),
+    radial-gradient(circle at 22% 16%,rgba(255,213,46,.07),transparent 42%),
+    radial-gradient(circle at 78% 72%,rgba(255,213,46,.05),transparent 46%)}
+.chBody>*{position:relative;z-index:1}
+.chDay{align-self:center;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  color:var(--dim);background:rgba(20,20,28,.9);border-radius:20px;padding:4px 12px;margin-bottom:4px}
+
+/* Пузыри. Соперник слева тёмный, мы справа жёлтые — как в любом мессенджере,
+   чтобы не пришлось объяснять, кто говорит. Хвостик срезанным углом, а не
+   треугольником: у игры плоский комиксовый язык, скруглённые «капли» из него
+   выпадают. */
+.chMsg{max-width:78%;padding:9px 12px;font-size:13.5px;line-height:1.4;
+  animation:chIn .26s cubic-bezier(.2,1.1,.3,1)}
+.chMsg.them{align-self:flex-start;background:#1a1a24;color:#e8e8f0;
+  border:1px solid #2c2c38;border-radius:14px 14px 14px 3px}
+.chMsg.me{align-self:flex-end;background:var(--yel);color:#0a0a0e;font-weight:600;
+  border-radius:14px 14px 3px 14px;box-shadow:2px 2px 0 rgba(0,0,0,.4)}
+@keyframes chIn{from{opacity:0;transform:translateY(10px) scale(.96)}}
+.chTime{font-family:var(--mono);font-size:8.5px;opacity:.5;margin-left:8px;vertical-align:baseline}
+
+/* «Печатает» — то, что делает переписку живой: без паузы перед репликой чат
+   читается как простыня текста, а не как разговор. */
+.chDots3{align-self:flex-start;display:flex;gap:4px;padding:11px 14px;background:#1a1a24;
+  border:1px solid #2c2c38;border-radius:14px 14px 14px 3px}
+.chDots3 i{width:6px;height:6px;border-radius:50%;background:var(--dim);
+  animation:chBlink 1.1s ease-in-out infinite}
+.chDots3 i:nth-child(2){animation-delay:.16s}
+.chDots3 i:nth-child(3){animation-delay:.32s}
+@keyframes chBlink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+.chBar{flex:none;display:flex;align-items:center;gap:9px;padding:10px 12px;
+  background:#101017;border-top:1px solid #23232e}
+.chClip{color:var(--dim);font-size:15px;flex:none}
+/* Поле ввода — не input: печатать игроку нечего, реплика уже написана. Живой
+   input попросил бы клавиатуру, а в Telegram она ещё и поле боя перекрывает. */
+.chField{flex:1;min-width:0;background:#181820;border:1px solid #2c2c38;border-radius:20px;
+  padding:9px 14px;font-size:13px;color:#e8e8f0;min-height:19px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chField.ph{color:#4d4d5e}
+.chSend{flex:none;width:40px;height:40px;border-radius:50%;border:0;cursor:pointer;
+  background:var(--yel);color:#0a0a0e;font-size:16px;display:grid;place-items:center;
+  transition:transform .12s;box-shadow:2px 2px 0 rgba(0,0,0,.45)}
+.chSend:active{transform:translate(2px,2px);box-shadow:0 0 0 rgba(0,0,0,.45)}
+.chSend:disabled{background:#2c2c38;color:#5a5a6e;cursor:default;box-shadow:none}
+.chSend.go{width:auto;border-radius:22px;padding:0 16px;font-family:var(--disp);font-size:13px}
+
+/* ---- телефон с уведомлением ---- */
+.chNote{position:fixed;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;
+  background:rgba(5,5,9,.86);opacity:0;transition:opacity .2s;padding:20px}
+.chNote.on{opacity:1}
+.chPhone{width:min(300px,84vw);border-radius:30px;border:8px solid #16161c;background:#0b0b11;
+  box-shadow:0 0 0 2px #2c2c38,0 26px 60px rgba(0,0,0,.8),0 0 50px rgba(255,213,46,.12);
+  padding:16px 14px 18px;text-align:center;transform:translateY(24px) scale(.92);
+  transition:transform .32s cubic-bezier(.2,1.15,.3,1)}
+.chNote.on .chPhone{transform:none}
+.chNotch{width:78px;height:5px;border-radius:4px;background:#2c2c38;margin:0 auto 14px}
+.chBell{width:52px;height:52px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;
+  border:2px solid var(--yel);background:#15151e;animation:chRing 1.5s ease-in-out infinite}
+.chBell svg{width:26px;fill:var(--yel)}
+@keyframes chRing{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-11deg)}84%{transform:rotate(9deg)}92%{transform:rotate(-5deg)}}
+.chNoteN{font-family:var(--disp);font-style:italic;font-size:19px;color:#fff;line-height:1.2}
+.chNoteS{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--dim);
+  text-transform:uppercase;margin:6px 0 16px}
+.chNoteB{display:flex;flex-direction:column;gap:8px}
+
+/* Значок телефона на плитке рейда: чат остаётся доступен и после прочтения,
+   иначе написанное увидят один раз и больше никогда. Точка — что не читано. */
+.stChat{flex:none;width:34px;height:34px;border-radius:50%;cursor:pointer;position:relative;
+  border:2px solid #2c2c38;background:#15151e;color:var(--dim);font-size:15px;
+  display:grid;place-items:center;transition:transform .12s,border-color .12s}
+.stChat:hover{transform:translateY(-2px);border-color:var(--yel);color:var(--yel)}
+.stChat.nw{border-color:var(--yel);color:var(--yel)}
+.stChat.nw::after{content:'';position:absolute;top:-3px;right:-3px;width:10px;height:10px;
+  border-radius:50%;background:var(--red);border:2px solid #12121a}
+
 #scr-settings .setBody{flex:1;overflow-y:auto;padding:24px;scrollbar-width:thin}
 /* Три положения — сегментами в один ряд, а не выпадающим списком: выбор из
    трёх должен быть виден целиком, иначе игрок не знает, что вообще есть. */
@@ -1507,6 +1613,23 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 </div>
 
 <!-- ===== НАСТРОЙКИ ===== -->
+<div class="screen" id="scr-chat">
+  <div class="chFrame" id="chFrame">
+    <div class="chHead">
+      <button class="chBack" id="chBack" aria-label="Назад">←</button>
+      <span class="chAva" id="chAva"><svg viewBox="0 0 100 100"><path d="M50 8 L60 37 L91 38 L66 57 L75 88 L50 69 L25 88 L34 57 L9 38 L40 37 Z"/></svg></span>
+      <div class="chWho"><div class="chT">БАМ-ЧАТ</div><div class="chS" id="chWho"></div></div>
+      <button class="chDots" aria-hidden="true">⋮</button>
+    </div>
+    <div class="chBody" id="chBody"><div class="chDay">Сегодня</div></div>
+    <div class="chBar">
+      <span class="chClip" aria-hidden="true">📎</span>
+      <div class="chField" id="chField"></div>
+      <button class="chSend" id="chSend" aria-label="Отправить">➤</button>
+    </div>
+  </div>
+</div>
+
 <div class="screen" id="scr-settings">
   <div class="topbar">
     <button class="btn tbBack" data-go="menu">◄ МЕНЮ</button>
@@ -1995,6 +2118,7 @@ const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'
   /* Настройки графики. По умолчанию всё включено: игра должна показывать себя
      как задумана, а урезать пусть решает тот, кому тяжело. */
   gfx:{irid:1,spec:1,scan:1,grain:1,glow:1,tilt:1},
+  chats:{},   /* какие переписки уже прочитаны — по номеру этапа */
   stats:{packs:0,wins:0,battles:0}};
 let S=load();
 function defaultDeck(){return CARDS.filter(c=>c.t===0&&!c.noColl).flatMap(c=>[c.id,c.id]).slice(0,20)}
@@ -2005,6 +2129,7 @@ function fixS(s){
   /* Сейвы, сделанные до появления блока графики, приходят без gfx. Дополняем
      по ключам, а не подменяем объект целиком: иначе будущий новый флаг
      затирал бы уже выбранное игроком. */
+  if(!s.chats||typeof s.chats!=='object')s.chats={};
   if(!s.gfx||typeof s.gfx!=='object')s.gfx={};
   for(const k in DEF.gfx)if(s.gfx[k]!==0&&s.gfx[k]!==1)s.gfx[k]=DEF.gfx[k];
   return s}
@@ -2053,6 +2178,9 @@ function go(id){
   /* Игрок сам ушёл с боя — значит рейд брошен осознанно. Снимок держим
      только для аварийных случаев (свернули приложение, упал webview). */
   if(CUR==='deck'&&id!=='deck')closeCardView(true);
+  /* Выходя из чата, гасим номер этапа: иначе отложенная реплика дописалась бы
+     в уже закрытую ленту, а то и пометила бы чат прочитанным задним числом. */
+  if(CUR==='chat'&&id!=='chat')chSi=null;
   if(CUR==='battle'&&id!=='battle'){
     dropBattleSnap();
     /* И обязательно снять обучение. Иначе оно продолжает жить на другом
@@ -2223,6 +2351,51 @@ m:{art:'art/story/boy',face:'m',foe:'НАЧАЛЬНИК',
 {a:4,m:'joy',l:[['g','Ну что, поехали.']]}
 ]}
 };
+/* ================= БАМ-ЧАТ =================
+   Переписка с соперником перед боем. Ключ — номер этапа: чат появляется ровно
+   у тех боёв, для которых написан текст, и больше нигде. Добавить разговор к
+   новому бою = дописать сюда строку, править код не нужно.
+     't' — пишет соперник, 'm' — пишем мы.
+   Наша реплика заранее стоит в поле ввода: игроку остаётся нажать отправку.
+   Печатать нечего, а ощущение участия при этом остаётся.
+   {NAME} подставляется как в сюжете. */
+const CHATS={
+1:{who:'КРЫСЫ ПРОВАЛА',beats:[
+  ['t','эй'],
+  ['t','ты новенький?'],
+  ['m','допустим'],
+  ['t','слышь, новенький. тут внизу наша территория'],
+  ['t','эхо жрём мы. кристаллы наши'],
+  ['m','я просто мимо'],
+  ['t','мимо не бывает'],
+  ['t','колоду покажи'],
+  ['m','не покажу'],
+  ['t','ну тогда сам виноват'],
+]},
+2:{who:'ГОПНИКИ ТЕРРАСЫ',beats:[
+  ['t','слышь'],
+  ['t','иди сюда'],
+  ['m','зачем'],
+  ['t','поговорить надо'],
+  ['t','крыс уделал? молодец. крысы это крысы'],
+  ['t','а тут терраса. за проход платят'],
+  ['m','сколько'],
+  ['t','а сколько есть'],
+  ['m','нисколько'],
+  ['t','вот и поговорили'],
+]},
+5:{who:'ЦИРК ШЁПОТА',beats:[
+  ['t','здравствуйте, {NAME}'],
+  ['t','мы вас ждали'],
+  ['m','мы знакомы?'],
+  ['t','ещё нет'],
+  ['t','но мы посмотрели все ваши бои. все до одного'],
+  ['t','вы очень предсказуемы, когда у вас мало маны'],
+  ['m','это блеф'],
+  ['t','конечно блеф'],
+  ['t','улыбнитесь'],
+]},
+};
 /* Активный сюжет — по выбранному герою. */
 function curStory(){return STORIES[S.hero]||STORIES.f}
 
@@ -2315,7 +2488,7 @@ function vnShow(){
       ${face}
       <div class="vnCol">
         <div class="vnName${her?'':' c'}">${nm}</div>
-        <div class="vnText${sp==='t'?' think':''}">${esc(t).replace('{NAME}',S.name||'—')}</div>
+        <div class="vnText${sp==='t'?' think':''}">${sub(esc(t))}</div>
       </div>
     </div>`;
   }).join('');
@@ -3066,6 +3239,8 @@ function stNodeHTML(st,i,num){
     <span class="stNum">${num}</span>
     <div class="stInfo"><div class="stName">${st.n}</div><div class="stDesc">${st.d}</div>
       <div class="stMeta">${st.hp} хп · награда ${st.reward} ⚡ · ии: ${DIFF[i]}${st.boss?' · БОСС':''}</div></div>
+    ${(!lock&&CHATS[i])?`<button class="stChat ${chatSeen(i)?'':'nw'}" data-chat="${i}"
+      aria-label="Открыть БАМ-ЧАТ">✆</button>`:''}
     <span class="stState ${done?'w':lock?'l':'n'}">${done?'ЗАЧИЩЕНО':lock?'ЗАКРЫТО':'В БОЙ'}</span>
   </div>`;
 }
@@ -3107,6 +3282,10 @@ function renderStages(){
     $('#act1Head').classList.toggle('open',act1Open);
     $('#act1Body').classList.toggle('open',act1Open);
   };
+  $$('#stMap .stChat').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();          /* иначе следом уйдём в бой */
+    sfx.ui(); openChat(+b.dataset.chat,null);
+  });
   $$('#stMap .stNode').forEach(el=>el.onclick=()=>{
     const i=+el.dataset.i;
     if(i>S.stage){toast('Зачисти предыдущий Провал!',1);return}
@@ -3120,8 +3299,132 @@ function renderStages(){
       }));
       return;
     }
-    vnLoad(STAGES[i].n.toUpperCase(),900,()=>startBattle(i));
+    /* Чат перед боем — только пока сообщение не прочитано. Прочитанный
+       остаётся под значком телефона на плитке: на поздних рейдах игрок ходит
+       по многу раз, и обязательные два тапа перед каждой попыткой из «живо»
+       быстро превращаются в «убери это». */
+    const вБой=()=>vnLoad(STAGES[i].n.toUpperCase(),900,()=>startBattle(i));
+    if(CHATS[i]&&!chatSeen(i)&&chatNote(i,вБой))return;
+    вБой();
   });
+}
+
+/* ================= показ чата =================
+   Реплики идут по одной, как в сюжете, но с паузой «печатает» перед чужими:
+   без неё лента вываливается простынёй и читается как текст, а не как
+   разговор. Свои появляются сразу — мы же их только что отправили. */
+let chI=0, chSi=null, chAfter=null, chBusy=false;
+/* Подстановка имени героя — та же, что в сюжете. Заводим общую функцию, а не
+   повторяем replace по месту: имён-заполнителей со временем станет больше, и
+   искать все точки подстановки по файлу — то самое, чего мы избегаем. */
+function sub(t){return String(t).replace(/\{NAME\}/g,S.name||'—')}
+/* Склонение по числу. «2 новое сообщение» выдаёт машину сразу же, а весь
+   смысл этого экрана в том, чтобы выглядеть настоящим мессенджером. */
+function plural(n,one,few,many){
+  const a=Math.abs(n)%100, b=a%10;
+  if(a>10&&a<20)return many;
+  if(b>1&&b<5)return few;
+  if(b===1)return one;
+  return many;
+}
+function chatFor(si){return CHATS[si]||null}
+function chatSeen(si){return !!(S.chats&&S.chats[si])}
+function openChat(si,after){
+  const c=chatFor(si); if(!c)return false;
+  chSi=si; chI=0; chAfter=after||null; chBusy=false;
+  $('#chWho').textContent=c.who;
+  $('#chBody').innerHTML='<div class="chDay">Сегодня</div>';
+  $('#chBack').onclick=()=>chatDone(true);
+  $('#chSend').onclick=chatSend;
+  go('chat');
+  chStep();
+  return true;
+}
+/* Одна ступень: выкладываем все подряд чужие реплики, останавливаемся на своей
+   и кладём её в поле ввода — дальше ход игрока. */
+async function chStep(){
+  if(chBusy)return; chBusy=true;
+  const c=chatFor(chSi); if(!c){chBusy=false;return}
+  while(chI<c.beats.length&&c.beats[chI][0]==='t'){
+    await chTyping(260+Math.min(900,c.beats[chI][1].length*26));
+    if(chSi===null){chBusy=false;return}      /* успели выйти — не дописываем */
+    chPush('them',c.beats[chI][1]); chI++;
+  }
+  chBusy=false;
+  chArm();
+}
+function chArm(){
+  const c=chatFor(chSi); if(!c)return;
+  const f=$('#chField'), b=$('#chSend');
+  if(chI<c.beats.length){
+    f.textContent=sub(c.beats[chI][1]); f.classList.remove('ph');
+    b.disabled=false; b.classList.remove('go'); b.textContent='➤';
+  }else{
+    f.textContent='Написать сообщение...'; f.classList.add('ph');
+    b.disabled=false; b.classList.add('go'); b.textContent='В БОЙ ►';
+  }
+}
+function chatSend(){
+  const c=chatFor(chSi); if(!c||chBusy)return;
+  if(chI>=c.beats.length){chatDone(false);return}
+  sfx.ui(); PF.hit('light');
+  chPush('me',c.beats[chI][1]); chI++;
+  $('#chField').textContent=''; $('#chSend').disabled=true;
+  chStep();
+}
+function chPush(side,text){
+  const d=document.createElement('div');
+  d.className='chMsg '+side;
+  d.textContent=sub(text);
+  $('#chBody').appendChild(d);
+  chBottom();
+}
+function chTyping(ms){
+  return new Promise(r=>{
+    const d=document.createElement('div');
+    d.className='chDots3'; d.innerHTML='<i></i><i></i><i></i>';
+    $('#chBody').appendChild(d); chBottom();
+    setTimeout(()=>{d.remove();r()},ms);
+  });
+}
+/* Прокрутка вниз следующим кадром: сразу после вставки высота ещё старая. */
+function chBottom(){
+  const b=$('#chBody');
+  requestAnimationFrame(()=>{b.scrollTop=b.scrollHeight});
+}
+function chatDone(back){
+  const si=chSi; chSi=null;
+  if(si!==null){ if(!S.chats)S.chats={}; S.chats[si]=1; save() }
+  const after=chAfter; chAfter=null;
+  if(back||!after)go('stages'); else after();
+}
+/* Телефон с уведомлением. Появляется, только когда сообщение НЕ читано:
+   на поздних рейдах игрок будет заходить по многу раз, и обязательные два
+   тапа перед каждой попыткой быстро превратились бы в помеху. Прочитанный
+   чат остаётся под значком телефона на самой плитке. */
+function chatNote(si,after){
+  const c=chatFor(si); if(!c)return false;
+  const n=Math.max(1,(c.beats.filter(b=>b[0]==='t').length>6?2:1));
+  const el=document.createElement('div');
+  el.className='chNote';
+  el.innerHTML=`<div class="chPhone">
+    <div class="chNotch"></div>
+    <div class="chBell"><svg viewBox="0 0 24 24"><path d="M12 2a6 6 0 0 0-6 6v4l-2 3v1h16v-1l-2-3V8a6 6 0 0 0-6-6zm0 20a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3z"/></svg></div>
+    <div class="chNoteN">${n} ${plural(n,'новое сообщение','новых сообщения','новых сообщений')}</div>
+    <div class="chNoteS">БАМ-ЧАТ · ${c.who}</div>
+    <div class="chNoteB">
+      <button class="btn pri" data-a="ok">ОТВЕТИТЬ</button>
+      <button class="btn" data-a="skip">ПОЗЖЕ</button>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('on'));
+  sfx.ui(); PF.notify&&PF.notify('warning');
+  const close=go2=>{el.classList.remove('on');setTimeout(()=>el.remove(),220);go2&&go2()};
+  el.querySelector('[data-a="ok"]').onclick=()=>close(()=>openChat(si,after));
+  /* «Позже» не помечает прочитанным: игрок отказался читать, а не прочёл. */
+  el.querySelector('[data-a="skip"]').onclick=()=>close(after);
+  return true;
 }
 
 /* ================= настроение героя =================
