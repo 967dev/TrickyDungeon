@@ -1278,20 +1278,31 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 /* На узком экране герои кадрируются по лицу и стоят во всю высоту: рельса
    открывает их достаточно, чтобы лицо читалось, а показывать ноги, как выходило
    при contain, бессмысленно — по коленям героя не узнать. */
+/* На узком экране голову целиком сбоку от телефона не уместить: посчитано —
+   для этого телефон пришлось бы сузить до 242px, а это уже нечитаемая
+   переписка. Зато экран высокий, и вертикаль свободна. Поэтому телефон
+   становится ниже и уезжает ВНИЗ, а говорящий показывается СВЕРХУ: голова и
+   плечи целиком над перепиской, торс — сбоку. Рельса при этом добирает
+   ширину, а обрезать героя краю экрана больше нечем: говорящий выходит в
+   кадр полностью, молчащий уезжает за край. */
 @media (max-width:560px){
-  .chFrame{width:78vw;height:min(660px,76vh)}
-  .chHero{width:70vw;height:72vh;max-height:none;bottom:2vh;
-    object-fit:cover;object-position:50% 14%;
-    -webkit-mask-image:linear-gradient(180deg,#000 74%,transparent 100%);
-    mask-image:linear-gradient(180deg,#000 74%,transparent 100%)}
-  .chWrap.on .chHero.l{transform:translateX(-34%)}
-  .chWrap.on .chHero.r{transform:translateX(34%) scaleX(-1)}
-  /* 13%, а не больше: при 15% телефон краем уходил за границу экрана, и
-     сообщение обрезалось ровно тогда, когда его надо читать. */
-  .chWrap.on.sayL .chFrame{transform:translateX(13%)}
-  .chWrap.on.sayR .chFrame{transform:translateX(-13%)}
-  .chWrap.on.sayL .chHero.r{transform:translateX(56%) scaleX(-1)}
-  .chWrap.on.sayR .chHero.l{transform:translateX(-56%)}
+  .chWrap{align-items:flex-end}
+  .chFrame{width:74vw;height:min(600px,68vh);margin-bottom:2vh}
+  .chHero{width:74vw;height:56vh;max-height:none;bottom:auto;top:1vh;
+    object-fit:cover;object-position:50% 9%;
+    -webkit-mask-image:linear-gradient(180deg,#000 76%,transparent 100%);
+    mask-image:linear-gradient(180deg,#000 76%,transparent 100%)}
+  /* В покое оба задвинуты за края — на экране только телефон. */
+  .chWrap.on .chHero.l{transform:translateX(-58%)}
+  .chWrap.on .chHero.r{transform:translateX(58%) scaleX(-1)}
+  /* Говорящий выходит целиком: край экрана его больше не режет. */
+  .chWrap.on.sayL .chHero.l{transform:translateX(-4%)}
+  .chWrap.on.sayR .chHero.r{transform:translateX(4%) scaleX(-1)}
+  .chWrap.on.sayL .chHero.r{transform:translateX(74%) scaleX(-1)}
+  .chWrap.on.sayR .chHero.l{transform:translateX(-74%)}
+  /* Телефон сдвигается вбок слабее: основную работу делает вертикаль. */
+  .chWrap.on.sayL .chFrame{transform:translateX(11%)}
+  .chWrap.on.sayR .chFrame{transform:translateX(-11%)}
 }
 /* Системное «меньше движения» — рельсу выключаем: она самая заметная качка на
    экране, а читать переписку это не мешает. */
