@@ -2473,28 +2473,34 @@ m:{art:'art/story/boy',face:'m',foe:'НАЧАЛЬНИК',
    сообщение значило бы соврать. Идёт отдельной строкой по центру.
    Третий элемент — эмоция говорящего: подменяет портрет сбоку.
    Наша реплика заранее стоит в поле ввода, игроку остаётся нажать отправку. */
+/* Портреты. g — героиня, b — герой, a — соперник.
+   Набор парня ждёт картинок: положить в art/chat как b-calm / b-angry /
+   b-what / b-palm. Пока их нет, портрет просто не покажется — см. onerror
+   ниже: показывать вместо парня девушку было бы хуже пустоты. */
 const CHAT_FACE={
   g:{calm:'art/chat/g-calm.webp',angry:'art/chat/g-angry.webp',
      what:'art/chat/g-what.webp',palm:'art/chat/g-palm.webp'},
+  b:{calm:'art/chat/b-calm.webp',angry:'art/chat/b-angry.webp',
+     what:'art/chat/b-what.webp',palm:'art/chat/b-palm.webp'},
   a:{calm:'art/chat/a-calm.webp',laugh:'art/chat/a-laugh.webp'}
 };
 const CHATS={
 1:{who:'xX_Mr_Anon_Xx',foe:'a',
   pre:[
    ['t','0 побед. Какой позорный рейтинг...'],
-   ['t','Ты вообще в мета-колоды заглядывала? Или играешь рандомными картами?'],
+   ['t','Ты вообще в мета-колоды {заглядывала|заглядывал}? Или играешь рандомными картами?'],
    ['m','А ты кто? Модератор?'],
    ['m','Или просто делать нечего?'],
-   ['t','Я Тот, от кого ты сейчас примешь поражение, бомжиха.','laugh'],
+   ['t','Я Тот, от кого ты сейчас примешь поражение, {бомжиха|бомжара}.','laugh'],
    ['t','Твоя колода — просто мусор, ахахаха.','laugh'],
-   ['m','Бомжиха? Запомни этот день.','angry'],
-   ['m','Как день, когда тебя нагнула бомжиха.','angry'],
+   ['m','{Бомжиха|Бомжара}? Запомни этот день.','angry'],
+   ['m','Как день, когда тебя {нагнула|нагнул} {бомжиха|бомжара}.','angry'],
   ],
   post:[
    ['t','Ладно, признаю. Зря быканул, сори.'],
    ['t','Карты у тебя, кстати, не такие уж и мусорные.'],
    ['m','Не извиняйся, просто играй лучше.'],
-   ['t','Слушай, ты дерзкая...'],
+   ['t','Слушай, ты {дерзкая|дерзкий}...'],
    ['t','Не хотелось бы встретиться с тобой на турнире, честно.'],
    ['m','Турнир? Какой ещё турнир?','what'],
    ['t','Ты что, в танке?'],
@@ -2509,7 +2515,7 @@ const CHATS={
    ['m','Шшшепелявый Шшшуллер?!','what'],
    ['m','Тот самый, с самой дорогой колодой в нашем районе??','what'],
    ['t','Да-да, точно! Он там всех в хлам порвёт.','laugh'],
-   ['t','Удачи, бомжиха.','laugh'],
+   ['t','Удачи, {бомжиха|бомжара}.','laugh'],
   ]},
 2:{who:'ГОПНИКИ ТЕРРАСЫ',foe:'a',
   pre:[
@@ -2517,7 +2523,7 @@ const CHATS={
    ['t','иди сюда'],
    ['m','зачем'],
    ['t','поговорить надо'],
-   ['t','крыс уделал? молодец. крысы это крысы'],
+   ['t','анона {уделала|уделал}? молодец. анон это анон'],
    ['t','а тут терраса. за проход платят'],
    ['m','сколько'],
    ['t','а сколько есть'],
@@ -3465,7 +3471,16 @@ function renderStages(){
 let chI=0, chSi=null, chPart='pre', chAfter=null, chBusy=false, chOn=false;
 /* Подстановка имени героя — та же, что в сюжете. Общая функция, а не replace
    по месту: заполнителей со временем станет больше. */
-function sub(t){return String(t).replace(/\{NAME\}/g,S.name||'—')}
+/* Подстановки в тексте. {NAME} — имя героя, {она|он} — род.
+   Пол размечаем ВНУТРИ одной реплики, а не держим две копии диалога: копии
+   разъезжаются при первой же правке, и заметить это можно только сыграв за
+   обоих. Здесь же видно сразу, что где меняется. */
+function sub(t){
+  const он=S.hero==='m';
+  return String(t)
+    .replace(/\{NAME\}/g,S.name||'—')
+    .replace(/\{([^{}|]*)\|([^{}|]*)\}/g,(_,ж,м)=>он?м:ж);
+}
 /* Склонение по числу: «2 новое сообщение» выдаёт машину сразу, а весь смысл
    этого экрана — выглядеть настоящим мессенджером. */
 function plural(n,one,few,many){
@@ -3484,11 +3499,18 @@ function chatSeen(si,part){return !!(S.chats&&S.chats[chatKey(si,part||'pre')])}
    разнообразия: игрок не должен каждый раз соображать, кто где. */
 function chFace(side,emo){
   const c=CHATS[chSi]; if(!c)return;
-  const set=side==='m'?CHAT_FACE[S.hero==='m'?'g':'g']:CHAT_FACE[c.foe||'a'];
+  const set=side==='m'?(CHAT_FACE[S.hero==='m'?'b':'g']):CHAT_FACE[c.foe||'a'];
   const el=side==='m'?$('#chHeroL'):$('#chHeroR');
   if(!el||!set)return;
   const src=set[emo]||set.calm||Object.values(set)[0];
-  if(src&&!el.src.endsWith(src))el.src=src;
+  if(src&&!el.src.endsWith(src)){
+    /* Картинки может не быть — набор парня рисуется. Тогда прячем портрет, а
+       не подставляем чужой: пустой бок честнее, чем девушка вместо парня. */
+    el.style.visibility='hidden';
+    el.onload=()=>{el.style.visibility=''};
+    el.onerror=()=>{el.style.visibility='hidden'};
+    el.src=src;
+  }
   $('#chHeroL').classList.toggle('say',side==='m');
   $('#chHeroR').classList.toggle('say',side!=='m');
   /* Кто говорит — тем и решается, куда отъедет телефон. Классы на обёртке, а
@@ -3508,8 +3530,9 @@ function openChat(si,part,after){
      этот миг ушло бы в chatSend, и чужая реплика отправилась бы от нас. */
   $('#chSend').disabled=true; $('#chSend').classList.remove('go'); $('#chSend').textContent='➤';
   $('#chField').textContent='Написать сообщение...'; $('#chField').classList.add('ph');
-  $('#chHeroL').src=CHAT_FACE.g.calm;
-  $('#chHeroR').src=(CHAT_FACE[c.foe||'a']||CHAT_FACE.a).calm;
+  chFace('t','calm');   /* обе картинки ставим через chFace: там же и защита
+                           от отсутствующего файла */
+  chFace('m','calm');
   $('#chHeroL').classList.remove('say');$('#chHeroR').classList.remove('say');
   $('#chWrap').classList.remove('sayL','sayR');   /* рельса в середине */
   const w=$('#chWrap'); w.hidden=false;
