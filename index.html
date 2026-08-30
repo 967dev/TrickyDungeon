@@ -1251,21 +1251,23 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 /* Герои выезжают из-за краёв: слева всегда мы, справа собеседник. Прижаты к
    низу и заходят ЗА телефон — на узком экране иначе их просто некуда деть,
    а так видно ровно то, что нужно: головы и плечи по бокам. */
+/* На широком экране героев видно во весь рост, и мельчить незачем: места по
+   бокам от телефона там втрое больше, чем он занимает сам. */
 .chHero{position:absolute;bottom:0;z-index:1;pointer-events:none;
-  width:min(460px,62vw);max-height:88vh;object-fit:contain;object-position:bottom;
+  width:min(880px,48vw);max-height:94vh;object-fit:contain;object-position:bottom;
   filter:drop-shadow(0 0 40px rgba(0,0,0,.9));
   opacity:0;transition:transform .42s cubic-bezier(.2,1.05,.3,1),opacity .3s}
-.chHero.l{left:0;transform:translateX(-46%)}
-.chHero.r{right:0;transform:translateX(46%) scaleX(-1)}
-.chWrap.on .chHero.l{opacity:1;transform:translateX(-16%)}
-.chWrap.on .chHero.r{opacity:1;transform:translateX(16%) scaleX(-1)}
+.chHero.l{left:0;transform:translateX(-40%)}
+.chHero.r{right:0;transform:translateX(40%) scaleX(-1)}
+.chWrap.on .chHero.l{opacity:1;transform:translateX(-8%)}
+.chWrap.on .chHero.r{opacity:1;transform:translateX(8%) scaleX(-1)}
 /* Говорящий остаётся на месте, отступает МОЛЧАЩИЙ. Сначала я двигал вперёд
    говорящего — и стало хуже: он подавался навстречу телефону и уходил под
    него, потому что лицо у него посередине кадра, а телефон в это же время
    ехал в ту же сторону. Просвет открывает именно телефон; герою достаточно
    стоять. */
-.chWrap.on.sayL .chHero.r{transform:translateX(28%) scaleX(-1)}
-.chWrap.on.sayR .chHero.l{transform:translateX(-28%)}
+.chWrap.on.sayL .chHero.r{transform:translateX(24%) scaleX(-1)}
+.chWrap.on.sayR .chHero.l{transform:translateX(-24%)}
 /* Говорящий подсвечивается, молчащий уходит в тень — иначе на двух портретах
    сразу непонятно, чья реплика. */
 .chHero{filter:drop-shadow(0 0 40px rgba(0,0,0,.9)) brightness(.42) saturate(.6)}
@@ -3427,19 +3429,29 @@ function renderStages(){
     /* Сюжет — один раз, перед первым настоящим рейдом. У каждого героя своя
        сцена, поэтому проверка только на флаг. Обучение (этап 0) сюда не
        попадает: сюжет привязан к первому бою акта, а не к любому бою. */
+    /* Путь до боя — одна цепочка, а не набор развилок: сцена, потом чат, потом
+       бой. Раньше сюжетная ветка уводила в бой сама и чат проскакивала целиком
+       — на первом рейде разговор с Аноном просто не показывался. Теперь порядок
+       задан здесь один раз и держится для любого боя: добавится сцена ещё
+       где-то — чат за ней последует сам.
+       Заодно ушло зашитое «КРЫСЫ ПРОВАЛА» в заставке: первый рейд давно не
+       крысы, и надпись врала. */
+    const вБой=()=>vnLoad(STAGES[i].n.toUpperCase(),900,()=>startBattle(i));
+    /* Чат — только пока не прочитан. Прочитанный остаётся под значком телефона:
+       на поздних рейдах игрок ходит по многу раз, и обязательные два тапа перед
+       каждой попыткой из «живо» превращаются в помеху. */
+    const сЧатом=()=>{
+      if(CHATS[i]&&CHATS[i].pre&&!chatSeen(i,'pre')&&chatNote(i,'pre',вБой))return;
+      вБой();
+    };
     if(i===1&&!S.story&&STORIES[S.hero]){
-      vnLoad(STORIES[S.hero].intro,1100,()=>startStory(()=>{
-        vnLoad('КРЫСЫ ПРОВАЛА',1000,()=>startBattle(i));
-      }));
+      /* Возвращаемся на рейды ПЕРЕД чатом. Иначе телефон ложится поверх экрана
+         новеллы, и стрелка «назад» из него ведёт в никуда: тот экран сам по
+         себе выхода не имеет, его закрывает только конец сцены. */
+      vnLoad(STORIES[S.hero].intro,1100,()=>startStory(()=>{go('stages');сЧатом()}));
       return;
     }
-    /* Чат перед боем — только пока сообщение не прочитано. Прочитанный
-       остаётся под значком телефона на плитке: на поздних рейдах игрок ходит
-       по многу раз, и обязательные два тапа перед каждой попыткой из «живо»
-       быстро превращаются в «убери это». */
-    const вБой=()=>vnLoad(STAGES[i].n.toUpperCase(),900,()=>startBattle(i));
-    if(CHATS[i]&&CHATS[i].pre&&!chatSeen(i,'pre')&&chatNote(i,'pre',вБой))return;
-    вБой();
+    сЧатом();
   });
 }
 
@@ -3573,6 +3585,9 @@ function chatDone(back){
   setTimeout(()=>{w.hidden=true},260);
   if(!back&&after)setTimeout(after,180);
   else if(CUR==='stages')renderStages();
+  /* Страховка на будущее: чат могут открыть с экрана, у которого нет своего
+     выхода. Закрыв его, игрок обязан остаться там, откуда сможет уйти. */
+  else if(CUR!=='menu'&&CUR!=='battle')go('stages');
 }
 /* Телефон с уведомлением. Появляется, только пока сообщение не читано: на
    поздних рейдах игрок ходит по многу раз, и обязательные два тапа перед
