@@ -1568,6 +1568,16 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .setWrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 .setRow{display:flex;align-items:center;justify-content:space-between;gap:14px;border:3px solid #2c2c38;
   background:#12121a;padding:15px 17px}
+/* Строка промокода. Стоит СРАЗУ ПОСЛЕ .setRow намеренно: оба правила по
+   одному классу, и кто из них применится — решает порядок в файле. Стоя выше,
+   этот блок проигрывал `align-items:center` из .setRow, строка оставалась
+   рядом, и поле с кнопкой вылезали за панель на 50px. */
+.prRow{flex-direction:column;align-items:stretch;gap:10px}
+.prHead{width:100%}
+.prIn{display:flex;gap:8px;align-items:stretch;width:100%}
+.prIn .hInput{flex:1 1 auto;min-width:0;font-size:15px;letter-spacing:.12em;
+  text-transform:uppercase;border-width:2px;padding:9px 11px}
+.prIn .btn{flex:0 0 auto;white-space:nowrap}
 .setRow .sT{font-family:var(--disp);font-size:13px;color:#fff}
 .setRow .sS{font-size:10.5px;color:var(--dim);font-style:italic;margin-top:4px}
 .tgl{width:64px;height:30px;border:2px solid #2c2c38;background:#0a0a10;cursor:pointer;position:relative;flex:none;transition:.15s}
@@ -2375,6 +2385,7 @@ const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'
      как задумана, а урезать пусть решает тот, кому тяжело. */
   gfx:{irid:1,spec:1,scan:1,grain:1,glow:1,tilt:1},
   chats:{},   /* какие переписки уже прочитаны — по номеру этапа */
+  promo:{},   /* какие промокоды уже активированы — чтобы не вводить дважды */
   stats:{packs:0,wins:0,battles:0}};
 let S=load();
 function defaultDeck(){return CARDS.filter(c=>c.t===0&&!c.noColl).flatMap(c=>[c.id,c.id]).slice(0,20)}
@@ -2386,6 +2397,7 @@ function fixS(s){
      по ключам, а не подменяем объект целиком: иначе будущий новый флаг
      затирал бы уже выбранное игроком. */
   if(!s.chats||typeof s.chats!=='object')s.chats={};
+  if(!s.promo||typeof s.promo!=='object')s.promo={};
   if(!s.gfx||typeof s.gfx!=='object')s.gfx={};
   for(const k in DEF.gfx)if(s.gfx[k]!==0&&s.gfx[k]!==1)s.gfx[k]=DEF.gfx[k];
   return s}
@@ -5886,6 +5898,32 @@ function openInfo(tab){
 }
 
 /* ================= настройки ================= */
+/* Промокоды. Проверяются на клиенте, потому что сервера у игры нет вовсе:
+   кто откроет исходник, увидит список целиком. Для подарочных кодов это
+   нормально — их и так раздают публично. Прятать за таким что-то ценное
+   нельзя, для этого нужен сервер.
+   Активированные коды помнит сейв, поэтому один код одному игроку даёт
+   награду ровно раз — и переживает переустановку, раз сейв уходит в облако. */
+const PROMO={
+  PRERELEASE:{sparks:1000,t:'Спасибо, что играешь до релиза!'},
+};
+function redeemPromo(сырое){
+  const код=String(сырое||'').trim().toUpperCase().replace(/\s+/g,'');
+  if(!код){toast('Введи код',1);return}
+  if(!S.promo||typeof S.promo!=='object')S.promo={};
+  const p=PROMO[код];
+  if(!p){toast('Такого промокода нет',1);tone(130,.12,{v:.09});return}
+  if(S.promo[код]){toast('Этот промокод уже активирован',1);tone(160,.08,{v:.06});return}
+  S.promo[код]=1;
+  S.sparks+=p.sparks;
+  save();
+  sfx.sparks();PF.hit('medium');
+  /* Счётчик искр живёт на экране круток — если он сейчас в разметке,
+     обновляем сразу, иначе игрок увидит старое число, когда туда придёт. */
+  const t=$('#gTok'); if(t)t.textContent=fmtN(S.sparks);
+  toast(`${p.t} +${fmtN(p.sparks)} искр`);
+  renderSettings();
+}
 function renderSettings(){
   const rows=[
     {k:'snd',t:'ЗВУК',s:'выстрелы, удары, срыв крышек — весь WebAudio-набор'},
@@ -5900,7 +5938,14 @@ function renderSettings(){
     <div class="setRow"><div><div class="sT">${r.t}</div><div class="sS">${r.s}</div></div>
     <button class="tgl ${S[r.k]?'on':''}" data-k="${r.k}" role="switch" aria-checked="${!!S[r.k]}"><i></i></button></div>`).join('')+
     gfxHTML()+
-    `<div class="setRow"><div><div class="sT">СПРАВКА</div>
+    `<div class="setRow prRow"><div class="prHead"><div class="sT">ПРОМОКОД</div>
+      <div class="sS">${Object.keys(S.promo||{}).length
+        ?'активировано кодов: '+Object.keys(S.promo).length
+        :'если тебе дали код — введи его тут'}</div></div>
+      <div class="prIn"><input class="hInput" id="prCode" maxlength="24" autocomplete="off"
+        autocapitalize="characters" spellcheck="false" placeholder="КОД" aria-label="Промокод">
+        <button class="btn pri" id="prGo">ПРИМЕНИТЬ</button></div></div>
+    <div class="setRow"><div><div class="sT">СПРАВКА</div>
       <div class="sS">правила · все карты · стратегии · шансы</div></div>
       <button class="btn" data-info="battle">ОТКРЫТЬ</button></div>
     <div class="setRow" style="border-color:#4a2230"><div><div class="sT" style="color:var(--red)">СБРОС ПРОГРЕССА</div>
@@ -5910,6 +5955,14 @@ function renderSettings(){
       БАМ-БАМ: КАСКАД · v1.4 · шансы как в кейсах · секрет 1 из 3 846</div>`;
   $$('#setWrap .tgl').forEach(t=>t.onclick=()=>{
     S[t.dataset.k]=!S[t.dataset.k];save();sfx.ui();renderSettings()});
+  {
+    const поле=$('#prCode'), кнопка=$('#prGo');
+    if(кнопка)кнопка.onclick=()=>redeemPromo(поле?поле.value:'');
+    /* Enter — то же самое: на телефоне это единственная кнопка под рукой,
+       когда клавиатура закрывает половину экрана. */
+    if(поле)поле.addEventListener('keydown',e=>{
+      if(e.key==='Enter'||e.keyCode===13){e.preventDefault();redeemPromo(поле.value)}});
+  }
   wireGfx();
   let armed=false;
   $('#setReset').onclick=e=>{
