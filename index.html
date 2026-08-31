@@ -912,6 +912,19 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 /* Карта, летящая из руки на поле. Копия поверх всего: настоящую карту в этот
    момент уже убирает перерисовка руки. */
 .flyCard{position:fixed;z-index:95;pointer-events:none;will-change:transform}
+/* Замах перед ударом. Ход врага игрок не начинал сам, поэтому без этой
+   подсветки удар успевал случиться раньше, чем взгляд находил, КТО бьёт.
+   Тень, а не filter: фильтр на карточке пересчитывал бы её содержимое каждый
+   кадр, и это ровно то, на чём умирал экран круток на iPhone. */
+.unit.tell{z-index:20;animation:uTell .34s ease-in-out}
+@keyframes uTell{
+  0%{box-shadow:0 0 0 0 rgba(255,51,85,0)}
+  45%{transform:translateY(-7px) scale(1.08);box-shadow:0 0 0 4px var(--red),0 0 24px rgba(255,51,85,.75)}
+  100%{box-shadow:0 0 0 0 rgba(255,51,85,0)}}
+/* Пока карта летит к цели и пока ходит враг, поле не принимает нажатий:
+   иначе эффект прилетит уже в изменившуюся доску. */
+.bWrap.locked #bHand,.bWrap.locked .bRow,.bWrap.locked #bTop,
+.bWrap.locked #bEnd{pointer-events:none}
 .unit.buffed .uA{color:var(--grn)}
 .dmgPop{position:fixed;z-index:85;pointer-events:none;font-family:var(--disp);font-style:italic;font-size:26px;
   color:#fff;text-shadow:2px 2px 0 #000,0 0 12px var(--red);animation:dmgA .8s cubic-bezier(.2,1,.3,1) forwards}
@@ -3805,6 +3818,7 @@ function snapBattle(){
 }
 function dropBattleSnap(){store.del(BSNAP)}
 function restoreBattle(){
+  lockUI(0);
   let d=null;
   try{d=JSON.parse(store.get(BSNAP)||'null')}catch(e){}
   if(!d||d.v!==1)return false;
@@ -3897,7 +3911,7 @@ const TRAIN={
   ]
 };
 function startBattle(si){
-  dropBattleSnap();
+  dropBattleSnap();lockUI(0);
   const st=STAGES[si];
   const pool=CARDS.filter(c=>!c.noColl&&c.t<=st.pool&&(c.ty==='u'||c.ty==='s'));
   const aiDeck=[];
@@ -3991,6 +4005,7 @@ function startTurn(who){
   drawCard(who);
   B.phase=who;B.sel=null;
   renderBattle();
+  lockUI(who==='e');
   if(who==='e'){turnBanner('ХОД ВРАГА');$('#bEnd').disabled=true;
     setTimeout(safeEnemyTurn,1000)}
   else{$('#bEnd').disabled=false}
@@ -4005,8 +4020,12 @@ async function trainEnemyTurn(){
   await sleep(700);
   if(step.play&&B.e.board.length<5){
     const c=byId(step.play);
-    if(c){enemyBanner(c);await sleep(600);
-      B.e.board.push(mkUnit(c));renderBattle()}
+    if(c){enemyBanner(c);await sleep(400);
+      const u=mkUnit(c);B.e.board.push(u);renderBattle();
+      const el=$(`#rowE .unit[data-uid="${u.uid}"]`);
+      /* В обучении читаемость важнее всего: карта врага так же вылетает и
+         замирает посередине, а не появляется на доске сама собой. */
+      if(el)await flyToBoard(c,enemyHandRect(),unitRect(el),el,{reveal:1})}
   }
   if(step.face){await sleep(600);damageHero('p',step.face)}
   /* Хвост тот же, что у настоящего хода ИИ: смерти и проверка победы
@@ -4032,16 +4051,21 @@ async function endTurn(){
    (ранний return по неучтённой ветке), это так же насмерть, но без
    исключения, и никакой обработчик ошибок такое не заметит. */
 async function safeEnemyTurn(){
-  try{ await aiTurn() }
-  catch(e){
-    try{console.error('[bbduel] ход врага упал',e)}catch(_){}
-    if(B&&!B.over&&B.phase!=='p'){toast('Сбой у врага — ход возвращён тебе',1);startTurn('p')}
-    return;
-  }
-  if(B&&!B.over&&B.phase!=='p'){
-    try{console.warn('[bbduel] ход врага завершился, не передав ход')}catch(_){}
-    startTurn('p');
-  }
+  /* Снять блокировку обязаны при любом исходе: с ней поле не принимает
+     нажатий, и застрявшая блокировка — тот же мёртвый бой, что и застрявшая
+     фаза, только без единого следа в консоли. */
+  try{
+    try{ await aiTurn() }
+    catch(e){
+      try{console.error('[bbduel] ход врага упал',e)}catch(_){}
+      if(B&&!B.over&&B.phase!=='p'){toast('Сбой у врага — ход возвращён тебе',1);startTurn('p')}
+      return;
+    }
+    if(B&&!B.over&&B.phase!=='p'){
+      try{console.warn('[bbduel] ход врага завершился, не передав ход')}catch(_){}
+      startTurn('p');
+    }
+  }finally{ if(!B||B.phase==='p'||B.over)lockUI(0) }
 }
 async function aiTurn(){
   if(B.train){return trainEnemyTurn()}
@@ -4068,9 +4092,15 @@ async function aiTurn(){
       sfx.play(c.t);
       renderBattle();
       const el=$(`#rowE .unit[data-uid="${u.uid}"]`);
-      if(el){const r=el.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,fxCols(c.t),8+c.t*6,.9)}
-      if(c.eff)await aiSpell(c);
-      await sleep(650);
+      if(el){
+        const r=unitRect(el);
+        await flyToBoard(c,enemyHandRect(),r,el,{reveal:1});
+        burst(r.left+r.width/2,r.top+r.height/2,fxCols(c.t),8+c.t*6,.9);
+        bang(pick(c.stk||['БАМ!']),50,46);
+      }
+      /* Боевой клич уже вылетевшей карты второй раз не летит. */
+      if(c.eff)await aiSpell(c,1);
+      await sleep(240);
     }else{
       sfx.play(c.t);
       await aiSpell(c);
@@ -4093,31 +4123,62 @@ async function aiTurn(){
       else tgt={hero:1};
     }
     u.canAtk=false;
-    await doAttack('e',u,tgt);
-    await sleep(560);
+    await doAttack('e',u,tgt,{tell:320,ms:520});
+    await sleep(340);
   }
   if(B.over)return;
   await sleep(350);
   startTurn('p');
 }
-async function aiSpell(c){
+/* Куда летит заклятие врага — в то, что оно затронет. Раньше всё, что видел
+   игрок, — плашка в углу: карта тратилась, где-то менялись числа, и связать
+   одно с другим было не с чем. */
+function aiSpellAim(c){
+  const e=c.eff,P=B.p,E=B.e;
+  const un=u=>u?$(`#rowE .unit[data-uid="${u.uid}"],#rowP .unit[data-uid="${u.uid}"]`):null;
+  if(e.k==='dmg'||e.k==='drain'){
+    const t=P.board.filter(x=>x.hp<=e.v).sort((a,b)=>b.atk-a.atk)[0]||P.board[0];
+    return {tgt:t||null,el:t?un(t):$('#pHp')};
+  }
+  if(e.k==='healHero')return {el:$('#eHp')};
+  if(e.k==='draw')return {el:$('#eHandN')};
+  if(e.k==='mana')return {el:$('#eMana')};
+  if(e.k==='buff')return {el:un(E.board[0])||$('#rowE')};
+  if(e.k==='healAll'||e.k==='buffAll')return {el:$('#rowE')};
+  return {el:$('#rowP')};   /* aoe, weaken и всё прочее — по нашему ряду */
+}
+async function aiSpell(c,noFly){
   const E=B.e,P=B.p;
   const e=c.eff;if(!e)return;
+  const aim=aiSpellAim(c);
+  if(!noFly){
+    await flyCard(c,enemyHandRect(),[
+      {r:revealRect(),ms:290,hold:440,rot:-3},
+      {r:aimRect(aim.el),ms:300,k:.82,fade:0}]);
+    bang(pick(c.stk||['БАМ!']),50,44);
+    await sleep(110);
+  }
   if(e.k==='dmg'||e.k==='drain'){
-    let tgt=P.board.filter(x=>x.hp<=e.v).sort((a,b)=>b.atk-a.atk)[0]||P.board[0];
+    /* Цель выбрана до полёта — за это время доска не менялась, но если
+       выбранного юнита всё же нет, бьём по тому, кто стоит первым. */
+    let tgt=aim.tgt&&P.board.includes(aim.tgt)?aim.tgt:P.board[0];
     if(tgt)await dealDamage('p',tgt,e.v);
     else damageHero('p',e.v);
     if(e.k==='drain'){E.hp=Math.min(E.max,E.hp+e.v);popDmg($('#eHp'),e.v,true);sfx.heal();renderBattle()}
   }else if(e.k==='healHero'){E.hp=Math.min(E.max,E.hp+e.v);popDmg($('#eHp'),e.v,true);sfx.heal();renderBattle()}
   else if(e.k==='healAll'){for(const u of E.board)u.hp=Math.min(u.maxhp,u.hp+e.v);sfx.heal();renderBattle()}
-  else if(e.k==='draw'){for(let k=0;k<e.v;k++)drawCard('e')}
+  else if(e.k==='draw'){for(let k=0;k<e.v;k++)drawCard('e');renderBattle()}
+  /* Прибавку маны врагу раньше не обрабатывали вовсе: карта тратилась
+     впустую. В пул ИИ такие карты сейчас не попадают, но ветка обязана быть —
+     иначе первая же добавленная станет молчаливой дырой. */
+  else if(e.k==='mana'){E.mana=Math.min(10,E.mana+e.v);bang('ВРАГУ +'+e.v+' МАНЫ!',50,40);sfx.sparks();renderBattle()}
   else if(e.k==='aoe'){for(const u of [...P.board])await dealDamage('p',u,e.v)}
   else if(e.k==='buff'||e.k==='buffAll'||e.k==='weaken'){
     if(e.k==='buff'&&E.board[0]){E.board[0].atk+=e.a||0;E.board[0].hp+=e.h||0;E.board[0].maxhp+=e.h||0}
     if(e.k==='buffAll')for(const u of E.board){u.atk+=e.a||0;u.hp+=e.h||0;u.maxhp+=e.h||0}
     if(e.k==='weaken')for(const u of P.board)u.atk=Math.max(0,u.atk-e.v);
     renderBattle()}
-  await sleep(500);
+  await sleep(380);
 }
 
 /* --- розыгрыш --- */
@@ -4158,17 +4219,36 @@ function playCard(i,targetUnit){
     const u=mkUnit(c);P.board.push(u);
     renderBattle();
     const el=$(`#rowP .unit[data-uid="${u.uid}"]`);
-    if(el){const r=el.getBoundingClientRect();
+    if(el){const r=unitRect(el);
       flyToBoard(c,откуда,r,el);
       burst(r.left+r.width/2,r.top+r.height/2,fxCols(c.t),10+c.t*8,1);
       bang(pick(c.stk||['БАМ!']),50,46)}
     if(c.eff)playerEff(c,targetUnit);
+    B.sel=null;
+    renderBattle();
   }else{
-    bang(pick(c.stk||['БАМ!']),50,46);
-    playerEff(c,targetUnit);
+    /* Заклятие тоже долетает до цели. Раньше карта просто исчезала, а где-то
+       на поле менялись числа — на размене из трёх карт подряд связать одно с
+       другим было не с чем. Эффект применяем на касании, а не при нажатии,
+       поэтому на время полёта поле заперто: иначе доска успела бы измениться
+       между прицеливанием и попаданием. */
+    const цельEl=targetUnit
+      ? $(`#rowP .unit[data-uid="${targetUnit.uid}"],#rowE .unit[data-uid="${targetUnit.uid}"]`)
+      : spellAimP(c);
+    B.sel=null;
+    renderBattle();
+    const попал=()=>{
+      lockUI(0);
+      if(!B||B.over)return;
+      bang(pick(c.stk||['БАМ!']),50,46);
+      playerEff(c,targetUnit);
+      renderBattle();
+    };
+    if(gfxAnim()&&откуда){
+      lockUI(1);
+      flyCard(c,откуда,[{r:aimRect(цельEl),ms:300,k:.85,fade:0}]).then(попал);
+    }else попал();
   }
-  B.sel=null;
-  renderBattle();
 }
 function playerEff(c,tgt){
   const P=B.p,E=B.e,e=c.eff;if(!e)return;
@@ -4253,51 +4333,83 @@ async function dealDamage(side,u,v){
   }
   renderBattle();
 }
-async function doAttack(side,u,tgt){
+/* Выпад: замах назад, бросок к цели, возврат. Одна кривая на удар по юниту и
+   по герою — иначе два одинаковых по смыслу события читаются как разные.
+   reach — доля пути: в героя не долетаем, там панель поверх поля.
+   Обещание анимации ждём с жёстким сроком: в фоновой вкладке кадры встают, а
+   на этом ожидании висит продолжение хода врага. */
+async function lunge(elS,цель,ms,reach){
+  if(!elS||!цель||!gfxAnim())return;
+  const a=elS.getBoundingClientRect();
+  const dx=цель.x-(a.left+a.width/2),dy=цель.y-(a.top+a.height/2);
+  const k=reach||.84;
+  elS.style.zIndex=30;
+  /* Плавность у каждой фазы своя: замах тянется, бросок разгоняется и
+     приходит на полной скорости, возврат мягкий. С одной общей кривой на все
+     кадры фазы размазывались друг в друга, и удар читался как рывок. */
+  const an=elS.animate([
+    {transform:'translate(0,0) scale(1)',offset:0,easing:'ease-in-out'},
+    {transform:`translate(${-dx*.13}px,${-dy*.13}px) scale(.97)`,offset:.28,
+     easing:'cubic-bezier(.45,0,.75,.35)'},
+    {transform:`translate(${dx*k}px,${dy*k}px) scale(1.09)`,offset:.58,easing:'linear'},
+    {transform:`translate(${dx*k}px,${dy*k}px) scale(1.09)`,offset:.66,
+     easing:'cubic-bezier(.25,.6,.3,1)'},
+    {transform:'translate(0,0) scale(1)',offset:1}],
+    {duration:ms,easing:'linear'});
+  await Promise.race([an.finished.catch(()=>{}),sleep(ms+400)]);
+  elS.style.zIndex='';
+}
+async function doAttack(side,u,tgt,opts){
+  const o=opts||{};
+  const foe=side==='p'?'e':'p';
+  const rowS=side==='p'?$('#rowP'):$('#rowE');
+  const rowT=side==='p'?$('#rowE'):$('#rowP');
+  const elS=rowS?rowS.querySelector(`.unit[data-uid="${u.uid}"]`):null;
+  const elT=tgt.hero?(side==='p'?$('#bTop'):$('#pStats'))
+                    :(rowT?rowT.querySelector(`.unit[data-uid="${tgt.uid}"]`):null);
+  /* Черту и подсветку показываем ДО удара, а не вместе с ним: удар врага
+     игрок не начинал сам, и без этой доли секунды взгляд не успевал найти,
+     кто по кому бьёт. Своему удару замах не нужен — цель выбрал сам. */
+  if(elS&&elT){
+    atkLine(elS.getBoundingClientRect(),elT.getBoundingClientRect(),260+(o.tell||0));
+    if(o.tell&&gfxAnim()){
+      elS.classList.remove('tell');void elS.offsetWidth;elS.classList.add('tell');
+      await sleep(o.tell);
+      elS.classList.remove('tell');
+    }
+  }
+  if(!B||B.over)return;
   const sil=side==='p'?$('#silP'):$('#silE');
   if(sil){sil.classList.remove('att','attE');void sil.offsetWidth;
     sil.classList.add(side==='p'?'att':'attE');
     setTimeout(()=>sil.classList.remove('att','attE'),460)}
   const sf=$('#spFlash');
   if(sf){sf.classList.remove('go');void sf.offsetWidth;sf.classList.add('go')}
-  if(tgt.hero){damageHero(side==='p'?'e':'p',u.atk);shake($('#bWrap'))}
+  const ms=o.ms||400;
+  if(tgt.hero){
+    /* Удар в героя тоже должен быть виден: раньше юнит не двигался вообще,
+       и всё событие сводилось к дрожи экрана и убывающему числу. */
+    if(elS&&elT){const b=elT.getBoundingClientRect();
+      await lunge(elS,{x:b.left+b.width/2,y:b.top+b.height/2},ms,.5)}
+    damageHero(foe,u.atk);shake($('#bWrap'));
+  }
   else{
-    const foe=side==='p'?'e':'p';
     const back=tgt.atk||0;
-    const rowS=side==='p'?$('#rowP'):$('#rowE');
-    const rowT=side==='p'?$('#rowE'):$('#rowP');
-    const elS=rowS.querySelector(`.unit[data-uid="${u.uid}"]`);
-    const elT=rowT.querySelector(`.unit[data-uid="${tgt.uid}"]`);
-    if(elS&&elT){
-      const a=elS.getBoundingClientRect(),b=elT.getBoundingClientRect();
-      const dx=b.left+b.width/2-(a.left+a.width/2),dy=b.top+b.height/2-(a.top+a.height/2);
-      elS.style.zIndex=30;
-      atkLine(a,b);
-      /* Замах назад перед броском. Без него выпад читается как рывок: глаз
-         ждёт подготовки, и она же делает сам удар быстрее по ощущению, хотя
-         общая длительность та же. */
-      if(gfxAnim())await elS.animate([
-        {transform:'translate(0,0) scale(1)',offset:0},
-        {transform:`translate(${-dx*.13}px,${-dy*.13}px) scale(.97)`,offset:.26},
-        {transform:`translate(${dx*.84}px,${dy*.84}px) scale(1.09)`,offset:.56},
-        {transform:`translate(${dx*.84}px,${dy*.84}px) scale(1.09)`,offset:.64},
-        {transform:'translate(0,0) scale(1)',offset:1}],
-        {duration:400,easing:'cubic-bezier(.35,.05,.2,1)'}).finished;
-      elS.style.zIndex='';
-    }
+    if(elS&&elT){const b=elT.getBoundingClientRect();
+      await lunge(elS,{x:b.left+b.width/2,y:b.top+b.height/2},ms)}
     await dealDamage(foe,tgt,u.atk);
     if(back>0)await dealDamage(side,u,back);
   }
 }
 
-/* Карта не исчезает из руки, чтобы существо возникло на поле из ниоткуда, —
-   она туда долетает. Летит копия поверх всего: настоящую карту в этот момент
-   уже убрала перерисовка руки, а новое существо должно оказаться на месте
-   сразу, иначе следующий клик пришёлся бы в пустоту.
-   Само существо на время полёта прячем прозрачностью, а не задержкой показа:
-   узел обязан существовать и занимать место, иначе поле дёрнется. */
-function flyToBoard(c,откуда,куда,el){
-  if(!gfxAnim()||!откуда||!куда||!куда.width){return}
+/* Полёт копии карты по цепочке остановок — один механизм на всё: розыгрыш
+   игроком, вскрытие карты врагом, бросок заклятия в цель.
+   Остановка: {r:куда, ms:сколько лететь, hold:сколько висеть на месте,
+   rot:наклон, k:поправка масштаба, fade:прозрачность на подлёте}.
+   Масштаб считается от ширины копии, поэтому ВСЕ прямоугольники обязаны быть
+   карточных пропорций — для произвольных целей их строит aimRect(). */
+function flyCard(c,откуда,остановки){
+  if(!gfxAnim()||!откуда||!откуда.width||!остановки.length)return Promise.resolve();
   const fly=document.createElement('div');
   fly.className='flyCard';
   fly.style.width=откуда.width+'px';
@@ -4305,34 +4417,122 @@ function flyToBoard(c,откуда,куда,el){
   fly.style.top=откуда.top+'px';
   fly.innerHTML=cardHTML(c,{open:1,noAnim:1});
   document.body.appendChild(fly);
-  const sx=куда.width/откуда.width, sy=куда.height/откуда.height;
-  const dx=куда.left+куда.width/2-(откуда.left+откуда.width/2);
-  const dy=куда.top+куда.height/2-(откуда.top+откуда.height/2);
+  let всего=0;
+  for(const s of остановки)всего+=(s.ms||300)+(s.hold||0);
+  /* Плавность задаём покадрово, а не одной кривой на всю анимацию: с общей
+     кривой пауза посередине съедала бы разгон второго отрезка, и он начинался
+     бы рывком. */
+  const ease='cubic-bezier(.3,.05,.2,1)';
+  const kf=[{transform:'translate(0,0) scale(1) rotate(0deg)',opacity:1,offset:0,easing:ease}];
+  let t=0;
+  for(const s of остановки){
+    const dx=s.r.left+s.r.width/2-(откуда.left+откуда.width/2);
+    const dy=s.r.top+s.r.height/2-(откуда.top+откуда.height/2);
+    const sc=(s.r.width/откуда.width)*(s.k||1);
+    const tr=`translate(${dx}px,${dy}px) scale(${sc}) rotate(${s.rot||0}deg)`;
+    const op=s.fade!=null?s.fade:1;
+    t+=(s.ms||300);
+    kf.push({transform:tr,opacity:op,offset:Math.min(1,t/всего),easing:ease});
+    if(s.hold){t+=s.hold;
+      kf.push({transform:tr,opacity:op,offset:Math.min(1,t/всего),easing:ease})}
+  }
+  const an=fly.animate(kf,{duration:всего,easing:'linear',fill:'forwards'});
+  /* Уборка обязана случиться при любом исходе: обещание анимации не
+     резолвится, если вкладка ушла в фон и кадры встали, — а на этом обещании
+     висит и продолжение хода. Поэтому поверх него жёсткий срок. */
+  return new Promise(готово=>{
+    let убрано=false;
+    const done=()=>{if(убрано)return;убрано=true;fly.remove();готово()};
+    an.finished.then(done).catch(done);
+    setTimeout(done,всего+600);
+  });
+}
+/* Карточный прямоугольник по центру произвольного элемента: целью бывает ряд
+   во всю ширину или счётчик здоровья, и брать их размер за размер карты
+   нельзя — копия растянулась бы на пол-экрана. */
+function aimRect(el,W){
+  const f=$('#bField');
+  const fr=f?f.getBoundingClientRect():{left:0,top:0,width:innerWidth,height:innerHeight};
+  const r=el&&el.getBoundingClientRect?el.getBoundingClientRect():null;
+  const cx=r&&r.width?r.left+r.width/2:fr.left+fr.width/2;
+  const cy=r&&r.width?r.top+r.height/2:fr.top+fr.height/2;
+  const w=W||88,h=w*1.32;
+  return {left:cx-w/2,top:cy-h/2,width:w,height:h};
+}
+/* Место, где карта врага замирает, чтобы её успели прочитать. */
+function revealRect(){
+  const f=$('#bField');
+  const r=f?f.getBoundingClientRect():{left:0,top:0,width:innerWidth,height:innerHeight};
+  const w=Math.min(152,Math.max(104,r.width*.32)),h=w*1.32;
+  return {left:r.left+r.width/2-w/2,top:r.top+r.height*.44-h/2,width:w,height:h};
+}
+/* Пока карта в полёте и пока ходит враг, поле нажатий не принимает: эффект
+   обязан прилететь в ту же доску, по которой его нацелили. */
+function lockUI(on){const w=$('#bWrap');if(w)w.classList.toggle('locked',!!on)}
+/* Размер только что созданной клетки. Замер «как есть» врал: у свежего юнита
+   CSS-анимация unitIn стартует со scale(.3), и getBoundingClientRect сразу
+   после отрисовки давал прямоугольник втрое меньше настоящего — карта летела
+   не в клетку, а в точку, и туда же сыпались искры. Гасим появление: на время
+   полёта юнит всё равно скрыт прозрачностью, а на посадке его встряхивает
+   свой пружок. Через finish(), а не inline-стилем: inline animation:none
+   заодно убил бы и падение unitDie, и замах. */
+function unitRect(el){
+  try{el.getAnimations().forEach(a=>{if(a.animationName==='unitIn')a.finish()})}catch(e){}
+  return el.getBoundingClientRect();
+}
+/* Куда летит НАШЕ заклятие без явной цели — по тому же правилу, что и
+   вражеское, только стороны зеркальны. */
+function spellAimP(c){
+  const e=c.eff;if(!e)return $('#rowE');
+  if(e.k==='dmg'||e.k==='drain')return $('#eHp');
+  if(e.k==='healHero'||e.k==='healAll')return $('#pHp');
+  if(e.k==='mana')return $('#pMana');
+  if(e.k==='draw')return $('#bHand');
+  if(e.k==='buffAll')return $('#rowP');
+  return $('#rowE');   /* aoe, weaken — по вражескому ряду */
+}
+/* Откуда вылетает карта врага. Руки у него на экране нет, поэтому берём
+   счётчик руки в его панели — оттуда карта и «приходит». */
+function enemyHandRect(){
+  const p=$('#eHandN'),host=p?(p.closest('.pile')||p):$('#bTop');
+  return aimRect(host,86);
+}
+/* Карта не исчезает из руки, чтобы существо возникло на поле из ниоткуда, —
+   она туда долетает. Летит копия поверх всего: настоящую карту в этот момент
+   уже убрала перерисовка руки, а новое существо должно оказаться на месте
+   сразу, иначе следующий клик пришёлся бы в пустоту.
+   Само существо на время полёта прячем прозрачностью, а не задержкой показа:
+   узел обязан существовать и занимать место, иначе поле дёрнется. */
+async function flyToBoard(c,откуда,куда,el,opts){
+  const o=opts||{};
+  if(!gfxAnim()||!откуда||!куда||!куда.width){return}
   el.style.opacity='0';
-  const an=fly.animate([
-    {transform:'translate(0,0) scale(1) rotate(0)',opacity:1},
-    {transform:`translate(${dx*.55}px,${dy*.55 - 26}px) scale(${(1+sx)/2}) rotate(-4deg)`,offset:.55},
-    {transform:`translate(${dx}px,${dy}px) scale(${Math.max(sx,sy*.72)}) rotate(0)`,opacity:.85,offset:1}],
-    {duration:340,easing:'cubic-bezier(.4,0,.2,1)'});
-  /* Уборка обязана случиться при любом исходе. Обещание анимации не резолвится,
-     если вкладка ушла в фон и кадры встали, — а вместе с копией так и осталось
-     бы спрятанным САМО существо: оно скрыто прозрачностью на время полёта.
-     Поэтому поверх обещания — жёсткий срок. Повторный вызов безвреден. */
-  let убрано=false;
-  const done=()=>{
-    if(убрано)return; убрано=true;
-    fly.remove(); el.style.opacity='';
-    if(gfxAnim())el.animate([{transform:'scale(1.16)'},{transform:'scale(1)'}],
-      {duration:220,easing:'cubic-bezier(.3,1.5,.4,1)'});
-  };
-  an.finished.then(done).catch(done);
-  setTimeout(done,900);
+  const stops=[];
+  /* Карту врага сначала показываем крупно посередине: свою руку он игроку не
+     показывает, и без этой остановки существо просто возникало на доске. */
+  if(o.reveal)stops.push({r:revealRect(),ms:290,hold:440,rot:-3});
+  else{
+    /* Своя карта летит по дуге с подбросом: та же длительность читается
+       живее, чем прямая. Точка на 55% пути, приподнятая над линией. */
+    const w=(откуда.width+куда.width)/2,h=w*1.32;
+    const cx=откуда.left+откуда.width/2+(куда.left+куда.width/2-(откуда.left+откуда.width/2))*.55;
+    const cy=откуда.top+откуда.height/2+(куда.top+куда.height/2-(откуда.top+откуда.height/2))*.55-26;
+    stops.push({r:{left:cx-w/2,top:cy-h/2,width:w,height:h},ms:190,rot:-4});
+  }
+  stops.push({r:куда,ms:o.reveal?300:190,fade:.85});
+  await flyCard(c,откуда,stops);
+  el.style.opacity='';
+  if(gfxAnim())el.animate([{transform:'scale(1.16)'},{transform:'scale(1)'}],
+    {duration:220,easing:'cubic-bezier(.3,1.5,.4,1)'});
 }
 
 /* Черта от атакующего к цели: на поле из пяти клеток «кто кого» иначе
-   восстанавливается только задним числом, по тому, у кого убыло здоровье. */
-function atkLine(a,b){
+   восстанавливается только задним числом, по тому, у кого убыло здоровье.
+   ms — сколько черта живёт: при замахе она обязана дотянуть до самого удара,
+   иначе прицел гаснет раньше, чем происходит то, на что он указывал. */
+function atkLine(a,b,ms){
   if(!gfxAnim()||!S.vfx)return;
+  const dur=ms||260;
   const x1=a.left+a.width/2,y1=a.top+a.height/2;
   const x2=b.left+b.width/2,y2=b.top+b.height/2;
   const len=Math.hypot(x2-x1,y2-y1);
@@ -4343,12 +4543,13 @@ function atkLine(a,b){
   el.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;
   document.body.appendChild(el);
   const an=el.animate([{opacity:0,clipPath:'inset(0 100% 0 0)'},
-              {opacity:1,clipPath:'inset(0 0 0 0)',offset:.35},
+              {opacity:1,clipPath:'inset(0 0 0 0)',offset:Math.min(.5,90/dur)},
+              {opacity:1,clipPath:'inset(0 0 0 0)',offset:.72},
               {opacity:0,clipPath:'inset(0 0 0 60%)'}],
-    {duration:260,easing:'ease-out'});
+    {duration:dur,easing:'ease-out'});
   const off=()=>el.remove();
   an.finished.then(off).catch(off);
-  setTimeout(off,800);   /* тот же страховочный срок: в фоне кадры встают */
+  setTimeout(off,dur+540);   /* тот же страховочный срок: в фоне кадры встают */
 }
 
 /* ================= ИНСПЕКТОР КАРТЫ ================= */
@@ -4760,7 +4961,7 @@ function unitHTML(u,side,targetable){
    15% превратили бы «начать десятый рейд и сразу сдаться» в ферму по 45 искр за
    пару секунд, что после починки экономики паков было бы единственной дырой. */
 function finish(win,forfeit){
-  B.over=true;dropBattleSnap();$('#bEnd').disabled=true;
+  B.over=true;dropBattleSnap();$('#bEnd').disabled=true;lockUI(0);
   const si=B.si;   /* запоминаем: к моменту показа итогов B могут обнулить */
   /* Обучение снимаем ЗДЕСЬ, а не только при уходе с экрана. Итоги боя
      показываются, не покидая экран боя, — значит перехватчик ввода режиссёра
