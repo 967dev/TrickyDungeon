@@ -783,6 +783,7 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
   /* Кнопки по центру панели по вертикали. */
   .pBtns{display:flex;flex-direction:column;justify-content:center;gap:8px;
     margin-left:auto;padding-left:14px}
+  .pBtns{flex-wrap:nowrap}
   .bBottom .hero .bGiveUp{font-size:17px;line-height:1}
 }
 @media (min-width:1200px){
@@ -800,6 +801,41 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .ePlay i{background:#ff3355;color:#fff;font-style:normal;font-size:8px;padding:2px 6px;margin-right:8px;vertical-align:2px;letter-spacing:.08em}
 @keyframes ePlayIn{from{transform:translateX(130%)}}
 @keyframes ePlayOut{to{transform:translateX(130%);opacity:0}}
+/* Журнал боя. Действия просто пролетали: за один ход врага их три-четыре, и
+   если не успел уследить — посмотреть было негде. Лента держит последние
+   строки на экране сама, полная история — по кнопке в панели игрока.
+   Лента поверх доски намеренно: на 375px в поле нет ни одной свободной
+   полосы, зато строки короткие, тонированы под фон и сами гаснут. */
+.bFeed{position:absolute;right:9px;top:50%;transform:translateY(-50%);z-index:32;
+  display:flex;flex-direction:column;align-items:flex-end;gap:3px;
+  pointer-events:none;max-width:66%}
+.bFeed b{display:block;max-width:100%;font-family:var(--mono);font-weight:400;
+  font-size:9.5px;letter-spacing:.03em;padding:3px 7px;color:#cfccdd;
+  background:rgba(10,10,15,.9);border-left:3px solid #3a3a4c;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  animation:feedIn .22s cubic-bezier(.2,1.2,.3,1) both}
+.bFeed b.p{border-left-color:var(--yel);color:#fff}
+.bFeed b.e{border-left-color:var(--red);color:#fff}
+.bFeed b.turn{border-left-color:var(--cyn);color:var(--cyn);letter-spacing:.12em}
+.bFeed b.die{color:#ff9bb0}
+.bFeed b.off{opacity:0;transform:translateX(16px);transition:opacity .38s,transform .38s}
+@keyframes feedIn{from{opacity:0;transform:translateX(18px)}}
+/* Полная история. Заголовок хода отделяет раунды — иначе к третьему ходу
+   список превращается в кашу, в которой не видно, что относилось к чему. */
+/* Прокручивается список, а не всё окно: иначе «в конец» уносило за экран и
+   шапку с крестиком, и закрыть журнал можно было только тапом мимо. */
+.lgBox{overflow:visible}
+.lgList{display:flex;flex-direction:column;gap:2px;max-height:60vh;overflow-y:auto;
+  scrollbar-width:thin;padding-right:4px}
+.lgList i{font-family:var(--mono);font-style:normal;font-size:11px;line-height:1.5;
+  padding:3px 9px;border-left:3px solid #3a3a4c;background:rgba(255,255,255,.03);color:#cfccdd}
+.lgList i.p{border-left-color:var(--yel);color:#fff}
+.lgList i.e{border-left-color:var(--red);color:#fff}
+.lgList i.die{color:#ff9bb0}
+.lgList i.turn{margin-top:10px;border-left:none;background:none;padding:2px 0 4px;
+  font-family:var(--disp);font-style:italic;font-size:12.5px;color:var(--cyn);letter-spacing:.06em}
+.lgList i.turn:first-child{margin-top:0}
+.lgEmpty{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:center;padding:18px 0}
 .bHint{position:absolute;top:74px;left:50%;transform:translateX(-50%);z-index:30;pointer-events:none;
   font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--yel);
   background:rgba(10,10,15,.88);border:2px solid rgba(255,213,46,.4);padding:6px 15px;white-space:nowrap;max-width:94vw;
@@ -1757,6 +1793,7 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
       <div class="bRow" id="rowE"></div>
       <div class="bMid"></div>
       <div class="bRow" id="rowP"></div>
+      <div class="bFeed" id="bFeed"></div>
     </div>
     <div class="bBottom">
       <div class="hero">
@@ -1770,6 +1807,7 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
         </div>
         <div class="pBtns">
           <button class="btn iconbtn" data-info="battle" aria-label="Правила боя">?</button>
+          <button class="btn iconbtn" id="bLogBtn" aria-label="Журнал боя" title="Журнал боя"><svg width="15" height="13" viewBox="0 0 16 14" aria-hidden="true"><path d="M1 2h14M1 7h14M1 12h9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg></button>
           <button class="btn iconbtn bGiveUp" id="bGiveUp" aria-label="Сдаться и выйти из боя" title="Сдаться">⚑</button>
         </div>
       </div>
@@ -3883,7 +3921,9 @@ function restoreBattle(){
       .filter(Boolean)});
   const P=side(d.p),E=side(d.e);
   if(P.hp<=0||E.hp<=0){dropBattleSnap();return false}
-  B={si:d.si,st,phase:'p',over:false,skill:d.skill,p:P,e:E,sel:null};
+  clearFeed();
+  B={si:d.si,st,phase:'p',over:false,skill:d.skill,p:P,e:E,sel:null,log:[],turnNo:0};
+  blog('sys','— бой восстановлен —','turn');
   /* Иначе следующий призванный юнит получит uid уже занятый на поле. */
   UID=Math.max(UID,(d.uid|0)+1);
   go('battle');
@@ -3891,6 +3931,7 @@ function restoreBattle(){
   $('#bEnd').onclick=endTurn;
   $('#bEnd').disabled=false;
   $('#bGiveUp').onclick=askGiveUp;
+  $('#bLogBtn').onclick=openLog;
   renderBattle();
   toast('Бой восстановлен');
   return true;
@@ -3969,7 +4010,8 @@ function startBattle(si){
   const pool=CARDS.filter(c=>!c.noColl&&c.t<=st.pool&&(c.ty==='u'||c.ty==='s'));
   const aiDeck=[];
   while(aiDeck.length<20){const c=pick(pool);if(aiDeck.filter(x=>x===c.id).length<2)aiDeck.push(c.id)}
-  B={si,st,phase:'player',over:false,train:!!st.tutorial,eTurn:0,
+  clearFeed();
+  B={si,st,phase:'player',over:false,train:!!st.tutorial,eTurn:0,log:[],turnNo:0,
     skill:clamp(.15+si*.09,0,1), /* 0.15 на первом рейде → 0.96 на финале */
     p:{hp:30,max:30,mana:0,mmax:0,
        deck:st.tutorial?[...TRAIN.deck].reverse():shuffle([...S.deck]),
@@ -3981,6 +4023,7 @@ function startBattle(si){
   if(B.train){
     B.p.hand=[...TRAIN.hand];
     $('#bEnd').onclick=endTurn;$('#bEnd').disabled=false;$('#bGiveUp').onclick=askGiveUp;
+    $('#bLogBtn').onclick=openLog;
     renderBattle();
     turnBanner('ТРЕНИРОВКА');
     setTimeout(()=>{startTurn('p');startTraining()},600);
@@ -4001,15 +4044,18 @@ function startBattle(si){
   $('#bEnd').onclick=endTurn;
   $('#bEnd').disabled=false;
   $('#bGiveUp').onclick=askGiveUp;
+  $('#bLogBtn').onclick=openLog;
   renderBattle();
   turnBanner('ТВОЙ ХОД!');
   setTimeout(()=>{startTurn('p')},600);
 }
 function drawCard(who,silent){
   const P=B[who];
-  if(!P.deck.length){P.fatigue++;damageHero(who,P.fatigue);return null}
+  if(!P.deck.length){P.fatigue++;blog(who,`усталость · −${P.fatigue}`,'die');
+    damageHero(who,P.fatigue);return null}
   const id=P.deck.pop();
-  if(P.hand.length>=7){if(!silent&&who==='p')toast(`Карта сгорела: ${byId(id).n}`);return null}
+  if(P.hand.length>=7){blog(who,`сгорела: ${byId(id).n}`,'die');
+    if(!silent&&who==='p')toast(`Карта сгорела: ${byId(id).n}`);return null}
   P.hand.push(id);
   if(who==='p'&&!silent)sfx.draw();
   return id}
@@ -4045,6 +4091,57 @@ function popDmg(el,v,heal){
   d.style.left=(r.left+r.width/2)+'px';d.style.top=(r.top-8)+'px';
   document.body.appendChild(d);setTimeout(()=>d.remove(),820);
 }
+/* ================= журнал боя =================
+   Единственный вход для «что сейчас произошло». Сегодня его зовут прямо из
+   боевого кода, но зовут ИЗ ОДНОГО места на событие — когда логику отделим от
+   анимаций (см. BACKLOG), этот же поток станет тем, что правила отдают
+   наружу, а лента с историей — одним из его читателей.
+   who: 'p' — наше действие, 'e' — вражеское, 'sys' — служебное. */
+/* Строки журнала собираются в разметку, а в них может попасть что угодно —
+   сегодня только имена карт, завтра имя игрока. Экранируем на входе, чтобы не
+   пришлось вспоминать об этом потом. */
+function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function blog(who,text,kind){
+  if(!B)return;
+  if(!Array.isArray(B.log))B.log=[];
+  const запись={w:who,t:text,k:kind||''};
+  B.log.push(запись);
+  /* Предел, чтобы длинный бой не растил массив без конца. */
+  if(B.log.length>400)B.log.splice(0,B.log.length-400);
+  feedPush(запись);
+}
+/* Строка в ленте: живёт несколько секунд и гаснет. Больше четырёх штук разом
+   не держим — на телефоне они начинают закрывать доску. */
+function feedPush(з){
+  const f=$('#bFeed');if(!f)return;
+  const el=document.createElement('b');
+  el.className=(з.w==='sys'?'':з.w)+(з.k?' '+з.k:'');
+  el.textContent=з.t;
+  f.appendChild(el);
+  while(f.children.length>4)f.firstChild.remove();
+  const снять=()=>{if(!el.parentNode)return;el.classList.add('off');
+    setTimeout(()=>el.remove(),420)};
+  setTimeout(снять,з.k==='turn'?2600:4200);
+}
+function clearFeed(){const f=$('#bFeed');if(f)f.innerHTML=''}
+function openLog(){
+  if(!B)return;
+  sfx.ui();
+  const box=document.createElement('div');box.className='iWrap';
+  const строки=(B.log||[]).map(з=>
+    `<i class="${(з.w==='sys'?'':з.w)+(з.k?' '+з.k:'')}">${esc(з.t)}</i>`).join('');
+  box.innerHTML=`<div class="iBox lgBox">
+    <div class="iHead"><h2>ЖУРНАЛ БОЯ</h2>
+      <button class="xbtn" aria-label="Закрыть"><svg width="13" height="13" viewBox="0 0 14 14"><path d="M1 1 L13 13 M13 1 L1 13" stroke="currentColor" stroke-width="2.4"/></svg></button></div>
+    ${строки?`<div class="lgList">${строки}</div>`:'<div class="lgEmpty">Пока ничего не произошло</div>'}</div>`;
+  document.body.appendChild(box);
+  const закрыть=()=>box.remove();
+  box.addEventListener('click',e=>{if(e.target===box)закрыть()});
+  box.querySelector('.xbtn').onclick=закрыть;
+  /* Прокручиваем к концу: интересует последнее, а не начало боя. */
+  const l=box.querySelector('.lgList');
+  if(l)l.scrollTop=l.scrollHeight;
+}
 function enemyBanner(c){
   const b=document.createElement('div');b.className='ePlay';
   b.innerHTML=`<i>ВРАГ</i>${c.n}`;
@@ -4054,6 +4151,9 @@ function enemyBanner(c){
 function startTurn(who){
   const P=B[who];
   P.mmax=Math.min(10,P.mmax+1);P.mana=P.mmax;
+  if(who==='p')B.turnNo=(B.turnNo||0)+1;
+  B.seq=(B.seq||0)+1;
+  blog('sys',`— ХОД ${B.turnNo||1} · ${who==='p'?'ТЫ':'ВРАГ'} —`,'turn');
   for(const u of P.board){u.canAtk=true;u.sick=false}
   drawCard(who);
   B.phase=who;B.sel=null;
@@ -4091,7 +4191,7 @@ async function trainEnemyTurn(){
 }
 async function endTurn(){
   if(B.phase!=='p'||B.over)return;
-  sfx.ui();B.phase='wait';$('#bEnd').disabled=true;
+  sfx.ui();B.phase='wait';B.seq=(B.seq||0)+1;$('#bEnd').disabled=true;
   B.sel=null;renderBattle();
   await sleep(200);
   startTurn('e');
@@ -4143,6 +4243,7 @@ async function aiTurn(){
     const откуда=enemyHandRect();
     E.hand.splice(idx.i,1);
     const c=idx.c;played++;
+    blog('e',`⚡ ${c.n}${c.ty==='u'?` ${c.a}/${c.h}`:''} · ${c.c} ${plural(c.c,'мана','маны','маны')}`,'card');
     enemyBanner(c);
     if(c.ty==='u'){
       const u=mkUnit(c);E.board.push(u);
@@ -4219,21 +4320,31 @@ async function aiSpell(c,noFly,откуда){
     /* Цель выбрана до полёта — за это время доска не менялась, но если
        выбранного юнита всё же нет, бьём по тому, кто стоит первым. */
     let tgt=aim.tgt&&P.board.includes(aim.tgt)?aim.tgt:P.board[0];
+    blog('e',`${c.n} → ${tgt?tgt.card.n:'ТВОЙ ГЕРОЙ'} · ${e.v}`
+      +(e.k==='drain'?`, себе ♥ +${e.v}`:''),'atk');
     if(tgt)await dealDamage('p',tgt,e.v);
     else damageHero('p',e.v);
     if(e.k==='drain'){E.hp=Math.min(E.max,E.hp+e.v);popDmg($('#eHp'),e.v,true);sfx.heal();renderBattle()}
-  }else if(e.k==='healHero'){E.hp=Math.min(E.max,E.hp+e.v);popDmg($('#eHp'),e.v,true);sfx.heal();renderBattle()}
-  else if(e.k==='healAll'){for(const u of E.board)u.hp=Math.min(u.maxhp,u.hp+e.v);sfx.heal();renderBattle()}
-  else if(e.k==='draw'){for(let k=0;k<e.v;k++)drawCard('e');renderBattle()}
+  }else if(e.k==='healHero'){blog('e',`♥ +${e.v} своему герою`);
+    E.hp=Math.min(E.max,E.hp+e.v);popDmg($('#eHp'),e.v,true);sfx.heal();renderBattle()}
+  else if(e.k==='healAll'){blog('e',`♥ +${e.v} всем своим`);
+    for(const u of E.board)u.hp=Math.min(u.maxhp,u.hp+e.v);sfx.heal();renderBattle()}
+  else if(e.k==='draw'){blog('e',`+${e.v} ${plural(e.v,'карта','карты','карт')} в руку`);
+    for(let k=0;k<e.v;k++)drawCard('e');renderBattle()}
   /* Прибавку маны врагу раньше не обрабатывали вовсе: карта тратилась
      впустую. В пул ИИ такие карты сейчас не попадают, но ветка обязана быть —
      иначе первая же добавленная станет молчаливой дырой. */
-  else if(e.k==='mana'){E.mana=Math.min(10,E.mana+e.v);bang('ВРАГУ +'+e.v+' МАНЫ!',50,40);sfx.sparks();renderBattle()}
-  else if(e.k==='aoe'){for(const u of [...P.board])await dealDamage('p',u,e.v)}
+  else if(e.k==='mana'){blog('e',`+${e.v} маны`);
+    E.mana=Math.min(10,E.mana+e.v);bang('ВРАГУ +'+e.v+' МАНЫ!',50,40);sfx.sparks();renderBattle()}
+  else if(e.k==='aoe'){blog('e',`${c.n} → по всем твоим · ${e.v}`,'atk');
+    for(const u of [...P.board])await dealDamage('p',u,e.v)}
   else if(e.k==='buff'||e.k==='buffAll'||e.k==='weaken'){
-    if(e.k==='buff'&&E.board[0]){E.board[0].atk+=e.a||0;E.board[0].hp+=e.h||0;E.board[0].maxhp+=e.h||0}
-    if(e.k==='buffAll')for(const u of E.board){u.atk+=e.a||0;u.hp+=e.h||0;u.maxhp+=e.h||0}
-    if(e.k==='weaken')for(const u of P.board)u.atk=Math.max(0,u.atk-e.v);
+    if(e.k==='buff'&&E.board[0]){blog('e',`▲ ${E.board[0].card.n} +${e.a||0}/+${e.h||0}`);
+      E.board[0].atk+=e.a||0;E.board[0].hp+=e.h||0;E.board[0].maxhp+=e.h||0}
+    if(e.k==='buffAll'){blog('e',`▲ всем своим +${e.a||0}/+${e.h||0}`);
+      for(const u of E.board){u.atk+=e.a||0;u.hp+=e.h||0;u.maxhp+=e.h||0}}
+    if(e.k==='weaken'){blog('e',`▼ твоим −${e.v} атаки`);
+      for(const u of P.board)u.atk=Math.max(0,u.atk-e.v)}
     renderBattle()}
   await sleep(380);
 }
@@ -4271,6 +4382,7 @@ function playCard(i,targetUnit){
   const откуда=(()=>{const h=$(`#bHand .hCard[data-i="${i}"]`);
     return h?h.getBoundingClientRect():null})();
   P.mana-=c.c;P.hand.splice(i,1);
+  blog('p',`⚡ ${c.n}${c.ty==='u'?` ${c.a}/${c.h}`:''} · ${c.c} ${plural(c.c,'мана','маны','маны')}`,'card');
   sfx.play(c.t);
   if(c.ty==='u'){
     const u=mkUnit(c);P.board.push(u);
@@ -4309,34 +4421,47 @@ function playCard(i,targetUnit){
 }
 function playerEff(c,tgt){
   const P=B.p,E=B.e,e=c.eff;if(!e)return;
+  /* Что именно сделала карта — отдельной строкой: «сыграл Искру» без
+     продолжения не говорит, кому и сколько прилетело. */
+  const цель=tgt?tgt.card.n:'ГЕРОЙ ВРАГА';
   switch(e.k){
     case 'mana':
+      blog('p',`+${e.v} маны`);
       P.mana=Math.min(10,P.mana+e.v);
       bang('+1 МАНА!',50,55);sfx.sparks();renderBattle();break;
     case 'dmg':
+      blog('p',`${c.n} → ${цель} · ${e.v}`,'atk');
       if(tgt)dealDamage('e',tgt,e.v);
       else damageHero('e',e.v);
       break;
     case 'healHero':
+      blog('p',`♥ +${e.v} герою`);
       P.hp=Math.min(P.max,P.hp+e.v);popDmg($('#pHp'),e.v,true);sfx.heal();renderBattle();break;
     case 'healAll':
+      blog('p',`♥ +${e.v} герою и всем своим`);
       P.hp=Math.min(P.max,P.hp+e.v);popDmg($('#pHp'),e.v,true);
       for(const u of P.board)u.hp=Math.min(u.maxhp,u.hp+e.v);
       sfx.heal();renderBattle();break;
     case 'draw':
+      blog('p',`+${e.v} ${plural(e.v,'карта','карты','карт')} в руку`);
       for(let k=0;k<e.v;k++)drawCard('p');renderBattle();break;
     case 'buff':
-      if(tgt){tgt.atk+=e.a||0;tgt.hp+=e.h||0;tgt.maxhp+=e.h||0;tgt.buffed=1;
+      if(tgt){blog('p',`▲ ${tgt.card.n} +${e.a||0}/+${e.h||0}`);
+        tgt.atk+=e.a||0;tgt.hp+=e.h||0;tgt.maxhp+=e.h||0;tgt.buffed=1;
         sfx.heal();renderBattle()}break;
     case 'buffAll':
+      blog('p',`▲ всем своим +${e.a||0}/+${e.h||0}`);
       for(const u of P.board){u.atk+=e.a||0;u.hp+=e.h||0;u.maxhp+=e.h||0;u.buffed=1}
       sfx.heal();renderBattle();break;
     case 'aoe':
+      blog('p',`${c.n} → по всем врагам · ${e.v}`,'atk');
       for(const u of [...E.board])dealDamage('e',u,e.v);break;
     case 'weaken':
+      blog('p',`▼ врагам −${e.v} атаки`);
       for(const u of E.board)u.atk=Math.max(0,u.atk-e.v);
       bang('Ш-Ш-Ш…',50,46);renderBattle();break;
     case 'drain':
+      blog('p',`${c.n} → ${цель} · ${e.v}, себе ♥ +${e.v}`,'atk');
       if(tgt)dealDamage('e',tgt,e.v);else damageHero('e',e.v);
       P.hp=Math.min(P.max,P.hp+e.v);popDmg($('#pHp'),e.v,true);sfx.heal();
       renderBattle();break;
@@ -4366,6 +4491,7 @@ async function dealDamage(side,u,v){
      способ придать удару вес: глаз воспринимает её как инерцию от попадания. */
   await sleep(v>=4?190:120);
   if(u.hp<=0){
+    blog(side,`✖ ${u.card.n} погиб`,'die');
     sfx.die();PF.hit('rigid');
     /* Злость — только когда выбили НАШЕГО. В dealDamage side это владелец
        получающего урон юнита (из B[side].board его и удаляют), поэтому
@@ -4443,6 +4569,8 @@ async function doAttack(side,u,tgt,opts){
   const sf=$('#spFlash');
   if(sf){sf.classList.remove('go');void sf.offsetWidth;sf.classList.add('go')}
   const ms=o.ms||400;
+  blog(side,tgt.hero?`${u.card.n} → ${side==='p'?'ГЕРОЙ ВРАГА':'ТВОЙ ГЕРОЙ'} · ${u.atk}`
+                    :`${u.card.n} → ${tgt.card.n} · ${u.atk}`,'atk');
   if(tgt.hero){
     /* Удар в героя тоже должен быть виден: раньше юнит не двигался вообще,
        и всё событие сводилось к дрожи экрана и убывающему числу. */
@@ -4452,6 +4580,7 @@ async function doAttack(side,u,tgt,opts){
   }
   else{
     const back=tgt.atk||0;
+    if(back>0)blog(foe,`${tgt.card.n} в ответ → ${u.card.n} · ${back}`,'atk');
     if(elS&&elT){const b=elT.getBoundingClientRect();
       await lunge(elS,{x:b.left+b.width/2,y:b.top+b.height/2},ms)}
     await dealDamage(foe,tgt,u.atk);
@@ -5096,6 +5225,7 @@ function unitHTML(u,side,targetable){
    пару секунд, что после починки экономики паков было бы единственной дырой. */
 function finish(win,forfeit){
   B.over=true;dropBattleSnap();$('#bEnd').disabled=true;lockUI(0);
+  blog('sys',forfeit?'— СДАЛСЯ —':(win?'— ПОБЕДА —':'— ПОРАЖЕНИЕ —'),'turn');
   const si=B.si;   /* запоминаем: к моменту показа итогов B могут обнулить */
   /* Обучение снимаем ЗДЕСЬ, а не только при уходе с экрана. Итоги боя
      показываются, не покидая экран боя, — значит перехватчик ввода режиссёра
@@ -5660,7 +5790,14 @@ let wdPhase=null, wdSince=0;
 setInterval(()=>{
   try{
     if(!B||B.over||CUR!=='battle'){wdPhase=null;return}
-    if(B.phase!==wdPhase){wdPhase=B.phase;wdSince=Date.now();return}
+    /* Сравниваем ЗАХОД в фазу, а не её имя. По имени сторож ошибался:
+       короткая фаза 'wait' живёт 200мс, между опросами (раз в 2с) он видел её
+       через раз — и через несколько ходов принимал два разных попадания в
+       'wait' за одно бесконечное и отбирал у врага ход. В журнале это выглядит
+       как два хода игрока подряд без хода врага между ними: именно так баг и
+       нашёлся. Чем быстрее игрок жмёт «конец хода», тем вероятнее промах. */
+    const заход=B.phase+'#'+(B.seq||0);
+    if(заход!==wdPhase){wdPhase=заход;wdSince=Date.now();return}
     const stuck=Date.now()-wdSince;
     const btn=$('#bEnd');
     if(B.phase==='p'){
