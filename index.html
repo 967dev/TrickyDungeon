@@ -2331,7 +2331,7 @@ function migrate(s){
    страницы стирала сейв. */
 const INV_CAP=20;
 const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'',story:0,
-  gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,anim:true,
+  gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,anim:true,arrows:true,
   /* Настройки графики. По умолчанию всё включено: игра должна показывать себя
      как задумана, а урезать пусть решает тот, кому тяжело. */
   gfx:{irid:1,spec:1,scan:1,grain:1,glow:1,tilt:1},
@@ -3876,7 +3876,7 @@ function setMood(kind,hold){
 }
 
 /* ================= БОЙ ================= */
-let B=null,UID=1,DRAG=null,suppressClick=false;
+let B=null,UID=1,DRAG=null,suppressClick=false,holdFired=false;
 document.addEventListener('click',e=>{
   if(suppressClick){e.stopPropagation();e.preventDefault();suppressClick=false}},true);
 function mkUnit(card){
@@ -4797,7 +4797,10 @@ async function flyToBoard(c,откуда,куда,el,opts){
    стороны по той же причине — чужая атака и своя не должны выглядеть
    одинаково даже краем глаза. */
 function atkLine(a,b,ms,side){
-  if(!gfxAnim()||!S.vfx)return;
+  /* Своя настройка, а не общая с частицами: дуга — не украшение, а
+     единственное, что называет цель до удара, и выключать её вместе с искрами
+     неправильно ни в ту, ни в другую сторону. */
+  if(!gfxAnim()||S.arrows===false)return;
   const dur=ms||260;
   const x1=a.left+a.width/2,y1=a.top+a.height/2;
   const x2=b.left+b.width/2,y2=b.top+b.height/2;
@@ -4850,6 +4853,78 @@ function atkLine(a,b,ms,side){
   setTimeout(off,dur+660);   /* тот же страховочный срок: в фоне кадры встают */
 }
 
+/* Долгое нажатие по существу открывает его карту. В руке карта читается
+   тапом, а на поле тап занят выбором цели для атаки — прочитать, что делает
+   существо (особенно чужое), было нельзя вообще, хотя половина карт что-то
+   да умеет. Сдвиг пальца больше 10px отменяет удержание: иначе перетаскивание
+   юнита на цель каждый раз упиралось бы в открывшееся окно. */
+let HOLD_MS=420;   /* не const: порог подбирался на живых нажатиях */
+function wireHold(el){
+  /* Один раз на узел. Ряд пересобирается через syncRow, который СОХРАНЯЕТ
+     узлы выживших существ, а renderBattle зовут на каждый удар — без этой
+     метки на одном существе к середине боя висел бы десяток обработчиков, и
+     каждый заводил бы свой таймер. */
+  if(el.dataset.hold)return;
+  el.dataset.hold='1';
+  let t=null,sx=0,sy=0;
+  const снять=()=>{if(t){clearTimeout(t);t=null}};
+  el.addEventListener('pointerdown',e=>{
+    if(!B||B.over)return;
+    sx=e.clientX;sy=e.clientY;
+    снять();
+    t=setTimeout(()=>{
+      t=null;holdFired=true;
+      /* Гасим и начатое перетаскивание, и щелчок, который придёт по
+         отпусканию: иначе поверх разбора отработает выбор цели. */
+      DRAG=null;suppressClick=true;
+      PF.hit('light');
+      openUnitCard(+el.dataset.uid);
+    },HOLD_MS);
+  });
+  el.addEventListener('pointermove',e=>{
+    if(t&&Math.hypot(e.clientX-sx,e.clientY-sy)>10)снять()});
+  el.addEventListener('pointerup',снять);
+  el.addEventListener('pointercancel',снять);
+  el.addEventListener('pointerleave',снять);
+}
+/* Карта существа с ЖИВЫМИ статами: важно не то, что на ней напечатано, а во
+   что она превратилась после усилений и полученного урона. */
+function openUnitCard(uid){
+  if(!B)return;
+  const свой=B.p.board.some(x=>x.uid===uid);
+  const u=B.p.board.find(x=>x.uid===uid)||B.e.board.find(x=>x.uid===uid);
+  if(!u)return;
+  const c=u.card;
+  closeInspector();
+  sfx.ui();
+  const изм=(u.atk!==c.a||u.maxhp!==c.h);
+  insBox=document.createElement('div');insBox.className='iWrap';
+  insBox.innerHTML=`<div class="iBox">
+    <div class="iHead"><h2>${esc(c.n)}</h2>
+      <button class="xbtn" aria-label="Закрыть"><svg width="13" height="13" viewBox="0 0 14 14"><path d="M1 1 L13 13 M13 1 L1 13" stroke="currentColor" stroke-width="2.4"/></svg></button></div>
+    <div class="insView">
+      <div class="insCard">${cardHTML(c,{open:1,noAnim:1})}</div>
+      <div class="insInfo">
+        <div class="insMeta">${свой?'ТВОЙ ЮНИТ':'ЮНИТ ВРАГА'} · ${u.atk}/${u.hp}${
+          изм?` <span style="color:var(--dim)">(на карте ${c.a}/${c.h})</span>`:''
+        } · ${TIER_NAMES[c.t]} ${'★'.repeat(c.t+1)}</div>
+        ${kwLine(c)}
+        <div class="insDesc">${effDesc(c)}</div>
+        <div class="insFl">«${esc(c.fl)}»</div>
+        <div class="insBtns">
+          <span class="noMana">${свой
+            ?(u.canAtk&&u.atk>0?'ГОТОВ АТАКОВАТЬ':(u.atk<=0?'НЕЧЕМ БИТЬ — 0 АТАКИ':'УЖЕ ХОДИЛ В ЭТОМ ХОДУ'))
+            :(u.taunt?'ТАУНТ — его придётся бить первым':'на поле врага')}</span>
+          <button class="btn" id="insClose">ЗАКРЫТЬ</button>
+        </div>
+      </div>
+    </div></div>`;
+  document.body.appendChild(insBox);
+  const close=()=>closeInspector();
+  insBox.addEventListener('click',e=>{if(e.target===insBox)close()});
+  insBox.querySelector('.xbtn').onclick=close;
+  insBox.querySelector('#insClose').onclick=close;
+}
 /* ================= ИНСПЕКТОР КАРТЫ ================= */
 let insBox=null;
 function closeInspector(){if(insBox){insBox.remove();insBox=null}}
@@ -4925,6 +5000,7 @@ function dragTargetsFor(){
 }
 function beginDrag(e,kind,ref,srcEl){
   if(!B||B.over||B.phase!=='p')return;
+  holdFired=false;
   if(e.button!==undefined&&e.button!==0)return;
   DRAG={kind,ref,sx:e.clientX,sy:e.clientY,moved:false,ghost:null,srcEl};
   window.addEventListener('pointermove',onDragMove);
@@ -4965,6 +5041,9 @@ function onDragUp(e){
   if(drag.srcEl)drag.srcEl.classList.remove('dragSrc');
   clearDropHi();
   if(!drag.moved){
+    /* Долгое нажатие уже открыло карту — обычный тап по отпусканию не нужен,
+       иначе поверх разбора сразу выберется цель для атаки. */
+    if(holdFired){holdFired=false;return}
     if(drag.kind==='hand'){
       /* Повторный тап по уже выбранной карте отменяет выбор цели. Без этого
          из режима «тапни по цели» не было выхода вообще: тап мимо ничего не
@@ -5125,9 +5204,11 @@ function renderBattle(){
     el.addEventListener('pointerdown',e=>{
       e.preventDefault();
       beginDrag(e,'unit',+el.dataset.uid,el)});
+    wireHold(el);
   });
   $$('#rowE .unit').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();onEnemyTap(+el.dataset.uid)});
+    wireHold(el);
   });
   $$('#rowE .slot[data-slot="e-hero"],#bTop').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();onEnemyTap('hero')});
@@ -5727,6 +5808,7 @@ function renderSettings(){
     {k:'snd',t:'ЗВУК',s:'выстрелы, удары, срыв крышек — весь WebAudio-набор'},
     {k:'vfx',t:'ЧАСТИЦЫ',s:'искры и звёзды при ударах и крутках'},
     {k:'shk',t:'ТРЯСКА ЭКРАНА',s:'отдача при ударах по героям'},
+    {k:'arrows',t:'СТРЕЛКИ АТАК',s:'пунктирная дуга от атакующего к цели — кто кого бьёт'},
     {k:'anim',t:'АНИМАЦИИ БОЯ',s:REDUCE
       ?'полёт карт, замах и выпад. Система просит убрать движение — выключи, если мешает'
       :'полёт карт, замах перед ударом, выпад. Без них ход врага мгновенный'},
