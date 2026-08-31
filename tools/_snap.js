@@ -37,10 +37,15 @@
     'grid-template-columns','z-index','opacity','transform','box-shadow','filter',
     'overflow','visibility','object-fit','aspect-ratio','mix-blend-mode'];
 
+  /* Служебные теги в ключ не входят и соседей не сдвигают. Иначе разрезание
+     одного <script> на тринадцать сдвигало индексы всех элементов после них,
+     и снимок показывал 13446 расхождений там, где не изменилось ничего. */
+  const СЛУЖЕБНЫЕ = { SCRIPT: 1, LINK: 1, STYLE: 1, META: 1, TITLE: 1 };
   const путь = el => {
     const ч = [];
     while (el && el !== document.body) {
-      ч.push([...el.parentNode.children].indexOf(el));
+      const свои = [...el.parentNode.children].filter(x => !СЛУЖЕБНЫЕ[x.tagName]);
+      ч.push(свои.indexOf(el));
       el = el.parentElement;
     }
     return ч.reverse().join('/');
@@ -81,6 +86,7 @@
     успокоить();
     const из = {};
     for (const el of document.body.querySelectorAll('*')) {
+      if (СЛУЖЕБНЫЕ[el.tagName]) continue;
       if (el.closest(ИГНОР)) continue;
       const c = getComputedStyle(el);
       const r = el.getBoundingClientRect();
