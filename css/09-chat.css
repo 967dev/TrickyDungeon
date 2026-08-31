@@ -1,0 +1,222 @@
+/* 09-chat.css — БАМ-ЧАТ: телефон, реплики, герои по бокам, значок чата на плитке рейда
+
+   Часть общих стилей, разрезанных из одного блока. ПОРЯДОК ПОДКЛЮЧЕНИЯ В
+   index.html ЗНАЧИМ: правила одной силы разрешаются по нему, и файлы стоят
+   там в том же порядке, в каком лежали строки исходника. Не меняй порядок
+   ссылок, не убедившись снимком (tools/_snap.js).
+
+   Правило для новых стилей: клади их РЯДОМ с тем, что они красят, в этот же
+   файл. Именно нарушение этого дало вылезшее за панель поле промокода —
+   правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
+
+/* ====== настройки ====== */
+/* ================= БАМ-ЧАТ =================
+   Переписка с соперником перед боем. Рамку телефона рисуем только на широком
+   экране: на самом телефоне она съедала бы по два десятка пикселей ширины с
+   каждой стороны ради шутки, которую там всё равно не видно — там чат просто
+   ЕСТЬ телефон, и это честнее любой рамки. */
+/* Чат — накладка поверх рейдов, а не отдельный экран: телефон достают, не
+   уходя из списка боёв, и позади видно, откуда он взялся. Фон затемнён и
+   не ловит нажатия — иначе сквозь него можно было бы запустить бой. */
+.chWrap{position:fixed;inset:0;z-index:112;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,4,8,.9);opacity:0;transition:opacity .25s;overflow:hidden}
+.chWrap.on{opacity:1}
+.chWrap[hidden]{display:none}
+/* Телефон рамкой всегда, а не только на десктопе: по бокам теперь стоят герои,
+   и без рамки чат растёкся бы на весь экран, закрыв их целиком. */
+/* Телефон уже, чем раньше: он ездит по рельсе между героями, и запас по бокам
+   нужен, иначе при сдвиге текст уезжал бы за край экрана. */
+.chFrame{position:relative;z-index:2;display:flex;flex-direction:column;overflow:hidden;
+  width:min(384px,80vw);height:min(720px,82vh);border-radius:34px;border:8px solid #16161c;
+  background:#0b0b11;box-shadow:0 0 0 2px #2c2c38,0 26px 64px rgba(0,0,0,.8);
+  transform:translateY(26px) scale(.94);
+  transition:transform .42s cubic-bezier(.3,.9,.25,1)}
+.chWrap.on .chFrame{transform:none}
+/* Рельса: герой — телефон — собеседник. Телефон отъезжает ОТ говорящего и
+   тем открывает его. На узком экране это единственный способ показать лицо:
+   ширины на двоих рядом с читаемым чатом просто нет, поэтому недостающее
+   место занимаем не пикселями, а временем. */
+.chWrap.on.sayL .chFrame{transform:translateX(9%)}
+.chWrap.on.sayR .chFrame{transform:translateX(-9%)}
+
+/* Герои выезжают из-за краёв: слева всегда мы, справа собеседник. Прижаты к
+   низу и заходят ЗА телефон — на узком экране иначе их просто некуда деть,
+   а так видно ровно то, что нужно: головы и плечи по бокам. */
+/* На широком экране героев видно во весь рост, и мельчить незачем: места по
+   бокам от телефона там втрое больше, чем он занимает сам. */
+.chHero{position:absolute;bottom:0;z-index:1;pointer-events:none;
+  width:min(880px,48vw);max-height:94vh;object-fit:contain;object-position:bottom;
+  filter:drop-shadow(0 0 40px rgba(0,0,0,.9));
+  opacity:0;transition:transform .42s cubic-bezier(.2,1.05,.3,1),opacity .3s}
+.chHero.l{left:0;transform:translateX(-40%)}
+.chHero.r{right:0;transform:translateX(40%) scaleX(-1)}
+.chWrap.on .chHero.l{opacity:1;transform:translateX(-8%)}
+.chWrap.on .chHero.r{opacity:1;transform:translateX(8%) scaleX(-1)}
+/* Говорящий остаётся на месте, отступает МОЛЧАЩИЙ. Сначала я двигал вперёд
+   говорящего — и стало хуже: он подавался навстречу телефону и уходил под
+   него, потому что лицо у него посередине кадра, а телефон в это же время
+   ехал в ту же сторону. Просвет открывает именно телефон; герою достаточно
+   стоять. */
+.chWrap.on.sayL .chHero.r{transform:translateX(24%) scaleX(-1)}
+.chWrap.on.sayR .chHero.l{transform:translateX(-24%)}
+/* Говорящий подсвечивается, молчащий уходит в тень — иначе на двух портретах
+   сразу непонятно, чья реплика. */
+.chHero{filter:drop-shadow(0 0 40px rgba(0,0,0,.9)) brightness(.42) saturate(.6)}
+.chHero.say{filter:drop-shadow(0 0 40px rgba(0,0,0,.9)) brightness(1) saturate(1)}
+/* На узком экране двух героев рядом с читаемым чатом не поставить — ширины
+   физически нет. Поэтому телефон становится ниже, а герои поднимаются наверх и
+   кадрируются по лицу: видно головы над перепиской, тела уходят за телефон.
+   Показывать ноги сбоку, как выходило при contain, — хуже, чем не показывать
+   ничего: узнать героя по коленям нельзя. */
+/* На узком экране герои кадрируются по лицу и стоят во всю высоту: рельса
+   открывает их достаточно, чтобы лицо читалось, а показывать ноги, как выходило
+   при contain, бессмысленно — по коленям героя не узнать. */
+/* На узком экране голову целиком сбоку от телефона не уместить: посчитано —
+   для этого телефон пришлось бы сузить до 242px, а это уже нечитаемая
+   переписка. Зато экран высокий, и вертикаль свободна. Поэтому телефон
+   становится ниже и уезжает ВНИЗ, а говорящий показывается СВЕРХУ: голова и
+   плечи целиком над перепиской, торс — сбоку. Рельса при этом добирает
+   ширину, а обрезать героя краю экрана больше нечем: говорящий выходит в
+   кадр полностью, молчащий уезжает за край. */
+@media (max-width:560px){
+  .chWrap{align-items:flex-end}
+  .chFrame{width:74vw;height:min(600px,68vh);margin-bottom:2vh}
+  .chHero{width:74vw;height:56vh;max-height:none;bottom:auto;top:1vh;
+    object-fit:cover;object-position:50% 9%;
+    -webkit-mask-image:linear-gradient(180deg,#000 76%,transparent 100%);
+    mask-image:linear-gradient(180deg,#000 76%,transparent 100%)}
+  /* В покое оба задвинуты за края — на экране только телефон. */
+  .chWrap.on .chHero.l{transform:translateX(-58%)}
+  .chWrap.on .chHero.r{transform:translateX(58%) scaleX(-1)}
+  /* Говорящий выходит целиком: край экрана его больше не режет. */
+  .chWrap.on.sayL .chHero.l{transform:translateX(-4%)}
+  .chWrap.on.sayR .chHero.r{transform:translateX(4%) scaleX(-1)}
+  .chWrap.on.sayL .chHero.r{transform:translateX(74%) scaleX(-1)}
+  .chWrap.on.sayR .chHero.l{transform:translateX(-74%)}
+  /* Телефон сдвигается вбок слабее: основную работу делает вертикаль. */
+  .chWrap.on.sayL .chFrame{transform:translateX(11%)}
+  .chWrap.on.sayR .chFrame{transform:translateX(-11%)}
+}
+/* Системное «меньше движения» — рельсу выключаем: она самая заметная качка на
+   экране, а читать переписку это не мешает. */
+@media (prefers-reduced-motion:reduce){
+  .chWrap.on.sayL .chFrame,.chWrap.on.sayR .chFrame{transform:none}
+}
+.chHead{flex:none;display:flex;align-items:center;gap:11px;padding:12px 14px;
+  background:#101017;border-bottom:1px solid #23232e;position:relative;z-index:2}
+.chBack,.chDots{background:none;border:0;color:var(--yel);font-size:20px;line-height:1;
+  cursor:pointer;padding:4px 6px;flex:none}
+.chDots{color:var(--dim);font-size:17px}
+.chAva{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  border:2px solid var(--yel);background:#15151e}
+.chAva svg{width:20px;fill:var(--yel)}
+.chWho{flex:1;min-width:0}
+.chT{font-family:var(--disp);font-style:italic;font-size:16px;color:var(--yel);line-height:1.1}
+/* Ник не переводим в заглавные: «xX_Mr_Anon_Xx» на то и ник, что регистр в нём
+   часть имени, а не оформление. */
+.chS{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Обои рисуем сами, а не картинкой: звёзды, молнии и косые ленты у нас уже
+   есть в языке игры, а так это ноль килобайт и любой размер экрана. */
+.chBody{flex:1;overflow-y:auto;padding:14px 12px 18px;display:flex;flex-direction:column;
+  gap:8px;scrollbar-width:thin;position:relative;background:#0b0b11}
+.chBody::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:
+    repeating-linear-gradient(-45deg,rgba(255,213,46,.05) 0 10px,transparent 10px 30px),
+    repeating-linear-gradient(38deg,rgba(255,255,255,.022) 0 2px,transparent 2px 26px),
+    radial-gradient(circle at 22% 16%,rgba(255,213,46,.07),transparent 42%),
+    radial-gradient(circle at 78% 72%,rgba(255,213,46,.05),transparent 46%)}
+.chBody>*{position:relative;z-index:1}
+.chDay{align-self:center;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  color:var(--dim);background:rgba(20,20,28,.9);border-radius:20px;padding:4px 12px;margin-bottom:4px}
+
+/* Пузыри. Соперник слева тёмный, мы справа жёлтые — как в любом мессенджере,
+   чтобы не пришлось объяснять, кто говорит. Хвостик срезанным углом, а не
+   треугольником: у игры плоский комиксовый язык, скруглённые «капли» из него
+   выпадают. */
+.chMsg{max-width:78%;padding:9px 12px;font-size:13.5px;line-height:1.4;
+  animation:chIn .26s cubic-bezier(.2,1.1,.3,1)}
+.chMsg.them{align-self:flex-start;background:#1a1a24;color:#e8e8f0;
+  border:1px solid #2c2c38;border-radius:14px 14px 14px 3px}
+.chMsg.me{align-self:flex-end;background:var(--yel);color:#0a0a0e;font-weight:600;
+  border-radius:14px 14px 3px 14px;box-shadow:2px 2px 0 rgba(0,0,0,.4)}
+@keyframes chIn{from{opacity:0;transform:translateY(10px) scale(.96)}}
+/* Мысль — не сообщение: её никто не отправлял. Поэтому по центру, курсивом и
+   без пузыря, как ремарка в сценарии. */
+.chThink{align-self:center;max-width:88%;text-align:center;font-style:italic;font-size:12.5px;
+  line-height:1.45;color:#bda85a;padding:4px 8px;animation:chIn .26s cubic-bezier(.2,1.1,.3,1)}
+.chThink::before{content:'( '}
+.chThink::after{content:' )'}
+
+/* «Печатает» — то, что делает переписку живой: без паузы перед репликой чат
+   читается как простыня текста, а не как разговор. */
+.chDots3{align-self:flex-start;display:flex;gap:4px;padding:11px 14px;background:#1a1a24;
+  border:1px solid #2c2c38;border-radius:14px 14px 14px 3px}
+.chDots3 i{width:6px;height:6px;border-radius:50%;background:var(--dim);
+  animation:chBlink 1.1s ease-in-out infinite}
+.chDots3 i:nth-child(2){animation-delay:.16s}
+.chDots3 i:nth-child(3){animation-delay:.32s}
+@keyframes chBlink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+.chBar{flex:none;display:flex;align-items:center;gap:9px;padding:10px 12px;
+  background:#101017;border-top:1px solid #23232e}
+.chClip{color:var(--dim);font-size:15px;flex:none}
+/* Поле ввода — не input: печатать игроку нечего, реплика уже написана. Живой
+   input попросил бы клавиатуру, а в Telegram она ещё и поле боя перекрывает. */
+.chField{flex:1;min-width:0;background:#181820;border:1px solid #2c2c38;border-radius:20px;
+  padding:9px 14px;font-size:13px;color:#e8e8f0;min-height:19px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chField.ph{color:#4d4d5e}
+.chSend{flex:none;width:40px;height:40px;border-radius:50%;border:0;cursor:pointer;
+  background:var(--yel);color:#0a0a0e;font-size:16px;display:grid;place-items:center;
+  transition:transform .12s;box-shadow:2px 2px 0 rgba(0,0,0,.45)}
+.chSend:active{transform:translate(2px,2px);box-shadow:0 0 0 rgba(0,0,0,.45)}
+.chSend:disabled{background:#2c2c38;color:#5a5a6e;cursor:default;box-shadow:none}
+.chSend.go{width:auto;border-radius:22px;padding:0 16px;font-family:var(--disp);font-size:13px}
+
+/* ---- телефон с уведомлением ---- */
+.chNote{position:fixed;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;
+  background:rgba(5,5,9,.86);opacity:0;transition:opacity .2s;padding:20px}
+.chNote.on{opacity:1}
+.chPhone{width:min(300px,84vw);border-radius:30px;border:8px solid #16161c;background:#0b0b11;
+  box-shadow:0 0 0 2px #2c2c38,0 26px 60px rgba(0,0,0,.8),0 0 50px rgba(255,213,46,.12);
+  padding:16px 14px 18px;text-align:center;transform:translateY(24px) scale(.92);
+  transition:transform .32s cubic-bezier(.2,1.15,.3,1)}
+.chNote.on .chPhone{transform:none}
+.chNotch{width:78px;height:5px;border-radius:4px;background:#2c2c38;margin:0 auto 14px}
+.chBell{width:52px;height:52px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;
+  border:2px solid var(--yel);background:#15151e;animation:chRing 1.5s ease-in-out infinite}
+.chBell svg{width:26px;fill:var(--yel)}
+@keyframes chRing{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-11deg)}84%{transform:rotate(9deg)}92%{transform:rotate(-5deg)}}
+.chNoteN{font-family:var(--disp);font-style:italic;font-size:19px;color:#fff;line-height:1.2}
+.chNoteS{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--dim);
+  text-transform:uppercase;margin:6px 0 16px}
+.chNoteB{display:flex;flex-direction:column;gap:8px}
+
+/* Значок телефона на плитке рейда: чат остаётся доступен и после прочтения,
+   иначе написанное увидят один раз и больше никогда. Точка — что не читано. */
+/* Значок телефона справа от плитки, вне её рамки: он относится к бою, но
+   действие у него своё, и внутри плитки его легко было принять за часть
+   кнопки «в бой». */
+.stChat{flex:none;width:38px;height:38px;border-radius:11px;cursor:pointer;position:relative;
+  border:2px solid #2c2c38;background:#15151e;color:var(--dim);font-size:17px;
+  display:grid;place-items:center;transition:border-color .14s,color .14s,transform .12s}
+.stChat:hover{transform:translateY(-2px);border-color:var(--yel);color:var(--yel)}
+/* Непрочитанное дрожит — как телефон в кармане. Дрожь короткая и с большой
+   паузой: непрерывная быстро превращается в раздражитель, который хочется
+   выключить, а не открыть. */
+.stChat.nw{border-color:var(--yel);color:var(--yel);animation:stBuzz 2.6s ease-in-out infinite}
+@keyframes stBuzz{
+  0%,84%,100%{transform:translate(0,0) rotate(0)}
+  86%{transform:translate(-2px,1px) rotate(-7deg)}
+  88%{transform:translate(2px,-1px) rotate(6deg)}
+  90%{transform:translate(-2px,0) rotate(-5deg)}
+  92%{transform:translate(2px,1px) rotate(4deg)}
+  94%{transform:translate(-1px,0) rotate(-2deg)}
+  96%{transform:translate(0,0) rotate(0)}}
+.stChat.nw::after{content:'!';position:absolute;top:-7px;right:-7px;width:18px;height:18px;
+  border-radius:50%;background:var(--red);color:#fff;border:2px solid #0a0a0e;
+  font-family:var(--disp);font-size:12px;line-height:14px;text-align:center}
+.stRow{display:flex;align-items:center;gap:9px}
+.stRow .stNode{flex:1;min-width:0}
