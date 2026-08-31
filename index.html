@@ -2236,8 +2236,21 @@ function noise(d=.2,o={}){const c=ac();if(!c||!S.snd)return;
 const sfx={
   ui(){tone(990,.03,{v:.04})},
   draw(){noise(.06,{f:2400,q:1.4,v:.08})},
-  play(t){tone(180,.12,{v:.09,sl:-80});if(t>=2)tone(880,.14,{w:'triangle',v:.07,at:.05});
-    if(t>=3){tone(1174,.2,{w:'triangle',v:.07,at:.1});tone(1568,.3,{w:'triangle',v:.06,at:.2})}},
+  /* Слои по тиру — фанфара редкости, она остаётся. Поверх неё короткий
+     призвук стихии: то же различие, что теперь дают искры, но на слух. */
+  play(t,el){tone(180,.12,{v:.09,sl:-80});if(t>=2)tone(880,.14,{w:'triangle',v:.07,at:.05});
+    if(t>=3){tone(1174,.2,{w:'triangle',v:.07,at:.1});tone(1568,.3,{w:'triangle',v:.06,at:.2})}
+    if(el)sfx.elem(el)},
+  elem(el){
+    if(el==='fire')       noise(.20,{f:820,q:.7,v:.09,sl:-460});
+    else if(el==='ice'){  tone(1568,.15,{w:'triangle',v:.055});
+                          tone(2093,.12,{w:'sine',v:.045,at:.06}) }
+    else if(el==='volta'){noise(.05,{f:5200,q:2.6,v:.09});
+                          tone(2400,.05,{w:'square',v:.035,at:.03}) }
+    else if(el==='ether'){tone(392,.28,{w:'sine',v:.045});
+                          tone(587,.32,{w:'sine',v:.04,at:.1}) }
+    else                  noise(.07,{f:1500,q:2.2,v:.10,sl:-620});
+  },
   hit(){noise(.09,{f:500,q:.8,v:.26,sl:-320});tone(120,.1,{v:.14,sl:-60})},
   heal(){tone(659,.1,{w:'sine',v:.06});tone(880,.14,{w:'sine',v:.06,at:.08})},
   die(){tone(300,.18,{w:'sawtooth',v:.07,sl:-240});noise(.14,{f:400,q:.6,v:.16,sl:-300})},
@@ -2265,8 +2278,29 @@ function burst(x,y,cols,n,pow=1){
       life:1,dec:.013+Math.random()*.018,r:(Math.random()*7+3)*Math.min(pow,1.7),
       rot:Math.random()*6.28,vr:(Math.random()-.5)*.35,c:pick(cols)})}
   kickFx()}
+/* Цвет искр по ТИРУ — только там, где празднуют редкость: вскрытие пака.
+   В бою тир ни о чём не говорит, там важно, ЧЕМ ударили. */
 const fxCols=t=>t===1?['#35f0ff','#bffcff','#fff']:t===2?['#ff4fd8','#ffb3ec','#fff']:
   t===3?['#ffd52e','#fff','#ff9500']:t===4?['#ff3355','#fff','#ffd52e']:['#c9d4dc','#fff'];
+/* Цвет искр по СТИХИИ — в бою. Стихия прописана у каждой карты с самого
+   начала и рисует её эмблему, но на искры не влияла никак: огненное и ледяное
+   заклятия одного тира брызгали одинаково, и удар нельзя было опознать, не
+   прочитав название. */
+const EL_COLS={
+  fire :['#ff6a1f','#ffd52e','#fff'],
+  ice  :['#35f0ff','#bffcff','#fff'],
+  volta:['#ffd52e','#fffbc2','#fff'],
+  ether:['#ff4fd8','#c07bff','#fff'],
+  steel:['#c9d4dc','#8fa3b0','#fff'],
+};
+const elCols=c=>EL_COLS[c&&c.el]||EL_COLS.steel;
+/* Вспышка в цвет стихии по центру произвольного элемента. */
+function elBurst(el,c,n,pow){
+  if(!el||!el.getBoundingClientRect)return;
+  const r=el.getBoundingClientRect();
+  if(!r.width)return;
+  burst(r.left+r.width/2,r.top+r.height/2,elCols(c),n||10,pow||1);
+}
 function fxLoop(){fxc.clearRect(0,0,innerWidth,innerHeight);
   for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.life-=p.dec;
     if(p.life<=0){parts.splice(i,1);continue}
@@ -4279,20 +4313,20 @@ async function aiTurn(){
     enemyBanner(c);
     if(c.ty==='u'){
       const u=mkUnit(c);E.board.push(u);
-      sfx.play(c.t);
+      sfx.play(c.t,c.el);
       renderBattle();
       const el=$(`#rowE .unit[data-uid="${u.uid}"]`);
       if(el){
         const r=unitRect(el);
         await flyToBoard(c,откуда,r,el,{reveal:1});
-        burst(r.left+r.width/2,r.top+r.height/2,fxCols(c.t),8+c.t*6,.9);
+        burst(r.left+r.width/2,r.top+r.height/2,elCols(c),8+c.t*6,.9);
         bang(pick(c.stk||['БАМ!']),50,46);
       }
       /* Боевой клич уже вылетевшей карты второй раз не летит. */
       if(c.eff)await aiSpell(c,1);
       await sleep(240);
     }else{
-      sfx.play(c.t);
+      sfx.play(c.t,c.el);
       await aiSpell(c,0,откуда);
     }
   }
@@ -4345,6 +4379,7 @@ async function aiSpell(c,noFly,откуда){
     await flyCard(c,откуда||enemyHandRect(),[
       {r:revealRect(),ms:290,hold:440,rot:-3},
       {r:aimRect(aim.el),ms:300,k:.82,fade:0}]);
+    elBurst(aim.el,c,12+c.t*4,1.05);
     bang(pick(c.stk||['БАМ!']),50,44);
     await sleep(110);
   }
@@ -4415,14 +4450,14 @@ function playCard(i,targetUnit){
     return h?h.getBoundingClientRect():null})();
   P.mana-=c.c;P.hand.splice(i,1);
   blog('p',`⚡ ${c.n}${c.ty==='u'?` ${c.a}/${c.h}`:''} · ${c.c} ${plural(c.c,'мана','маны','маны')}`,'card');
-  sfx.play(c.t);
+  sfx.play(c.t,c.el);
   if(c.ty==='u'){
     const u=mkUnit(c);P.board.push(u);
     renderBattle();
     const el=$(`#rowP .unit[data-uid="${u.uid}"]`);
     if(el){const r=unitRect(el);
       flyToBoard(c,откуда,r,el);
-      burst(r.left+r.width/2,r.top+r.height/2,fxCols(c.t),10+c.t*8,1);
+      burst(r.left+r.width/2,r.top+r.height/2,elCols(c),10+c.t*8,1);
       bang(pick(c.stk||['БАМ!']),50,46)}
     if(c.eff)playerEff(c,targetUnit);
     B.sel=null;
@@ -4441,6 +4476,7 @@ function playCard(i,targetUnit){
     const попал=()=>{
       lockUI(0);
       if(!B||B.over)return;
+      elBurst(цельEl,c,12+c.t*4,1.05);
       bang(pick(c.stk||['БАМ!']),50,46);
       playerEff(c,targetUnit);
       renderBattle();
@@ -4532,7 +4568,7 @@ async function dealDamage(side,u,v){
     if(el){
       el.classList.add('dying');
       const r=el.getBoundingClientRect();
-      burst(r.left+r.width/2,r.top+r.height/2,fxCols(u.card.t),18,1.15);
+      burst(r.left+r.width/2,r.top+r.height/2,elCols(u.card),18,1.15);
       /* Ждём саму анимацию, а не круглое число: правка длительности в CSS
          иначе разъехалась бы с этой задержкой, и существо либо исчезало
          рывком, либо висело уже невидимым. */
