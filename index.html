@@ -940,11 +940,24 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
   background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.9),rgba(255,90,120,.5) 45%,transparent 72%)}
 .unit.hit .uHit{animation:uHitF .26s ease-out}
 @keyframes uHitF{0%{opacity:0;transform:scale(.7)}18%{opacity:1}100%{opacity:0;transform:scale(1.25)}}
-/* Кто кого бьёт: короткая черта от атакующего к цели. Живёт 260мс — дольше
-   она уже мешает, короче не успевает прочитаться. */
-.atkLine{position:fixed;z-index:60;height:3px;pointer-events:none;transform-origin:0 50%;
-  background:linear-gradient(90deg,rgba(255,213,46,0),rgba(255,213,46,.95),rgba(255,255,255,.9));
-  box-shadow:0 0 10px rgba(255,213,46,.7)}
+/* Кто кого бьёт: дуга от атакующего к цели с наконечником. Прямая черта не
+   говорила о направлении — по ней одинаково читалось «сверху вниз» и «снизу
+   вверх», а на размене это как раз и есть вопрос. Дуга прочерчивается от
+   источника к цели, так что направление видно из самой анимации.
+   Свечение набрано СЛОЯМИ обводок, а не размытием: filter пришлось бы
+   пересчитывать каждый кадр прочерчивания по всему экрану — ровно то, на чём
+   умирал экран круток на iPhone. Слои ещё и ближе к плоским теням референса. */
+.atkArc{position:fixed;left:0;top:0;z-index:60;pointer-events:none;overflow:visible}
+.atkArc path{fill:none;stroke-linecap:round}
+.atkArc .aWide{stroke:var(--arc);stroke-width:15;opacity:.10}
+.atkArc .aHalo{stroke:var(--arc);stroke-width:8;opacity:.26}
+.atkArc .aBody{stroke:var(--arc);stroke-width:4;opacity:.92}
+.atkArc .aCore{stroke:#fff;stroke-width:1.6;opacity:.95}
+.atkArc .aHead{fill:var(--arc);stroke:#fff;stroke-width:1.5;stroke-linejoin:round;
+  transform-box:fill-box;transform-origin:center}
+.atkArc .aDot{fill:#fff;stroke:var(--arc);stroke-width:2.5}
+.atkArc.p{--arc:var(--yel)}
+.atkArc.e{--arc:var(--red)}
 /* Карта, летящая из руки на поле. Копия поверх всего: настоящую карту в этот
    момент уже убирает перерисовка руки. */
 .flyCard{position:fixed;z-index:95;pointer-events:none;will-change:transform}
@@ -4554,7 +4567,7 @@ async function doAttack(side,u,tgt,opts){
      игрок не начинал сам, и без этой доли секунды взгляд не успевал найти,
      кто по кому бьёт. Своему удару замах не нужен — цель выбрал сам. */
   if(elS&&elT){
-    atkLine(elS.getBoundingClientRect(),elT.getBoundingClientRect(),260+(o.tell||0));
+    atkLine(elS.getBoundingClientRect(),elT.getBoundingClientRect(),260+(o.tell||0),side);
     if(o.tell&&gfxAnim()){
       elS.classList.remove('tell');void elS.offsetWidth;elS.classList.add('tell');
       await sleep(o.tell);
@@ -4779,30 +4792,63 @@ async function flyToBoard(c,откуда,куда,el,opts){
     {duration:220,easing:'cubic-bezier(.3,1.5,.4,1)'});
 }
 
-/* Черта от атакующего к цели: на поле из пяти клеток «кто кого» иначе
+/* Дуга от атакующего к цели: на поле из пяти клеток «кто кого» иначе
    восстанавливается только задним числом, по тому, у кого убыло здоровье.
-   ms — сколько черта живёт: при замахе она обязана дотянуть до самого удара,
-   иначе прицел гаснет раньше, чем происходит то, на что он указывал. */
-function atkLine(a,b,ms){
+   ms — сколько дуга живёт: при замахе она обязана дотянуть до самого удара,
+   иначе прицел гаснет раньше, чем происходит то, на что он указывал.
+   side красит дугу: жёлтая — бьём мы, красная — бьют нас. Изгиб в разные
+   стороны по той же причине — чужая атака и своя не должны выглядеть
+   одинаково даже краем глаза. */
+function atkLine(a,b,ms,side){
   if(!gfxAnim()||!S.vfx)return;
   const dur=ms||260;
   const x1=a.left+a.width/2,y1=a.top+a.height/2;
   const x2=b.left+b.width/2,y2=b.top+b.height/2;
   const len=Math.hypot(x2-x1,y2-y1);
   if(len<8)return;
-  const el=document.createElement('div');
-  el.className='atkLine';
-  el.style.left=x1+'px';el.style.top=(y1-1.5)+'px';el.style.width=len+'px';
-  el.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;
-  document.body.appendChild(el);
-  const an=el.animate([{opacity:0,clipPath:'inset(0 100% 0 0)'},
-              {opacity:1,clipPath:'inset(0 0 0 0)',offset:Math.min(.5,90/dur)},
-              {opacity:1,clipPath:'inset(0 0 0 0)',offset:.72},
-              {opacity:0,clipPath:'inset(0 0 0 60%)'}],
-    {duration:dur,easing:'ease-out'});
-  const off=()=>el.remove();
-  an.finished.then(off).catch(off);
-  setTimeout(off,dur+540);   /* тот же страховочный срок: в фоне кадры встают */
+  /* Управляющая точка отведена вбок от середины по нормали — отсюда и дуга.
+     Изгиб пропорционален длине, но с потолком: на длинном броске через всё
+     поле кривая иначе улетает за край экрана. */
+  const nx=-(y2-y1)/len, ny=(x2-x1)/len, знак=side==='e'?1:-1;
+  const изгиб=знак*Math.min(64,len*.22);
+  const cx=(x1+x2)/2+nx*изгиб, cy=(y1+y2)/2+ny*изгиб;
+  /* Касательная в конце квадратичной кривой смотрит из управляющей точки в
+     конечную — по ней и разворачиваем наконечник. Саму линию обрываем у его
+     основания, иначе обводка торчит сквозь остриё. */
+  const уг=Math.atan2(y2-cy,x2-cx), дл=14, пш=8.5;
+  const бx=x2-Math.cos(уг)*дл, бy=y2-Math.sin(уг)*дл;
+  const пx=-Math.sin(уг), пy=Math.cos(уг);
+  const остриё=`${x2.toFixed(1)},${y2.toFixed(1)} `
+    +`${(бx+пx*пш).toFixed(1)},${(бy+пy*пш).toFixed(1)} `
+    +`${(бx-пx*пш).toFixed(1)},${(бy-пy*пш).toFixed(1)}`;
+  const d=`M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${бx.toFixed(1)} ${бy.toFixed(1)}`;
+  const t=document.createElement('div');
+  t.innerHTML=`<svg class="atkArc ${side==='e'?'e':'p'}" width="${innerWidth}" height="${innerHeight}"
+      viewBox="0 0 ${innerWidth} ${innerHeight}" aria-hidden="true">
+    <path class="aWide" d="${d}"/><path class="aHalo" d="${d}"/>
+    <path class="aBody" d="${d}"/><path class="aCore" d="${d}"/>
+    <circle class="aDot" cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="3.6"/>
+    <polygon class="aHead" points="${остриё}"/></svg>`;
+  const svg=t.firstElementChild;
+  document.body.appendChild(svg);
+  /* Прочерчивание — единственное, что здесь анимируется: длина штриха. */
+  const рис=Math.min(230,Math.max(110,dur*.45));
+  const L=svg.querySelector('.aBody').getTotalLength();
+  svg.querySelectorAll('path').forEach(pp=>{
+    pp.style.strokeDasharray=L;pp.style.strokeDashoffset=L;
+    pp.animate([{strokeDashoffset:L},{strokeDashoffset:0}],
+      {duration:рис,easing:'cubic-bezier(.3,.7,.25,1)',fill:'forwards'});
+  });
+  svg.querySelector('.aDot').animate([{opacity:0,r:1},{opacity:1,r:3.6}],
+    {duration:130,easing:'cubic-bezier(.2,1.6,.4,1)',fill:'both'});
+  svg.querySelector('.aHead').animate([{opacity:0,transform:'scale(.35)'},
+      {opacity:1,transform:'scale(1)'}],
+    {duration:170,delay:Math.max(0,рис-50),easing:'cubic-bezier(.2,1.7,.4,1)',fill:'both'});
+  const уход=svg.animate([{opacity:1,offset:0},{opacity:1,offset:.74},{opacity:0,offset:1}],
+    {duration:dur+120,easing:'linear'});
+  const off=()=>svg.remove();
+  уход.finished.then(off).catch(off);
+  setTimeout(off,dur+660);   /* тот же страховочный срок: в фоне кадры встают */
 }
 
 /* ================= ИНСПЕКТОР КАРТЫ ================= */
