@@ -1,0 +1,134 @@
+/* 02-menu.css — главное меню, плитки, верхний бар
+
+   Часть общих стилей, разрезанных из одного блока. ПОРЯДОК ПОДКЛЮЧЕНИЯ В
+   index.html ЗНАЧИМ: правила одной силы разрешаются по нему, и файлы стоят
+   там в том же порядке, в каком лежали строки исходника. Не меняй порядок
+   ссылок, не убедившись снимком (tools/_snap.js).
+
+   Правило для новых стилей: клади их РЯДОМ с тем, что они красят, в этот же
+   файл. Именно нарушение этого дало вылезшее за панель поле промокода —
+   правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
+
+@layer menu {
+/* ====== меню ====== */
+#scr-menu{align-items:center;justify-content:center;gap:0}
+.menuBg{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none}
+.mbWord{position:absolute;right:-3%;bottom:-7%;font-family:var(--disp);font-style:italic;
+  font-size:min(27vw,360px);line-height:1;color:transparent;-webkit-text-stroke:2px rgba(255,213,46,.065);
+  transform:rotate(-4deg);white-space:nowrap}
+.mbStripes{position:absolute;inset:0}
+/* Ленты заданы шириной 64%, поэтому их дальний конец приходится на середину
+   экрана и раньше обрывался прямым срезом — на широком мониторе это читалось
+   как недорисованный элемент. Маска растворяет ОБА конца: у каждой ленты один
+   конец уходит за край экрана (там затухание не видно), а второй — тот самый
+   обрыв. Симметричная маска закрывает оба случая и не зависит от того, какой
+   конец окажется на виду при другой ширине окна. */
+.mbStripes i{position:absolute;background:repeating-linear-gradient(-45deg,rgba(255,213,46,.05) 0 10px,transparent 10px 26px);
+  animation:stripeCrawl 7s linear infinite;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16%,#000 84%,transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0,#000 16%,#000 84%,transparent 100%)}
+.mbStripes i:first-child{top:9%;left:-6%;width:64%;height:56px;transform:rotate(-6deg)}
+.mbStripes i:last-child{bottom:7%;right:-6%;width:64%;height:46px;transform:rotate(-6deg);animation-direction:reverse;opacity:.7}
+@keyframes stripeCrawl{to{background-position:36.8px 0}}
+/* Фоновая иллюстрация меню. cover, а не contain: исходник 16:9, а основная
+   платформа — телефон в портрете, где 16:9 «вписанный» превратился бы в
+   узкую полоску посреди пустоты. Центр композиции (силуэт и свечение)
+   при обрезке по бокам сохраняется. */
+.mbArt{position:absolute;inset:0;background:url(../art/menu-bg.webp) center/cover no-repeat;
+  pointer-events:none;
+  transform:translate(calc(var(--mx,0)*-10px),calc(var(--my,0)*-6px)) scale(1.06);
+  transition:transform .35s ease-out}
+/* Затемнение под интерфейсом: без него жёлтый заголовок и плитки тонут в
+   свечении карт на самой картинке. */
+.mbScrim{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 55% at 50% 52%,rgba(10,10,15,.30) 0,rgba(10,10,15,.72) 100%),
+             linear-gradient(180deg,rgba(10,10,15,.62) 0,rgba(10,10,15,.18) 34%,rgba(10,10,15,.66) 100%)}
+/* Живое свечение за картами. Центр и разброс вымерены по самой картинке
+   (50.4% / 59.3%), поэтому пульсация ложится ровно на нарисованную дугу, а
+   не светит куда-то мимо. screen — чтобы добавлять свет, а не красить. */
+.mbGlow{position:absolute;left:50.4%;top:59.3%;width:76%;height:64%;
+  transform:translate(-50%,-50%);pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(ellipse at center,rgba(255,213,46,.34) 0,rgba(255,190,20,.14) 38%,transparent 70%);
+  animation:mbGlowPulse 5.5s ease-in-out infinite}
+@keyframes mbGlowPulse{
+  0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(.94)}
+  50%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}}
+@media (prefers-reduced-motion:reduce){.mbGlow{animation:none;opacity:.75}}
+/* Иллюстрация уже несёт свой силуэт и крупную надпись — наши перестают
+   помогать и начинают спорить с ней. Правила оставлены: вернуть можно
+   удалением одной строки. */
+.menuOn .mbSilO,.menuOn .mbWord{display:none}
+/* Экран загрузки. Появился не для красоты: раньше грузить было нечего, а
+   теперь фон меню — это отдельный файл, и без заставки первый кадр меню
+   успевал моргнуть голым. Заставка снимается по декодированию картинки, но
+   ЖЁСТКО не позже BOOT_MAX — иначе сеть, которая не отдаёт файл, оставила
+   бы игрока перед вечной заставкой вместо играбельной игры. */
+#boot{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:20px;background:var(--bg);
+  transition:opacity .45s ease}
+#boot.out{opacity:0;pointer-events:none}
+#boot .bootStar{width:96px;animation:bootSpin 2.6s ease-in-out infinite}
+#boot .bootStar svg{width:100%;fill:var(--yel);stroke:#0a0a0e;stroke-width:5;paint-order:stroke;
+  filter:drop-shadow(0 0 26px rgba(255,213,46,.45))}
+@keyframes bootSpin{0%,100%{transform:rotate(-6deg) scale(.96)}50%{transform:rotate(6deg) scale(1.06)}}
+#boot .bootT{font-family:var(--disp);font-style:italic;font-size:clamp(26px,6vw,40px);
+  color:var(--yel);text-shadow:3px 3px 0 #000}
+#boot .bootS{font-family:var(--mono);font-size:9.5px;letter-spacing:.24em;
+  text-transform:uppercase;color:var(--dim)}
+#boot .bootBar{width:min(220px,54vw);height:5px;background:#1a1a24;border:2px solid #000;overflow:hidden}
+#boot .bootBar i{display:block;height:100%;width:40%;background:var(--yel);
+  animation:bootRun 1.1s ease-in-out infinite}
+@keyframes bootRun{0%{transform:translateX(-110%)}100%{transform:translateX(320%)}}
+.mbSilO{position:absolute;bottom:0;pointer-events:none;transition:transform .35s ease-out}
+.mbSilO.l{left:1%;height:min(64vh,540px);transform:translate(calc(var(--mx,0)*-12px),calc(var(--my,0)*-7px))}
+.mbSilO.r{right:2%;height:min(72vh,600px);transform:translate(calc(var(--mx,0)*14px),calc(var(--my,0)*8px))}
+.mbSil{height:100%;color:#16161f;opacity:.55;filter:drop-shadow(0 0 24px rgba(255,213,46,.10));
+  animation:silBreathe 6s ease-in-out infinite}
+.mbSil svg{height:100%;width:auto;display:block}
+@keyframes silBreathe{50%{transform:translateY(-8px)}}
+#mbCry{position:absolute;inset:0}
+.mWrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:20px;width:100%;max-width:900px;position:relative;z-index:1}
+.mLogo{display:flex;align-items:center;gap:20px;transform:rotate(-2deg);position:relative}
+.mStar{width:86px;height:86px;animation:mStarBob 3s ease-in-out infinite}
+@keyframes mStarBob{0%,100%{transform:rotate(-9deg) translateY(0)}50%{transform:rotate(-6deg) translateY(-8px)}}
+.mStar svg{width:100%;height:100%;filter:drop-shadow(5px 7px 0 rgba(0,0,0,.5))}
+.mTitle{font-family:var(--disp);font-style:italic;font-weight:900;font-size:clamp(34px,7vw,58px);color:var(--yel);
+  text-shadow:4px 4px 0 #000,8px 8px 0 rgba(255,79,216,.45);line-height:.95}
+.mTitle em{color:var(--mag)}
+.mSub{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-top:10px}
+.mGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;width:100%;max-width:760px}
+.mTile{position:relative;border:3px solid #2c2c38;background:rgba(18,18,26,.88);padding:22px 18px 18px;cursor:pointer;
+  text-align:left;color:var(--ink);font-family:'Segoe UI',sans-serif;overflow:hidden;transition:.15s;
+  box-shadow:6px 7px 0 rgba(0,0,0,.5);animation:tileIn .55s cubic-bezier(.2,1.2,.3,1) backwards}
+.mTile:nth-child(1){animation-delay:.04s}.mTile:nth-child(2){animation-delay:.12s}
+.mTile:nth-child(3){animation-delay:.2s}.mTile:nth-child(4){animation-delay:.28s}
+@keyframes tileIn{from{transform:translateY(36px) rotate(-2deg);opacity:0}}
+.mTile::after{content:'';position:absolute;right:-18px;bottom:-18px;width:74px;height:74px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,213,46,.13),transparent 70%)}
+.mTile:hover{transform:translate(-3px,-3px) rotate(-.6deg);border-color:var(--yel);box-shadow:9px 11px 0 rgba(0,0,0,.5)}
+.mTile:active{transform:translate(2px,2px)}
+.mTile .tIc{display:block;width:34px;height:34px;margin-bottom:14px;color:var(--yel)}
+.mTile .tT{display:block;font-family:var(--disp);font-style:italic;font-size:19px;color:#fff;text-shadow:2px 2px 0 #000}
+.mTile .tS{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-top:7px}
+.mTile .tBadge{position:absolute;top:10px;right:10px;font-family:var(--disp);font-size:9px;background:var(--yel);
+  color:#0a0a0e;padding:3px 8px;border:2px solid #000;transform:rotate(4deg)}
+.mFoot{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#55556a}
+.infoF{position:fixed;top:16px;right:16px;z-index:45;width:46px;height:46px;border-radius:50%;
+  border:3px solid var(--yel);background:#12121a;color:var(--yel);font-family:var(--disp);font-size:20px;
+  cursor:pointer;box-shadow:3px 4px 0 rgba(0,0,0,.5);transition:.15s;display:none;place-items:center}
+.infoF:hover{transform:rotate(-10deg) scale(1.1)}
+body.menuOn .infoF{display:grid}
+
+/* ====== верхний бар ====== */
+.topbar{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) 18px 12px;border-bottom:3px solid #000;
+  background:rgba(16,16,23,.9);flex:none;z-index:5}
+.tbBack{padding:9px 13px}
+.tbTitle{font-family:var(--disp);font-style:italic;font-size:16px;color:var(--yel);text-shadow:2px 2px 0 #000}
+.tbSub{font-family:var(--mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.tbSpace{flex:1}
+.chipTok{display:flex;align-items:center;gap:8px;background:#101017;border:2px solid var(--yel);
+  padding:7px 13px;box-shadow:3px 3px 0 rgba(255,213,46,.25)}
+.chipTok svg{color:var(--yel)}
+.chipTok b{font-family:var(--mono);font-size:15px;color:var(--yel)}
+.chipTok small{display:block;font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+}

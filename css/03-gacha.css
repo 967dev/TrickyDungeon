@@ -1,0 +1,127 @@
+/* 03-gacha.css — экран круток: пачка, ролик вскрытия, лучи
+
+   Часть общих стилей, разрезанных из одного блока. ПОРЯДОК ПОДКЛЮЧЕНИЯ В
+   index.html ЗНАЧИМ: правила одной силы разрешаются по нему, и файлы стоят
+   там в том же порядке, в каком лежали строки исходника. Не меняй порядок
+   ссылок, не убедившись снимком (tools/_snap.js).
+
+   Правило для новых стилей: клади их РЯДОМ с тем, что они красят, в этот же
+   файл. Именно нарушение этого дало вылезшее за панель поле промокода —
+   правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
+
+@layer gacha {
+/* ====== гача ====== */
+#scr-gacha .gBody{flex:1;overflow-y:auto;padding:22px;scrollbar-width:thin}
+.gZone{display:flex;flex-direction:column;align-items:center;gap:18px;padding:16px 0 6px;min-height:340px;position:relative}
+.pkRays{position:absolute;left:50%;top:46%;width:640px;height:640px;transform:translate(-50%,-50%);pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,rgba(255,213,46,.07) 0 2deg,transparent 2deg 10deg);
+  -webkit-mask:radial-gradient(circle,#000 12%,transparent 62%);mask:radial-gradient(circle,#000 12%,transparent 62%);
+  animation:spin 40s linear infinite}
+/* На телефоне лучи стоят. Это 640x640 под маской, то есть на плотном экране
+   слой под два десятка мегабайт, и маска мешает браузеру растрировать его
+   один раз. Оборот занимает 40 секунд — стоящий узор от вращающегося на
+   глаз не отличить, а экрана круток эта пара слоёв и так еле держала. */
+@media (hover:none),(pointer:coarse){.pkRays{animation:none}}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+/* Пачка — тот же рендер, что играет в ролике, с вырезанным фоном.
+   Соотношение 640:1013 взято из самого файла: задать его вручную значит
+   рано или поздно разъехаться с картинкой.
+   Тень — drop-shadow, а не box-shadow: у пачки неровный контур (мятая
+   плёнка, зубцы по краям), и прямоугольная тень за ним торчала бы углами.
+   drop-shadow идёт по альфе. */
+.pack{position:relative;width:min(320px,82vw);aspect-ratio:640/1013;
+  border:0;background:none;cursor:pointer;
+  /* Перспектива нужна полосе: без неё rotateX/rotateY схлопываются в плоское
+     сжатие и «скручивания в воздухе» не видно вообще. */
+  perspective:900px;perspective-origin:50% 12%;
+  transition:transform .2s}
+/* Тень статична, а «дыхание» отдано отдельному слою через opacity.
+   Раньше пульсировал сам filter, и это убивало вкладку на iPhone: filter на
+   элементе с perspective заставляет WebKit собирать содержимое в отдельный
+   буфер и прогонять через размытия ЗАНОВО КАЖДЫЙ КАДР. Пачка на телефоне —
+   примерно 920x1460 физических точек, три тени, шестьдесят раз в секунду;
+   память кончалась, и iOS убивал процесс страницы (экран белел, помогала
+   только перезагрузка). Списки теней в кадрах вдобавок были разной длины —
+   две против трёх — так что браузер даже не мог их интерполировать и
+   пересобирал цепочку с нуля. Статичный filter растрируется один раз, а
+   анимация opacity целиком уезжает на видеоускоритель и не стоит ничего. */
+.pack::after{content:'';position:absolute;inset:0;
+  background:url(../art/pack.webp) 0 0/100% 100% no-repeat;
+  filter:drop-shadow(7px 9px 0 rgba(255,213,46,.16)) drop-shadow(0 22px 34px rgba(0,0,0,.6))}
+.pack::before{content:'';position:absolute;inset:-14% -18%;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse,rgba(255,213,46,.20) 0,rgba(255,213,46,.07) 46%,rgba(255,213,46,0) 70%);
+  animation:packPulse 2.4s ease-in-out infinite}
+@keyframes packPulse{0%,100%{opacity:.45}50%{opacity:1}}
+.pack:not(:disabled):hover{transform:rotate(-1.5deg) translateY(-6px) scale(1.03)}
+/* Пульс теперь на ::before, поэтому гасить надо его: правило на самой .pack
+   после переноса стало пустышкой, и у недоступной пачки свечение продолжало
+   бы дышать как ни в чём не бывало. */
+.pack:disabled{cursor:not-allowed;opacity:.5}
+.pack:disabled::before{animation:none;opacity:.35}
+/* Зев вскрывается слева направо вслед за отрывом, а не появляется целиком.
+   Раскрытие идёт через clip-path:inset, а не через анимацию кастомного
+   свойства в маске: --rev без работающей регистрации @property не
+   интерполируется вовсе и держит 0% на всём протяжении — проверено. */
+.pMouth{position:absolute;top:3.5%;left:7%;right:7%;height:9%;z-index:1;
+  background:linear-gradient(180deg,#05050a,#17171f);opacity:0;transition:opacity .2s;
+  clip-path:inset(0 100% 0 0)}
+.pMouth.on{opacity:1;animation:mouthGlow .5s ease-in-out infinite alternate}
+@keyframes mouthGlow{from{box-shadow:0 0 10px rgba(255,213,46,.25),inset 0 0 8px rgba(255,213,46,.2)}
+  to{box-shadow:0 0 26px rgba(255,213,46,.6),inset 0 0 14px rgba(255,213,46,.45)}}
+/* Петля на правом крае: рвём слева направо, поэтому полоса отходит левым
+   концом, а правый до последнего держится за пачку.
+   backface-visibility:visible — при перевороте в воздухе должна быть видна
+   изнанка полосы, иначе она мигает пустотой на каждом полуобороте. */
+/* Отрывная полоса — верхние 14.4% той же картинки, встык с пачкой под ней:
+   пока она не поехала, шва не видно. Доля вымерена по исходнику — линия
+   отрыва проходит сразу под печатным ярлыком «ТЯНИ!», чтобы он уезжал
+   вместе с полосой, а не оставался на вскрытой пачке. */
+.pTear{position:absolute;top:0;left:0;right:0;height:14.4%;z-index:3;
+  transform-origin:100% 50%;transform-style:preserve-3d;backface-visibility:visible;
+  background:url(../art/pack.webp) 0 0/100% 694.44% no-repeat}
+/* 694.44% = 100/14.4: картинка внутри полосы обязана быть ровно того же
+   размера, что и под ней, иначе на стыке видна ступенька. Меняешь высоту
+   полосы — пересчитывай и это. */
+/* «ТЯНИ!» теперь напечатан на самой пачке, поэтому здесь только зона
+   захвата: прозрачная, но крупная — пальцем на 375px по мелкому ярлыку не
+   попасть. Сидит ровно поверх печатного ярлыка (12.9% высоты пачки). */
+.pTab{position:absolute;left:50%;top:89%;transform:translate(-50%,-50%);
+  width:46%;height:44%;font-size:0;background:none;border:0;color:transparent;
+  pointer-events:auto;cursor:grab;touch-action:none}
+.gHint{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.gPity{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.08em}
+.gPity b{color:var(--red)}
+.gHand{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,184px));gap:20px;justify-content:center;padding:8px 0;perspective:1200px;width:100%}
+/* Ролик вскрытия. Размер и положение считаются в JS так, чтобы пачка ВНУТРИ
+   кадра легла точно на статичную пачку: замерено, что она занимает
+   13.16%..87.96% по ширине и 5.17%..93.74% по высоте кадра, а пропорции у
+   неё те же (0.6332 против 0.6318) — значит стыкуется без искажения.
+   Края кадра гасим маской, а не режем рамкой: жёсткая граница на почти
+   чёрном фоне всё равно видна ступенькой, а растворённая — нет. Полоски и
+   вспышка, уходящие за край, при этом красиво тают, а не обрубаются.
+   Проценты маски подобраны так, чтобы затухание не задело саму пачку. */
+/* Затухание краёв рисуем НАКЛАДКОЙ, а не маской на самом <video>.
+   Маска выбивает видео из аппаратного слоя: WebKit перестаёт отдавать кадры
+   напрямую композитору и заводит буфер в полный размер на каждый кадр. На
+   iPhone это сходилось с вращающимися лучами и частицами, и весь webview
+   уходил в чёрное — целиком, вместе с топбаром, которого код вскрытия даже
+   не касается. Накладка того же вида стоит один раз отрисованный градиент:
+   позади ролика ровный --bg, поэтому заливка им неотличима от прозрачности. */
+.pVid{position:absolute;z-index:7;background:none;cursor:pointer}
+/* Прозрачный конец задан цветом фона с нулевой альфой, а не словом
+   transparent: оно означает прозрачный ЧЁРНЫЙ, и затухание шло бы через
+   оттенок темнее фона — по краю ролика проступал быеле заметный тёмный ореол. */
+.pVidFade{position:absolute;z-index:8;pointer-events:none;
+  background:linear-gradient(to right,var(--bg) 0,rgba(10,10,15,0) 6%,rgba(10,10,15,0) 94%,var(--bg) 100%),
+             linear-gradient(to bottom,var(--bg) 0,rgba(10,10,15,0) 4%,rgba(10,10,15,0) 96%,var(--bg) 100%)}
+/* Пока идёт ролик, гасим вечное вращение лучей: это конический градиент под
+   маской 640x640, который перерисовывается каждый кадр. За 4.6 секунды
+   кинематографа на него всё равно никто не смотрит. */
+.gZone.vid .pkRays{animation:none}
+.pVidSkip{position:absolute;left:50%;bottom:-30px;transform:translateX(-50%);
+  font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dim);white-space:nowrap;pointer-events:none}
+.packGhost{position:absolute;z-index:6;pointer-events:none}
+.packGhost .pack{animation:none;filter:drop-shadow(7px 9px 0 rgba(255,213,46,.16)) drop-shadow(0 22px 34px rgba(0,0,0,.6))}
+.gActions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+}

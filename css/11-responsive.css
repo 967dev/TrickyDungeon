@@ -1,0 +1,55 @@
+/* 11-responsive.css — ТОЛЬКО адаптив: телефон в портрете и мало высоты. Подключается ПОСЛЕДНИМ
+
+   Часть общих стилей, разрезанных из одного блока. ПОРЯДОК ПОДКЛЮЧЕНИЯ В
+   index.html ЗНАЧИМ: правила одной силы разрешаются по нему, и файлы стоят
+   там в том же порядке, в каком лежали строки исходника. Не меняй порядок
+   ссылок, не убедившись снимком (tools/_snap.js).
+
+   Правило для новых стилей: клади их РЯДОМ с тем, что они красят, в этот же
+   файл. Именно нарушение этого дало вылезшее за панель поле промокода —
+   правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
+
+@layer responsive {
+/* ====== телефон в портрете (основной формат TMA) ======
+   Нижняя панель — это строка [статы][рука][конец хода]. У флекс-элементов
+   min-width:auto, поэтому они не сжимаются: на 375px строке требовалось ~703px,
+   рука уезжала за край, а кнопка «конец хода» оказывалась полностью за экраном
+   и ход нельзя было завершить. Здесь строка переносится: статы и кнопка сверху,
+   рука отдельной строкой во всю ширину. */
+@media (max-width:560px){
+  .bBottom{flex-wrap:wrap;gap:8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))}
+  .bBottom .hero{flex:1 1 auto;min-width:0;gap:8px;order:1}
+  .bBottom .bEnd{order:2;flex:0 0 auto;font-size:11px;padding:9px 12px;line-height:1.15}
+  .bBottom .bHand{order:3;flex:1 0 100%;min-width:0;min-height:140px}
+  /* статы компактнее, чтобы кнопка гарантированно помещалась рядом */
+  .pStats{padding:4px 8px}
+  .statHp{font-size:19px;gap:5px}
+  .statMana{margin-top:3px;padding:2px 7px}
+  .manaRow{margin-top:3px;gap:3px}
+  .mGem{width:9px;height:9px}
+  .pBoardC{margin-top:3px}
+  .heroName{font-size:11px}
+  /* верхняя панель врага — тоже уже */
+  .bTop{padding:8px 10px calc(8px + 0px);gap:8px}
+}
+
+/* ====== мало высоты (телефон лёжа) ======
+   Порог по ширине здесь не годится: 812x375 шире 760px, поэтому включались
+   десктопные карты 106x146 в окне высотой 375px. Ориентируемся на высоту. */
+@media (max-height:520px){
+  .hCard{width:76px;height:106px}
+  .hCard .cFront{padding:6px 6px 31px}
+  .hCard .cfAtkHp b{font-size:11px;padding:1px 5px}
+  .bHand{--hand-ov:-9px}
+  .bHand{min-height:124px}
+  .hCard .cfName{font-size:9px;min-height:2em}
+  .hCard .cfText{font-size:8px}
+  .hCard .cfCost{width:22px;height:22px;font-size:13px}
+  .slot,.unit{width:52px;height:70px}
+  .bRow{min-height:76px;gap:4px}
+  .statHp{font-size:17px}
+  .heroIc{width:34px;height:34px}
+  .piles{display:none}
+  .bBottom{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+}
+}

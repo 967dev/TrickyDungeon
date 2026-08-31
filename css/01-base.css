@@ -1,0 +1,123 @@
+/* ПОРЯДОК СЛОЁВ — единственное место, где он задан.
+   Раньше его задавал порядок <link>, то есть он не был записан нигде и
+   держался на том, что файлы случайно стоят правильно. Теперь: правило из
+   слоя правее ВСЕГДА выигрывает у правила из слоя левее, независимо от
+   специфичности. Отсюда два следствия, ради которых это и делается:
+     - адаптив (resp) выигрывает всегда, даже у самого длинного селектора;
+     - чтобы перебить чужое правило, больше не нужно наращивать селектор.
+   Новый файл - дописать сюда, осознанно выбрав место. */
+@layer base, menu, gacha, cards, deck, battle, story, overlays, chat, settings, responsive;
+
+/* ПОРЯДОК СЛОЁВ — единственное место, где он задан.
+   Раньше его задавал порядок <link>, то есть он был не записан нигде и
+   держался на том, что файлы случайно стоят правильно. Теперь: правило из
+   слоя правее ВСЕГДА выигрывает у правила из слоя левее, независимо от
+   специфичности. Отсюда два следствия, ради которых это и делается:
+     — адаптив (resp) выигрывает всегда, даже у самого длинного селектора;
+     — чтобы перебить чужое правило, больше не нужно наращивать селектор.
+   Новый файл — дописать сюда, осознанно выбрав место. */
+
+@layer base {
+@layer base, menu, gacha, cards, deck, battle, story, overlays, chat, settings, responsive;
+
+/* 01-base.css — переменные, сброс, типографика, кнопки, полосы — общее для всех экранов
+
+   Часть общих стилей, разрезанных из одного блока. ПОРЯДОК ПОДКЛЮЧЕНИЯ В
+   index.html ЗНАЧИМ: правила одной силы разрешаются по нему, и файлы стоят
+   там в том же порядке, в каком лежали строки исходника. Не меняй порядок
+   ссылок, не убедившись снимком (tools/_snap.js).
+
+   Правило для новых стилей: клади их РЯДОМ с тем, что они красят, в этот же
+   файл. Именно нарушение этого дало вылезшее за панель поле промокода —
+   правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
+
+@layer base {
+/* Стили игры. Вынесены из index.html одним куском, БЕЗ единой
+   перестановки правил — порядок каскада сохранён дословно.
+   Дальше этот файл разбирается по темам, см. css/. */
+/* Пути в url() считаются ОТ ЭТОГО ФАЙЛА, а не от страницы: после
+   выноса стилей из index.html они стали ../art/. Это первое, что
+   ломается при переносе CSS в отдельный файл, и ломается молча. */
+:root{
+  --bg:#0a0a0f; --panel:#101017; --ink:#f2f2f6; --dim:#8d8da0; --line:#262633;
+  --yel:#ffd52e; --mag:#ff4fd8; --cyn:#35f0ff; --red:#ff3355; --grn:#3dff8a;
+  --disp:'Arial Black',Impact,'Segoe UI',sans-serif;
+  --mono:ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;
+  /* Реальная высота вьюпорта. В webview Telegram 100vh врёт (шапка/клавиатура),
+     поэтому PF.syncHeight() держит здесь фактическое значение. Фолбэк на 100vh
+     нужен на случай, если JS ещё не выполнился. */
+  --app-h:100vh;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:var(--app-h)}
+body{background:var(--bg);color:var(--ink);font-family:'Segoe UI',Helvetica,Arial,sans-serif;
+  overflow:hidden;user-select:none;-webkit-user-select:none;
+  background-image:radial-gradient(ellipse 90% 50% at 50% -10%,rgba(255,213,46,.07),transparent 70%)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:95;
+  background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1.5px);background-size:22px 22px}
+::selection{background:var(--yel);color:#000}
+#fx{position:fixed;inset:0;z-index:80;pointer-events:none}
+
+/* ====== общие ====== */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;z-index:2}
+.screen.on{display:flex;animation:scrIn .3s cubic-bezier(.2,1,.3,1)}
+@keyframes scrIn{from{opacity:0;transform:scale(1.015)}}
+.btn{font-family:var(--disp);font-size:12px;letter-spacing:.04em;text-transform:uppercase;
+  background:#14141c;border:2px solid #2c2c38;color:#eee;padding:11px 16px;cursor:pointer;
+  box-shadow:4px 4px 0 rgba(0,0,0,.6);transition:.12s;display:inline-flex;align-items:center;gap:9px}
+/* Кнопка-значок: только символ внутри, поэтому его надо центрировать явно.
+   .btn — inline-flex с align-items:center, но БЕЗ justify-content, то есть
+   содержимое прижато к левому краю; при padding:0 и заданной ширине значок
+   уезжал в левый край квадрата. letter-spacing тоже обнуляем: он добавляет
+   пустоту ПОСЛЕ символа, и даже отцентрованный тот смещался бы влево на
+   половину этого зазора. line-height:1 убирает перекос по вертикали. */
+.iconbtn{justify-content:center;text-align:center;letter-spacing:0;gap:0;line-height:1}
+.btn:hover{border-color:var(--yel);color:var(--yel);transform:translate(-2px,-2px);box-shadow:6px 6px 0 rgba(0,0,0,.6)}
+.btn:active{transform:translate(2px,2px);box-shadow:0 0 0}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn.pri{background:var(--yel);border-color:var(--yel);color:#0a0a0e;
+  box-shadow:4px 4px 0 rgba(255,213,46,.22),0 10px 26px rgba(255,213,46,.14)}
+.btn.pri:hover{background:#ffe063;color:#0a0a0e}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.big{font-size:15px;padding:15px 22px}
+.hz{height:9px;background:repeating-linear-gradient(-45deg,var(--yel) 0 12px,#0a0a0e 12px 24px);
+  animation:hzCrawl 1.4s linear infinite;opacity:.85;flex:none;
+  /* Позиционирование только ради слоя: .menuBg — absolute, и без этого он
+     накрывает ленты, потому что позиционированное рисуется поверх обычного
+     потока. С появлением непрозрачной фоновой картинки ленты просто пропали. */
+  position:relative;z-index:2}
+.hz.rev{animation-direction:reverse}
+@keyframes hzCrawl{to{background-position:33.94px 0}}
+/* Жёлтая бегущая лента. Лежит в body, а экраны — position:fixed;inset:0;z-index:2,
+   поэтому раньше она просто просвечивала сквозь прозрачный экран меню. С
+   непрозрачной фоновой картинкой просвечивать стало нечему, и лента пропала —
+   поэтому теперь она явно над экранами.
+   Только в меню: на остальных экранах фиксированная полоса сверху накрыла бы
+   topbar с кнопкой «МЕНЮ». */
+.ticker{position:fixed;top:0;left:0;right:0;z-index:3;display:none;
+  padding-top:env(safe-area-inset-top,0px);
+  background:var(--yel);color:#0a0a0e;overflow:hidden;border-bottom:3px solid #000;flex:none}
+.menuOn .ticker{display:block}
+.tkIn{display:flex;align-items:center;width:max-content;padding:6px 0;font-family:var(--disp);font-size:12px;white-space:nowrap;will-change:transform}
+.tkIn>span{padding:0 4px}
+.tkHi{background:#0a0a0e;color:var(--yel);padding:2px 12px;margin:0 13px}
+.tkSep{margin:0 13px}
+.bang{position:fixed;left:50%;top:42%;z-index:90;pointer-events:none;
+  font-family:var(--disp);font-style:italic;font-size:clamp(40px,8vw,84px);color:var(--yel);
+  text-shadow:4px 4px 0 #000,8px 8px 0 rgba(255,79,216,.5);
+  animation:bangA .9s cubic-bezier(.2,1.4,.3,1) forwards}
+@keyframes bangA{0%{transform:translate(-50%,-50%) rotate(-14deg) scale(.2);opacity:0}
+  25%{opacity:1}75%{transform:translate(-50%,-50%) rotate(-5deg) scale(1.03);opacity:1}
+  100%{transform:translate(-50%,-50%) rotate(-5deg) scale(1.14);opacity:0}}
+.toast{position:fixed;right:16px;bottom:16px;z-index:130;background:#14141c;border:2px solid #262633;
+  border-left:5px solid var(--yel);padding:11px 14px;font-size:12.5px;box-shadow:5px 6px 0 rgba(0,0,0,.4);
+  animation:tIn .28s cubic-bezier(.2,1.2,.3,1)}
+.toast.out{animation:tOut .28s forwards}
+@keyframes tIn{from{transform:translateX(40px);opacity:0}}
+@keyframes tOut{to{transform:translateX(40px);opacity:0}}
+.crystal{position:absolute;border:2px solid currentColor;opacity:.4;pointer-events:none;
+  animation:cryFloat 6s ease-in-out infinite alternate;box-shadow:0 0 9px currentColor}
+@keyframes cryFloat{from{transform:translateY(0) rotate(45deg)}
+  to{transform:translateY(-24px) rotate(225deg)}}
+}
+}

@@ -1,0 +1,93 @@
+/* 10-settings.css — настройки: строки-переключатели, блок графики, промокод
+
+   Часть общих стилей, разрезанных из одного блока. ПОРЯДОК ПОДКЛЮЧЕНИЯ В
+   index.html ЗНАЧИМ: правила одной силы разрешаются по нему, и файлы стоят
+   там в том же порядке, в каком лежали строки исходника. Не меняй порядок
+   ссылок, не убедившись снимком (tools/_snap.js).
+
+   Правило для новых стилей: клади их РЯДОМ с тем, что они красят, в этот же
+   файл. Именно нарушение этого дало вылезшее за панель поле промокода —
+   правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
+
+@layer settings {
+#scr-settings .setBody{flex:1;overflow-y:auto;padding:24px;scrollbar-width:thin}
+/* Три положения — сегментами в один ряд, а не выпадающим списком: выбор из
+   трёх должен быть виден целиком, иначе игрок не знает, что вообще есть. */
+.gPres{display:flex;gap:0;flex:none}
+.gPre{font-family:var(--disp);font-size:11px;letter-spacing:.06em;cursor:pointer;
+  background:#15151e;color:#8d8da0;border:2px solid #2c2c38;border-right-width:0;
+  padding:8px 11px}
+.gPre:last-child{border-right-width:2px}
+.gPre.on{background:var(--yel);color:#0a0a0e;border-color:var(--yel)}
+.gHead{align-items:center}
+/* Пример справа от переключателей на широком экране и снизу на узком:
+   на 375px две колонки схлопнули бы карту до нечитаемого огрызка. */
+.gPanel{display:flex;gap:18px;align-items:flex-start;padding:4px 0 14px}
+.gList{flex:1;min-width:0}
+.gList .setRow:last-child{border-bottom:0}
+.gDemo{width:150px;flex:none;position:sticky;top:4px}
+.gDemoCap{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:#5a5a6e;
+  text-align:center;margin-top:8px;text-transform:uppercase}
+@media (max-width:640px){
+  .gPanel{flex-direction:column-reverse;align-items:center}
+  .gDemo{width:170px;position:static}
+  .gList{width:100%}
+  /* Три сегмента и заголовок в одну строку на 375px не влезают — замерено,
+     кнопки уходили за край на 47px. Перенос внутри самого блока не спасал:
+     он лежит в строке с flex:none, и места ему хватало «по своим меркам».
+     Поэтому разворачиваем всю строку в столбец, а сегменты делим поровну. */
+  .gHead{flex-direction:column;align-items:stretch;gap:10px}
+  .gPres{width:100%}
+  .gPre{flex:1;text-align:center;padding:9px 4px}
+}
+.setWrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.setRow{display:flex;align-items:center;justify-content:space-between;gap:14px;border:3px solid #2c2c38;
+  background:#12121a;padding:15px 17px}
+/* Строка промокода. Стоит СРАЗУ ПОСЛЕ .setRow намеренно: оба правила по
+   одному классу, и кто из них применится — решает порядок в файле. Стоя выше,
+   этот блок проигрывал `align-items:center` из .setRow, строка оставалась
+   рядом, и поле с кнопкой вылезали за панель на 50px. */
+.prRow{flex-direction:column;align-items:stretch;gap:10px}
+.prHead{width:100%}
+.prIn{display:flex;gap:8px;align-items:stretch;width:100%}
+.prIn .hInput{flex:1 1 auto;min-width:0;font-size:15px;letter-spacing:.12em;
+  text-transform:uppercase;border-width:2px;padding:9px 11px}
+.prIn .btn{flex:0 0 auto;white-space:nowrap}
+.setRow .sT{font-family:var(--disp);font-size:13px;color:#fff}
+.setRow .sS{font-size:10.5px;color:var(--dim);font-style:italic;margin-top:4px}
+.tgl{width:64px;height:30px;border:2px solid #2c2c38;background:#0a0a10;cursor:pointer;position:relative;flex:none;transition:.15s}
+.tgl i{position:absolute;top:2px;left:2px;width:22px;height:22px;background:#3a3a48;transition:.18s cubic-bezier(.2,1.3,.3,1)}
+.tgl.on{border-color:var(--yel);background:rgba(255,213,46,.12)}
+.tgl.on i{left:38px;background:var(--yel);box-shadow:0 0 10px rgba(255,213,46,.6)}
+
+@media (max-width:760px){
+  .mGrid{grid-template-columns:repeat(2,1fr)}
+  .mbSilO.l{display:none}
+  .mbSilO.r{height:42vh;right:-7%;opacity:.75}
+  .mbWord{font-size:44vw}
+  .slot,.unit{width:56px;height:76px}
+  .bRow{min-height:82px;gap:5px}
+  .bSilO.p{height:74%;left:-30px}
+  .bSilO.e{height:66%;right:-30px}
+  .bSilO.e.boss{height:74%}
+  .hCard{width:82px;height:114px}
+  .ebCard{width:52px;height:70px;margin:0 -14px;border-radius:9px}
+  .ebCard::after{bottom:9px;height:9px}
+  .hCard .cFront{padding:7px 7px 34px}
+  .hCard .cfAtkHp{left:5px;right:5px;bottom:5px}
+  .hCard .cfAtkHp b{font-size:12px;padding:1px 6px}
+  .bHand{--hand-ov:-10px}
+  .hCard .cfText{font-size:8.5px}
+  .hCard .cfName{font-size:10px}
+  .heroIc{width:40px;height:40px}
+  .statHp{font-size:20px}
+  .piles{display:none}
+  .unit .uArt{width:64%;height:64%}
+  .unit .uA,.unit .uH{font-size:11px}
+  .unit .uName{display:none}
+  .unit .uKw{top:4px}
+  .bHint{top:70px;font-size:9px}
+  .insView{flex-direction:column;align-items:center}
+  .insInfo{width:100%}
+}
+}
