@@ -936,7 +936,9 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 /* top задаёт JS: зазор между панелью и первым рядом зависит от высоты экрана
    (поле центрирует ряды по остатку места), и фиксированное число либо
    наезжало бы на доску, либо прятало руку целиком. */
-.ebCard{width:52px;height:70px;flex:none;margin:0 -14px;border-radius:9px;position:relative;
+/* Размер — от десктопного, дальше уменьшается медиазапросами. Наша рука на
+   десктопе 106px, у него 72: заметно, но теснее, как и просили. */
+.ebCard{width:72px;height:97px;flex:none;margin:0 -19px;border-radius:11px;position:relative;
   background:#12121b;border:2px solid #3a3a4c;overflow:hidden;
   /* Тёмный шов слева: при таком нахлёсте соседние рубашки иначе сливаются в
      один полосатый брусок, и веер перестаёт читаться как карты. */
@@ -946,7 +948,7 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 /* Полоса у низа, а не по центру: наружу торчит только нижний край карты, и
    опознавательный знак обязан попадать именно в него. Ниже неё оставлен
    чистый тёмный кант — по нему и видно, где кончается одна карта. */
-.ebCard::after{content:'';position:absolute;left:-20%;right:-20%;bottom:9px;height:9px;
+.ebCard::after{content:'';position:absolute;left:-20%;right:-20%;bottom:12px;height:12px;
   transform:rotate(-9deg);opacity:.72;border-top:2px solid #000;border-bottom:2px solid #000;
   background:repeating-linear-gradient(-45deg,var(--yel) 0 8px,#0a0a0e 8px 16px)}
 .unit.buffed .uA{color:var(--grn)}
@@ -1533,6 +1535,8 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
   .bSilO.e{height:66%;right:-30px}
   .bSilO.e.boss{height:74%}
   .hCard{width:82px;height:114px}
+  .ebCard{width:52px;height:70px;margin:0 -14px;border-radius:9px}
+  .ebCard::after{bottom:9px;height:9px}
   .hCard .cFront{padding:7px 7px 27px}
   .hCard .cfAtkHp{left:5px;right:5px;bottom:5px}
   .hCard .cfAtkHp b{font-size:12px;padding:1px 6px}
@@ -2279,7 +2283,7 @@ function migrate(s){
    страницы стирала сейв. */
 const INV_CAP=20;
 const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'',story:0,
-  gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,
+  gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,anim:true,
   /* Настройки графики. По умолчанию всё включено: игра должна показывать себя
      как задумана, а урезать пусть решает тот, кому тяжело. */
   gfx:{irid:1,spec:1,scan:1,grain:1,glow:1,tilt:1},
@@ -4603,8 +4607,13 @@ function placeEnemyHand(){
      больше). */
   let low=box.bottom;
   for(const c of eh.children)low=Math.max(low,c.getBoundingClientRect().bottom);
-  const top=Math.round(row.getBoundingClientRect().top-f.getBoundingClientRect().top
-    -box.height-(low-box.bottom)-5);
+  const место=row.getBoundingClientRect().top-f.getBoundingClientRect().top;
+  const надо=box.height+(low-box.bottom)+5;
+  /* Тесно (телефон) — поднимаем рубашки за верхний край, чтобы низ разошёлся
+     с доской; просторно (десктоп) — прижимаем к самому верху поля, под панель
+     врага. Без верхней границы рука на большом экране зависала посреди поля,
+     оторванная и от панели, и от доски. */
+  const top=Math.round(Math.min(0,место-надо));
   if(eh.dataset.top!=top){eh.dataset.top=top;eh.style.top=top+'px'}
 }
 addEventListener('resize',placeEnemyHand);
@@ -5043,10 +5052,19 @@ function updateUnit(el,u,side,targetable){
 }
 /* Одно место, где решается, двигаться ли вообще. Системную настройку
    «меньше движения» уважаем: для части людей это не вкус, а самочувствие. */
+/* Просит ли система убрать движение. Держим как подсказку для настроек, но
+   решает НЕ она. Раньше решала — и это молча выключало полёт карты врага,
+   замах перед ударом и выпад, то есть ровно то, чем ход противника вообще
+   объясняется: на десктопе с этим флагом бой выглядел как до всех правок,
+   только ещё быстрее (анимации пропущены, а паузы между ними остались).
+   Честнее и заметнее так: флаг ставит галочку по умолчанию новому игроку,
+   а дальше это обычный переключатель в настройках. Тем более что остальное
+   движение в игре — бегущие полосы, дрейф сетки, лента на рубашках — этот
+   флаг и не спрашивало никогда. */
 let REDUCE=false;
 try{const m=matchMedia('(prefers-reduced-motion:reduce)');REDUCE=m.matches;
   m.addEventListener&&m.addEventListener('change',e=>{REDUCE=e.matches})}catch(e){}
-function gfxAnim(){return !REDUCE}
+function gfxAnim(){return S.anim!==false}
 
 function unitHTML(u,side,targetable){
   const hex=u.card.ult?'#ff3355':TIER_HEX[u.card.t];
@@ -5530,6 +5548,9 @@ function renderSettings(){
     {k:'snd',t:'ЗВУК',s:'выстрелы, удары, срыв крышек — весь WebAudio-набор'},
     {k:'vfx',t:'ЧАСТИЦЫ',s:'искры и звёзды при ударах и крутках'},
     {k:'shk',t:'ТРЯСКА ЭКРАНА',s:'отдача при ударах по героям'},
+    {k:'anim',t:'АНИМАЦИИ БОЯ',s:REDUCE
+      ?'полёт карт, замах и выпад. Система просит убрать движение — выключи, если мешает'
+      :'полёт карт, замах перед ударом, выпад. Без них ход врага мгновенный'},
   ];
   $('#setWrap').innerHTML=rows.map(r=>`
     <div class="setRow"><div><div class="sT">${r.t}</div><div class="sS">${r.s}</div></div>
