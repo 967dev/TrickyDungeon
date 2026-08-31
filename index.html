@@ -948,14 +948,11 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
    пересчитывать каждый кадр прочерчивания по всему экрану — ровно то, на чём
    умирал экран круток на iPhone. Слои ещё и ближе к плоским теням референса. */
 .atkArc{position:fixed;left:0;top:0;z-index:60;pointer-events:none;overflow:visible}
-.atkArc path{fill:none;stroke-linecap:round}
-.atkArc .aWide{stroke:var(--arc);stroke-width:15;opacity:.10}
-.atkArc .aHalo{stroke:var(--arc);stroke-width:8;opacity:.26}
-.atkArc .aBody{stroke:var(--arc);stroke-width:4;opacity:.92}
-.atkArc .aCore{stroke:#fff;stroke-width:1.6;opacity:.95}
-.atkArc .aHead{fill:var(--arc);stroke:#fff;stroke-width:1.5;stroke-linejoin:round;
-  transform-box:fill-box;transform-origin:center}
-.atkArc .aDot{fill:#fff;stroke:var(--arc);stroke-width:2.5}
+.atkArc path{fill:none;stroke-linecap:round;stroke-dasharray:9 10}
+.atkArc .aHalo{stroke:var(--arc);stroke-width:9;opacity:.13}
+.atkArc .aBody{stroke:var(--arc);stroke-width:3;opacity:.55}
+.atkArc .aHead{fill:var(--arc);opacity:.6;transform-box:fill-box;transform-origin:center}
+.atkArc .aDot{fill:none;stroke:var(--arc);stroke-width:2;opacity:.45}
 .atkArc.p{--arc:var(--yel)}
 .atkArc.e{--arc:var(--red)}
 /* Карта, летящая из руки на поле. Копия поверх всего: настоящую карту в этот
@@ -4825,26 +4822,28 @@ function atkLine(a,b,ms,side){
   const t=document.createElement('div');
   t.innerHTML=`<svg class="atkArc ${side==='e'?'e':'p'}" width="${innerWidth}" height="${innerHeight}"
       viewBox="0 0 ${innerWidth} ${innerHeight}" aria-hidden="true">
-    <path class="aWide" d="${d}"/><path class="aHalo" d="${d}"/>
-    <path class="aBody" d="${d}"/><path class="aCore" d="${d}"/>
-    <circle class="aDot" cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="3.6"/>
+    <path class="aHalo" d="${d}"/><path class="aBody" d="${d}"/>
+    <circle class="aDot" cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="3.4"/>
     <polygon class="aHead" points="${остриё}"/></svg>`;
   const svg=t.firstElementChild;
   document.body.appendChild(svg);
-  /* Прочерчивание — единственное, что здесь анимируется: длина штриха. */
-  const рис=Math.min(230,Math.max(110,dur*.45));
-  const L=svg.querySelector('.aBody').getTotalLength();
-  svg.querySelectorAll('path').forEach(pp=>{
-    pp.style.strokeDasharray=L;pp.style.strokeDashoffset=L;
-    pp.animate([{strokeDashoffset:L},{strokeDashoffset:0}],
-      {duration:рис,easing:'cubic-bezier(.3,.7,.25,1)',fill:'forwards'});
-  });
-  svg.querySelector('.aDot').animate([{opacity:0,r:1},{opacity:1,r:3.6}],
-    {duration:130,easing:'cubic-bezier(.2,1.6,.4,1)',fill:'both'});
-  svg.querySelector('.aHead').animate([{opacity:0,transform:'scale(.35)'},
-      {opacity:1,transform:'scale(1)'}],
-    {duration:170,delay:Math.max(0,рис-50),easing:'cubic-bezier(.2,1.7,.4,1)',fill:'both'});
-  const уход=svg.animate([{opacity:1,offset:0},{opacity:1,offset:.74},{opacity:0,offset:1}],
+  /* Бегущий пунктир вместо прочерчивания. Прочерчивание говорило направление
+     один раз, в первые кадры, и чтобы его заметить, линию приходилось делать
+     яркой. Бегущий штрих повторяет то же самое всё время, пока дуга висит, —
+     поэтому её можно приглушить до полупрозрачной и она перестаёт спорить с
+     доской. Смещение отрицательное: штрихи идут ОТ источника К цели. */
+  const шаг=19;
+  svg.querySelectorAll('path').forEach(pp=>
+    pp.animate([{strokeDashoffset:0},{strokeDashoffset:-шаг}],
+      {duration:480,easing:'linear',iterations:Infinity}));
+  svg.querySelector('.aHead').animate([{opacity:0,transform:'scale(.5)'},
+      {opacity:.6,transform:'scale(1)'}],
+    {duration:190,easing:'cubic-bezier(.2,1.5,.4,1)',fill:'both'});
+  /* Появление и уход одной анимацией: две на одном элементе перебивали бы
+     друг друга по opacity. */
+  const вход=Math.min(.3,120/(dur+120));
+  const уход=svg.animate([{opacity:0,offset:0},{opacity:1,offset:вход},
+      {opacity:1,offset:.76},{opacity:0,offset:1}],
     {duration:dur+120,easing:'linear'});
   const off=()=>svg.remove();
   уход.finished.then(off).catch(off);
