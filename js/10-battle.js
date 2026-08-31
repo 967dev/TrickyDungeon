@@ -199,7 +199,14 @@ function startBattle(si){
 }
 function drawCard(who,silent){
   const P=B[who];
-  if(!P.deck.length){P.fatigue++;blog(who,`усталость · −${P.fatigue}`,'die');
+  if(!P.deck.length){
+    /* В обучении колоды у врага нет ПО ЗАМЫСЛУ: его ходы расписаны сценарием.
+       Усталость там не игровое событие, а побочный эффект пустого массива —
+       она молча съедала врагу 1, 2, 3 здоровья за ход и в итоге выигрывала
+       бой за игрока, попутно засоряя журнал понятием, которому обучение ещё
+       не научило. */
+    if(B.train&&who==='e')return null;
+    P.fatigue++;blog(who,`усталость · −${P.fatigue}`,'die');
     damageHero(who,P.fatigue);return null}
   const id=P.deck.pop();
   if(P.hand.length>=7){blog(who,`сгорела: ${byId(id).n}`,'die');
@@ -340,7 +347,29 @@ async function trainEnemyTurn(){
          замирает посередине, а не появляется на доске сама собой. */
       if(el)await flyToBoard(c,откуда,unitRect(el),el,{reveal:1})}
   }
-  if(step.face){await sleep(600);damageHero('p',step.face)}
+  /* Удар в лицо по сценарию. Раньше он просто отнимал здоровье: ни замаха, ни
+     дуги, ни строки в журнале — только число молча уменьшалось. И это читалось
+     как чужое событие: на третьем ходу враг теряет 3 от своей усталости, а
+     игрок в ту же секунду получает свои 3, и единственная строка в журнале —
+     «усталость −3». Вывод напрашивался неверный.
+     Бьём тем, кто на доске: сценарий задаёт УРОН, а картинку берём настоящую. */
+  if(step.face){
+    await sleep(500);
+    const бьющий=B.e.board.find(u=>u.atk>0)||B.e.board[0]||null;
+    const elS=бьющий?$(`#rowE .unit[data-uid="${бьющий.uid}"]`):null;
+    const elT=$('#pStats');
+    if(elS&&elT&&gfxAnim()){
+      atkLine(elS.getBoundingClientRect(),elT.getBoundingClientRect(),580,'e');
+      elS.classList.remove('tell');void elS.offsetWidth;elS.classList.add('tell');
+      await sleep(320);
+      elS.classList.remove('tell');
+      const b=elT.getBoundingClientRect();
+      await lunge(elS,{x:b.left+b.width/2,y:b.top+b.height/2},520,.5);
+    }else await sleep(200);
+    blog('e',`${бьющий?бьющий.card.n:'ВРАГ'} → ТВОЙ ГЕРОЙ · ${step.face}`,'atk');
+    damageHero('p',step.face);
+    shake($('#bWrap'));
+  }
   /* Хвост тот же, что у настоящего хода ИИ: смерти и проверка победы
      разрешаются внутри damageHero/doAttack, отдельного «подведения итогов»
      в этой боёвке нет. */
