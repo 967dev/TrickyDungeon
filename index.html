@@ -933,6 +933,9 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
    встаёт. Сложены теснее нашей руки — чужие карты не читают, важен счёт. */
 .eHand{position:absolute;left:0;right:0;top:-35px;display:flex;justify-content:center;
   align-items:flex-start;pointer-events:none;z-index:0}
+/* top задаёт JS: зазор между панелью и первым рядом зависит от высоты экрана
+   (поле центрирует ряды по остатку места), и фиксированное число либо
+   наезжало бы на доску, либо прятало руку целиком. */
 .ebCard{width:52px;height:70px;flex:none;margin:0 -14px;border-radius:9px;position:relative;
   background:#12121b;border:2px solid #3a3a4c;overflow:hidden;
   /* Тёмный шов слева: при таком нахлёсте соседние рубашки иначе сливаются в
@@ -962,6 +965,21 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .hCard .cfName{font-size:12px;min-height:2.2em}
 .hCard .cfText{font-size:10px;line-height:1.3}
 .hCard .cfCost{width:28px;height:28px;font-size:17px}
+/* Пара «атака/здоровье» в руке прибита к низу карты, а не стоит в потоке.
+   В поток она не помещалась НИГДЕ: у карты фиксированные кегли, и при 106px
+   содержимому нужно ~156px при коробке в 145 — на десктопе за обрез уходил
+   подвал и край статов, на телефоне (82px) статы целиком, а это ровно то
+   число, по которому решают, чем ходить. Так же сделано у существ на доске,
+   поэтому читается одинаково. Подвал в руке убран: тир уже говорят звёзды,
+   а юнит это или эхо — само наличие пары. */
+.hCard .cfFoot{display:none}
+.hCard .cFront{padding-bottom:34px}
+.hCard .cfAtkHp{position:absolute;left:7px;right:7px;bottom:7px;margin:0;z-index:3}
+.hCard .cfAtkHp b{box-shadow:2px 2px 0 rgba(0,0,0,.55)}
+/* Название и текст правил ограничены по высоте: длинное имя иначе съезжало
+   на третью строку и выдавливало текст под обрез. Полный текст — в инспекторе. */
+.hCard .cfName{max-height:2.4em;overflow:hidden}
+.hCard .cfText{max-height:calc(2.7em + 10px);overflow:hidden}
 .hCard.playable{transform:rotate(var(--rot)) translateY(calc(var(--ty) - 5px))}
 .hCard.playable .cFront{outline:2px solid rgba(255,213,46,.85);outline-offset:-2px}
 .hCard.unplayable{filter:grayscale(.55) brightness(.6)}
@@ -1515,6 +1533,9 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
   .bSilO.e{height:66%;right:-30px}
   .bSilO.e.boss{height:74%}
   .hCard{width:82px;height:114px}
+  .hCard .cFront{padding:7px 7px 27px}
+  .hCard .cfAtkHp{left:5px;right:5px;bottom:5px}
+  .hCard .cfAtkHp b{font-size:12px;padding:1px 6px}
   .bHand{--hand-ov:-10px}
   .hCard .cfText{font-size:8.5px}
   .hCard .cfName{font-size:10px}
@@ -1558,6 +1579,8 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
    десктопные карты 106x146 в окне высотой 375px. Ориентируемся на высоту. */
 @media (max-height:520px){
   .hCard{width:76px;height:106px}
+  .hCard .cFront{padding:6px 6px 24px}
+  .hCard .cfAtkHp b{font-size:11px;padding:1px 5px}
   .bHand{--hand-ov:-9px}
   .bHand{min-height:124px}
   .hCard .cfName{font-size:9px;min-height:2em}
@@ -4557,12 +4580,34 @@ function enemyHandRect(){
 function syncEnemyHand(){
   const eh=$('#eHand');if(!eh)return;
   const n=Math.min(7,B&&B.e?B.e.hand.length:0);
-  if(+eh.dataset.n===n)return;
-  eh.dataset.n=n;
-  let h='';
-  for(let i=0;i<n;i++)h+=`<div class="ebCard" style="transform:rotate(${((i-(n-1)/2)*2.4).toFixed(1)}deg)"></div>`;
-  eh.innerHTML=h;
+  if(+eh.dataset.n!==n){
+    eh.dataset.n=n;
+    let h='';
+    for(let i=0;i<n;i++)h+=`<div class="ebCard" style="transform:rotate(${((i-(n-1)/2)*2.4).toFixed(1)}deg)"></div>`;
+    eh.innerHTML=h;
+  }
+  placeEnemyHand();
 }
+/* Ставим веер так, чтобы его низ упирался в верх первого ряда, а не заходил
+   на доску. Считаем от РЯДА, а не от края поля: поле центрирует ряды по
+   свободному месту, и зазор гуляет от высоты экрана — на одном он 29px, на
+   низком 12px, и любое зашитое число промахивается. */
+function placeEnemyHand(){
+  const eh=$('#eHand'),row=$('#rowE'),f=$('#bField');
+  if(!eh||!row||!f||!eh.children.length)return;
+  const box=eh.getBoundingClientRect();
+  if(!box.height)return;
+  /* Крайние рубашки повёрнуты, и их углы свисают ниже коробки ряда — коробку
+     считает вёрстка, поворот в неё не входит. Меряем свес, а не подбираем
+     число: он зависит от того, сколько карт в руке (веер тем круче, чем их
+     больше). */
+  let low=box.bottom;
+  for(const c of eh.children)low=Math.max(low,c.getBoundingClientRect().bottom);
+  const top=Math.round(row.getBoundingClientRect().top-f.getBoundingClientRect().top
+    -box.height-(low-box.bottom)-5);
+  if(eh.dataset.top!=top){eh.dataset.top=top;eh.style.top=top+'px'}
+}
+addEventListener('resize',placeEnemyHand);
 /* Карта не исчезает из руки, чтобы существо возникло на поле из ниоткуда, —
    она туда долетает. Летит копия поверх всего: настоящую карту в этот момент
    уже убрала перерисовка руки, а новое существо должно оказаться на месте
