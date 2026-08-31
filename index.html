@@ -3923,7 +3923,11 @@ const BATTLE_BG={f:'art/story/scene1.webp',m:'art/story/boy4.webp'};
 function setBattleBg(si){
   const bg=$('#bBg'),field=$('#bField');
   if(!bg||!field)return;
-  const src=(si>0)&&BATTLE_BG[S.hero];
+  /* Запасной фон, если герой почему-то не выбран. BATTLE_BG[null] — undefined,
+     и бой молча оставался без задника: голая сетка с полосами, то есть ровно
+     вид тренировки, где задника нет по замыслу. В обычной игре герой к рейдам
+     всегда выбран, но цена страховки — один || . */
+  const src=(si>0)&&(BATTLE_BG[S.hero]||BATTLE_BG.f);
   if(src){bg.style.backgroundImage=`url(${src})`;field.classList.add('hasBg')}
   else{bg.style.backgroundImage='';field.classList.remove('hasBg')}
 }
