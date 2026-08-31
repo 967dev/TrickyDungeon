@@ -3035,7 +3035,10 @@ function cardHTML(c,opts={}){
    эмблемой — проверка по этому списку, а не попытка загрузить файл и
    обработать ошибку: несуществующий файл в background-image просто молча
    не покажется, и вместо карты был бы пустой прямоугольник. */
-const CARD_ART=new Set(['r01','r02','r03','r04','r05','r06','r07','r08','s01','s02']);
+const CARD_ART=new Set([
+  'r01','r02','r03','r04','r05','r06','r07','r08','s01','s02',
+  'c01','c02','c03','c05','c08','c09','c11','s03','s04',
+]);
 function spellIcon(c){return{dmg:'boom',healHero:'heal',healAll:'heal',draw:'card',buff:'up',buffAll:'up',aoe:'boom',weaken:'skull',drain:'skull',mana:'up'}[c.eff.k]||'boom'}
 
 /* ================= гача ================= */

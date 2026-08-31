@@ -24,6 +24,16 @@ MAP = {
     'r05': 'flamethrower.png', 'r06': 'siren.png',
     'r07': 'dejurniy.png',     'r08': 'phonegirl.png',
     's01': 'iskra.png',        's02': 'cardcharge.png',
+    # вторая партия, 31 августа 2026 — тир ГОРОД целиком плюс два эха
+    'c01': 'дизель.png',
+    'c02': 'румба.png',
+    'c03': 'каштан.png',
+    'c05': 'клещ.png',
+    'c08': 'ноа.png',
+    'c09': 'пиллар.png',
+    'c11': 'моль.png',
+    's03': 'чайник.png',
+    's04': 'клетка.png',
 }
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 RAW  = os.path.join(ROOT, 'art', '_raw')
