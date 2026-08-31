@@ -512,8 +512,12 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
   font-style:italic;padding:4px 6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
 .cfKw{color:var(--yel);font-style:normal;font-family:var(--disp);font-size:8.5px;letter-spacing:.03em}
 .cfFoot{position:relative;z-index:2;display:flex;justify-content:space-between;margin-top:6px;font-family:var(--mono);font-size:8px;color:var(--dim)}
-.cfAtkHp{position:relative;z-index:2;display:flex;justify-content:space-between;margin-top:5px}
+.cfAtkHp{position:relative;z-index:2;display:flex;justify-content:space-between;
+  align-items:flex-start;margin-top:5px}
+.cfAtkHp span{display:flex;flex-direction:column;align-items:center;gap:1px}
 .cfAtkHp b{font-family:var(--disp);font-size:15px;padding:2px 8px;border:2px solid #000;color:#fff;text-shadow:1px 1px 0 #000}
+.cfAtkHp i{font-family:var(--mono);font-style:normal;font-size:8px;line-height:1;
+  letter-spacing:.06em;color:var(--dim)}
 .cfAtkHp b.a{background:#c22b3f}.cfAtkHp b.h{background:#2b7ac2}
 .cfStk{position:absolute;top:8%;right:-5%;z-index:5;font-family:var(--disp);font-style:italic;font-size:10px;
   background:var(--yel);color:#0a0a0e;padding:3px 8px;border:2px solid #0a0a0e;box-shadow:2px 2px 0 rgba(0,0,0,.55)}
@@ -1021,9 +1025,10 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
    поэтому читается одинаково. Подвал в руке убран: тир уже говорят звёзды,
    а юнит это или эхо — само наличие пары. */
 .hCard .cfFoot{display:none}
-.hCard .cFront{padding-bottom:34px}
+.hCard .cFront{padding-bottom:42px}
 .hCard .cfAtkHp{position:absolute;left:7px;right:7px;bottom:7px;margin:0;z-index:3}
 .hCard .cfAtkHp b{box-shadow:2px 2px 0 rgba(0,0,0,.55)}
+.hCard .cfAtkHp i{font-size:6.5px}
 /* Название и текст правил ограничены по высоте: длинное имя иначе съезжало
    на третью строку и выдавливало текст под обрез. Полный текст — в инспекторе. */
 .hCard .cfName{max-height:2.4em;overflow:hidden}
@@ -1583,7 +1588,7 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
   .hCard{width:82px;height:114px}
   .ebCard{width:52px;height:70px;margin:0 -14px;border-radius:9px}
   .ebCard::after{bottom:9px;height:9px}
-  .hCard .cFront{padding:7px 7px 27px}
+  .hCard .cFront{padding:7px 7px 34px}
   .hCard .cfAtkHp{left:5px;right:5px;bottom:5px}
   .hCard .cfAtkHp b{font-size:12px;padding:1px 6px}
   .bHand{--hand-ov:-10px}
@@ -1629,7 +1634,7 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
    десктопные карты 106x146 в окне высотой 375px. Ориентируемся на высоту. */
 @media (max-height:520px){
   .hCard{width:76px;height:106px}
-  .hCard .cFront{padding:6px 6px 24px}
+  .hCard .cFront{padding:6px 6px 31px}
   .hCard .cfAtkHp b{font-size:11px;padding:1px 5px}
   .bHand{--hand-ov:-9px}
   .bHand{min-height:124px}
@@ -2914,27 +2919,39 @@ function renderMenu(){
 })();
 
 /* ================= описания эффектов ================= */
+/* «+3 к урону», «+2 к жизням» или обе половины — смотря что даёт карта. */
+function плюс(e){
+  const ч=[];
+  if(e.a)ч.push(`+${e.a} к урону`);
+  if(e.h)ч.push(`+${e.h} к жизням`);
+  return ч.join(' и ')||'ничего';
+}
 function effDesc(c){
   const e=c.eff;
   const pre=c.ty==='u'?'<b>Боевой клич:</b> ':'<b>Эхо-заклятие:</b> ';
   if(!e)return 'Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.';
   switch(e.k){
-    case 'dmg':return pre+`наносит <b>${e.v} урона</b> по твоему выбору — вражеский юнит или сам вражеский герой. Идеален, чтобы добить раненого.`;
-    case 'healHero':return pre+`восстанавливает <b>${e.v} здоровья</b> твоему герою. Держи, когда тебя начали колотить.`;
-    case 'healAll':return pre+`<b>${e.v} здоровья</b> герою И всем твоим юнитам на поле сразу.`;
-    case 'draw':return pre+`берёт <b>${e.v===1?'карту':e.v+' карты'}</b> из колоды в руку — не даёт руке оскудеть.`;
-    case 'buff':return pre+`усиливает выбранного твоего юнита: <b>+${e.a||0} атаки / +${e.h||0} здоровья</b> навсегда. Бросай на сильного — станет зверем.`;
-    case 'buffAll':return pre+`все твои юниты получают <b>+${e.a} атаки / +${e.h} здоровья</b>. Чем больше твое поле — тем жирнее эффект.`;
-    case 'aoe':return pre+`<b>${e.v} урона ВСЕМ юнитам врага разом</b>. Копи до момента, когда враг развернётся — тогда она решает бой.`;
-    case 'weaken':return pre+`все юниты врага теряют <b>${e.v} атаки</b> (не ниже нуля). Отлично против swarm-толпы.`;
-    case 'drain':return pre+`<b>${e.v} урона</b> выбранной цели И лечит твоего героя на <b>${e.v}</b>. И бьёт, и кормит.`;
-    case 'mana':return pre+`даёт <b>+1 маны</b> прямо в этот ход. Стартовый буст — с ней первый ход не пропадает.`;
+    /* В каждой строке обязаны стоять три вещи: СКОЛЬКО, ПО КОМУ и КТО
+       выбирает цель. Раньше «по твоему выбору» стояло даже там, где выбора
+       нет, а «выбранной цели» — у карты, которая всегда бьёт в героя. */
+    case 'dmg':return pre+`<b>${e.v} ${plural(e.v,'урон','урона','урона')}</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.`;
+    case 'healHero':return pre+`<b>+${e.v} здоровья ТВОЕМУ герою</b>, но не выше его максимума. Юнитов не лечит.`;
+    case 'healAll':return pre+`<b>+${e.v} здоровья</b> твоему герою <b>и каждому твоему юниту</b> на поле. Цель не выбирается.`;
+    case 'draw':return pre+`берёшь <b>${e.v} ${plural(e.v,'карту','карты','карт')}</b> из своей колоды в руку. Если в руке уже 7 — лишняя сгорает.`;
+    /* Нулевую половину прибавки не показываем: «+3 к урону / +0 к жизням»
+       заставляет читать и отбрасывать половину строки. */
+    case 'buff':return pre+`<b>${плюс(e)}</b> одному <b>твоему</b> юниту на выбор. Навсегда, до конца боя.`;
+    case 'buffAll':return pre+`<b>${плюс(e)}</b> каждому <b>твоему</b> юниту на поле. Навсегда. Цель не выбирается.`;
+    case 'aoe':return pre+`<b>${e.v} ${plural(e.v,'урон','урона','урона')} КАЖДОМУ юниту врага</b> разом. Героя не задевает, цель не выбирается.`;
+    case 'weaken':return pre+`каждый юнит врага теряет <b>${e.v} ${plural(e.v,'урон','урона','урона')}</b> (не ниже нуля). Жизни не трогает, цель не выбирается.`;
+    case 'drain':return pre+`<b>${e.v} ${plural(e.v,'урон','урона','урона')} вражескому ГЕРОЮ</b> и <b>+${e.v} здоровья твоему</b>. Бьёт только в героя — цель не выбирается.`;
+    case 'mana':return pre+`<b>+${e.v} ${plural(e.v,'мана','маны','маны')}</b> прямо сейчас и только на этот ход. Дальше мана растёт как обычно.`;
   }
   return '';
 }
 function kwLine(c){
   const k=[];
-  if(c.kw&&c.kw.includes('taunt'))k.push('<span class="kw">ТАУНТ</span> враги обязаны атаковать его, пока он жив — щит для героя');
+  if(c.kw&&c.kw.includes('taunt'))k.push('<span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно');
   if(c.kw&&c.kw.includes('rush'))k.push('<span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт');
   return k.length?`<p>${k.join(' · ')}</p>`:'';
 }
@@ -2949,7 +2966,12 @@ function cardHTML(c,opts={}){
     const names={dmg:'урон',healHero:'лечение',healAll:'лечение всем',draw:'взять карту',buff:'усиление',
       buffAll:'усиление всем',aoe:'по всем врагам',weaken:'ослабление',drain:'урон+лечение',mana:'+1 маны'};
     eff=`${names[e.k]||''} ${e.v||''}${e.a?` (+${e.a}/+${e.h})`:''}`.trim()}
-  const atkHp=c.ty==='u'?`<div class="cfAtkHp"><b class="a">${c.a}</b><b class="h">${c.h}</b></div>`:'';
+  /* Подписи под числами. Два цветных квадрата без подписи читались только
+     тем, кто уже знает, что красный слева — урон: цвет и место конвенция, но
+     конвенцию надо откуда-то узнать. */
+  const atkHp=c.ty==='u'
+    ?`<div class="cfAtkHp"><span><b class="a">${c.a}</b><i>УРОН</i></span>`
+      +`<span><b class="h">${c.h}</b><i>ЖИЗНИ</i></span></div>`:'';
   const holo=S.foil
     ? `<div class="holo"><i></i></div><div class="cShine"></div><div class="cScan"></div><div class="cGrain"></div>`
     : '';
@@ -4982,7 +5004,13 @@ function dragTargetsFor(){
   if(DRAG.kind==='hand'){
     const c=byId(B.p.hand[DRAG.ref]);
     if(!c)return res;
-    if(c.ty==='u'){if(B.p.board.length<5)res.zones.add('rowP')}
+    if(c.ty==='u'){
+      if(B.p.board.length<5)res.zones.add('rowP');
+      /* У юнита с прицельным кличем подсвечиваем и цели: бросок прямо во
+         врага выкладывает юнита и сразу бьёт кличем по нему. */
+      if(c.eff&&c.eff.tg==='any'&&B.p.board.length<5){
+        res.hero=true;B.e.board.forEach(u=>res.units.add(u.uid))}
+    }
     else if(c.eff){
       if(c.eff.tg==='any'){res.hero=true;B.e.board.forEach(u=>res.units.add(u.uid))}
       else if(c.eff.tg==='ally'){B.p.board.forEach(u=>res.units.add(u.uid))}
@@ -5063,6 +5091,22 @@ function onDragUp(e){
     const c=byId(B.p.hand[drag.ref]);
     if(!c)return;
     if(c.c>B.p.mana){tone(130,.12,{v:.09});toast('Мало маны!',1);return}
+    /* Юнит с прицельным боевым кличем — сначала юнит, потом клич. Проверка
+       tg стояла выше проверки типа, и такой юнит уходил по ветке заклятий:
+       подсветка звала на своё поле, а бросок туда отвечал «это заклятие нужно
+       бросить НА цель» и оставлял карту в руке. Пять карт из 38 нельзя было
+       выложить перетаскиванием вообще. */
+    if(c.ty==='u'&&c.eff&&c.eff.tg==='any'){
+      if(B.p.board.length>=5){toast('Поле заполнено — максимум 5 юнитов',1);return}
+      if(uid!==null&&B.e.board.some(u=>u.uid===uid)){
+        playCard(drag.ref,B.e.board.find(u=>u.uid===uid));return}
+      if(el.closest('#bTop')){playCard(drag.ref,null);return}
+      /* Брошен на своё поле — выкладывать вслепую нельзя, клич обещает выбор.
+         Переходим в режим выбора цели, тот же, что из инспектора. */
+      B.sel={type:'hand',i:drag.ref};renderBattle();
+      toast('Юнит выйдет, когда выберешь цель боевого клича');
+      return;
+    }
     if(c.eff&&c.eff.tg==='any'){
       if(uid!==null&&B.e.board.some(u=>u.uid===uid))playCard(drag.ref,B.e.board.find(u=>u.uid===uid));
       else if(el.closest('#bTop'))playCard(drag.ref,null);
