@@ -925,6 +925,27 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
    иначе эффект прилетит уже в изменившуюся доску. */
 .bWrap.locked #bHand,.bWrap.locked .bRow,.bWrap.locked #bTop,
 .bWrap.locked #bEnd{pointer-events:none}
+/* Рука врага — рубашкой вверх. Её не было вовсе: карта врага вылетала из
+   счётчика «рука» в его панели, а на телефоне и вовсе из центра поля, потому
+   что счётчики там скрыты медиазапросом и замер давал пустой прямоугольник.
+   Карты подоткнуты под верхний край поля (overflow у .bField их и обрезает):
+   между панелью и первым рядом всего 25px, целиком ряд рубашек туда не
+   встаёт. Сложены теснее нашей руки — чужие карты не читают, важен счёт. */
+.eHand{position:absolute;left:0;right:0;top:-35px;display:flex;justify-content:center;
+  align-items:flex-start;pointer-events:none;z-index:0}
+.ebCard{width:52px;height:70px;flex:none;margin:0 -14px;border-radius:9px;position:relative;
+  background:#12121b;border:2px solid #3a3a4c;overflow:hidden;
+  /* Тёмный шов слева: при таком нахлёсте соседние рубашки иначе сливаются в
+     один полосатый брусок, и веер перестаёт читаться как карты. */
+  box-shadow:-3px 0 0 rgba(0,0,0,.65),0 3px 0 rgba(0,0,0,.5)}
+.ebCard::before{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,rgba(255,213,46,.06) 0 8px,transparent 8px 20px)}
+/* Полоса у низа, а не по центру: наружу торчит только нижний край карты, и
+   опознавательный знак обязан попадать именно в него. Ниже неё оставлен
+   чистый тёмный кант — по нему и видно, где кончается одна карта. */
+.ebCard::after{content:'';position:absolute;left:-20%;right:-20%;bottom:9px;height:9px;
+  transform:rotate(-9deg);opacity:.72;border-top:2px solid #000;border-bottom:2px solid #000;
+  background:repeating-linear-gradient(-45deg,var(--yel) 0 8px,#0a0a0e 8px 16px)}
 .unit.buffed .uA{color:var(--grn)}
 .dmgPop{position:fixed;z-index:85;pointer-events:none;font-family:var(--disp);font-style:italic;font-size:26px;
   color:#fff;text-shadow:2px 2px 0 #000,0 0 12px var(--red);animation:dmgA .8s cubic-bezier(.2,1,.3,1) forwards}
@@ -1705,6 +1726,7 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
       <div class="bSilO e" id="silEO"><div class="bSil" id="silE"></div></div>
       <div class="speedFlash" id="spFlash"></div>
       <div id="bCry"></div>
+      <div class="eHand" id="eHand" aria-hidden="true"></div>
       <div class="bRow" id="rowE"></div>
       <div class="bMid"></div>
       <div class="bRow" id="rowP"></div>
@@ -4021,11 +4043,12 @@ async function trainEnemyTurn(){
   if(step.play&&B.e.board.length<5){
     const c=byId(step.play);
     if(c){enemyBanner(c);await sleep(400);
+      const откуда=enemyHandRect();
       const u=mkUnit(c);B.e.board.push(u);renderBattle();
       const el=$(`#rowE .unit[data-uid="${u.uid}"]`);
       /* В обучении читаемость важнее всего: карта врага так же вылетает и
          замирает посередине, а не появляется на доске сама собой. */
-      if(el)await flyToBoard(c,enemyHandRect(),unitRect(el),el,{reveal:1})}
+      if(el)await flyToBoard(c,откуда,unitRect(el),el,{reveal:1})}
   }
   if(step.face){await sleep(600);damageHero('p',step.face)}
   /* Хвост тот же, что у настоящего хода ИИ: смерти и проверка победы
@@ -4084,6 +4107,9 @@ async function aiTurn(){
     if(Math.random()<sk)idx=cands.sort((a,b)=>b.c.c-a.c.c)[0];
     else idx=pick(cands);
     E.mana-=idx.c.c;
+    /* Точку вылета снимаем ДО перерисовки руки: через миг рубашки
+       перестроятся под новый счёт, и карта полетела бы из чужого места. */
+    const откуда=enemyHandRect();
     E.hand.splice(idx.i,1);
     const c=idx.c;played++;
     enemyBanner(c);
@@ -4094,7 +4120,7 @@ async function aiTurn(){
       const el=$(`#rowE .unit[data-uid="${u.uid}"]`);
       if(el){
         const r=unitRect(el);
-        await flyToBoard(c,enemyHandRect(),r,el,{reveal:1});
+        await flyToBoard(c,откуда,r,el,{reveal:1});
         burst(r.left+r.width/2,r.top+r.height/2,fxCols(c.t),8+c.t*6,.9);
         bang(pick(c.stk||['БАМ!']),50,46);
       }
@@ -4103,7 +4129,7 @@ async function aiTurn(){
       await sleep(240);
     }else{
       sfx.play(c.t);
-      await aiSpell(c);
+      await aiSpell(c,0,откуда);
     }
   }
   guard=0;
@@ -4147,12 +4173,12 @@ function aiSpellAim(c){
   if(e.k==='healAll'||e.k==='buffAll')return {el:$('#rowE')};
   return {el:$('#rowP')};   /* aoe, weaken и всё прочее — по нашему ряду */
 }
-async function aiSpell(c,noFly){
+async function aiSpell(c,noFly,откуда){
   const E=B.e,P=B.p;
   const e=c.eff;if(!e)return;
   const aim=aiSpellAim(c);
   if(!noFly){
-    await flyCard(c,enemyHandRect(),[
+    await flyCard(c,откуда||enemyHandRect(),[
       {r:revealRect(),ms:290,hold:440,rot:-3},
       {r:aimRect(aim.el),ms:300,k:.82,fade:0}]);
     bang(pick(c.stk||['БАМ!']),50,44);
@@ -4410,25 +4436,38 @@ async function doAttack(side,u,tgt,opts){
    карточных пропорций — для произвольных целей их строит aimRect(). */
 function flyCard(c,откуда,остановки){
   if(!gfxAnim()||!откуда||!откуда.width||!остановки.length)return Promise.resolve();
+  /* Копию верстаем в САМОМ КРУПНОМ размере, который ей понадобится, и дальше
+     только уменьшаем. Раньше она версталась по размеру старта, а карта уже
+     ко второй остановке становилась вдвое шире — и всё это время показывала
+     вёрстку, снятую с узкой. Кегли внутри карты фиксированные: на 86px её
+     собственное содержимое не помещается, нижняя пара «атака/здоровье»
+     уходит за обрез на 43px (замерено), и увеличение показывало ровно эту
+     обрезку крупнее. Отсюда и «статы куда-то уезжают». */
+  const W=Math.max(откуда.width,...остановки.map(s=>s.r.width*(s.k||1)));
+  const cx=откуда.left+откуда.width/2, cy=откуда.top+откуда.height/2;
   const fly=document.createElement('div');
   fly.className='flyCard';
-  fly.style.width=откуда.width+'px';
-  fly.style.left=откуда.left+'px';
-  fly.style.top=откуда.top+'px';
+  fly.style.width=W+'px';
+  fly.style.left=(cx-W/2)+'px';
+  fly.style.top=cy+'px';
   fly.innerHTML=cardHTML(c,{open:1,noAnim:1});
   document.body.appendChild(fly);
+  /* Высоту берём у свёрстанной копии, а не считаем по пропорции: центр старта
+     обязан совпасть с центром карты, иначе она прыгает в первый же кадр. */
+  fly.style.top=(cy-fly.getBoundingClientRect().height/2)+'px';
   let всего=0;
   for(const s of остановки)всего+=(s.ms||300)+(s.hold||0);
   /* Плавность задаём покадрово, а не одной кривой на всю анимацию: с общей
      кривой пауза посередине съедала бы разгон второго отрезка, и он начинался
      бы рывком. */
   const ease='cubic-bezier(.3,.05,.2,1)';
-  const kf=[{transform:'translate(0,0) scale(1) rotate(0deg)',opacity:1,offset:0,easing:ease}];
+  const kf=[{transform:`translate(0px,0px) scale(${откуда.width/W}) rotate(0deg)`,
+             opacity:1,offset:0,easing:ease}];
   let t=0;
   for(const s of остановки){
-    const dx=s.r.left+s.r.width/2-(откуда.left+откуда.width/2);
-    const dy=s.r.top+s.r.height/2-(откуда.top+откуда.height/2);
-    const sc=(s.r.width/откуда.width)*(s.k||1);
+    const dx=s.r.left+s.r.width/2-cx;
+    const dy=s.r.top+s.r.height/2-cy;
+    const sc=(s.r.width*(s.k||1))/W;
     const tr=`translate(${dx}px,${dy}px) scale(${sc}) rotate(${s.rot||0}deg)`;
     const op=s.fade!=null?s.fade:1;
     t+=(s.ms||300);
@@ -4456,14 +4495,18 @@ function aimRect(el,W){
   const r=el&&el.getBoundingClientRect?el.getBoundingClientRect():null;
   const cx=r&&r.width?r.left+r.width/2:fr.left+fr.width/2;
   const cy=r&&r.width?r.top+r.height/2:fr.top+fr.height/2;
-  const w=W||88,h=w*1.32;
+  const w=W||88,h=w*1.4;
   return {left:cx-w/2,top:cy-h/2,width:w,height:h};
 }
 /* Место, где карта врага замирает, чтобы её успели прочитать. */
 function revealRect(){
   const f=$('#bField');
   const r=f?f.getBoundingClientRect():{left:0,top:0,width:innerWidth,height:innerHeight};
-  const w=Math.min(152,Math.max(104,r.width*.32)),h=w*1.32;
+  /* Не уже 140px: у карты фиксированные кегли, и на меньшей ширине её
+     собственное содержимое не помещается. Замерено на юните 2 тира — при
+     104px нижняя пара «атака/здоровье» вылезает за обрез на 5px, при 120 уже
+     внутри; 140 берём с запасом на длинные названия. */
+  const w=Math.min(196,Math.max(140,r.width*.46)),h=w*1.4;
   return {left:r.left+r.width/2-w/2,top:r.top+r.height*.44-h/2,width:w,height:h};
 }
 /* Пока карта в полёте и пока ходит враг, поле нажатий не принимает: эффект
@@ -4491,11 +4534,34 @@ function spellAimP(c){
   if(e.k==='buffAll')return $('#rowP');
   return $('#rowE');   /* aoe, weaken — по вражескому ряду */
 }
-/* Откуда вылетает карта врага. Руки у него на экране нет, поэтому берём
-   счётчик руки в его панели — оттуда карта и «приходит». */
+/* Откуда вылетает карта врага — из его руки, из середины веера рубашек.
+   Запасные пути на случай, если руки на экране нет: счётчик в панели (он
+   скрыт медиазапросом на телефоне) и, последним, верхний край поля. Раньше
+   последним был центр экрана, и на телефоне карта вылетала оттуда — ровно
+   из ниоткуда. */
 function enemyHandRect(){
-  const p=$('#eHandN'),host=p?(p.closest('.pile')||p):$('#bTop');
-  return aimRect(host,86);
+  const eh=$('#eHand'),backs=eh?eh.querySelectorAll('.ebCard'):null;
+  if(backs&&backs.length){
+    const r=backs[Math.floor(backs.length/2)].getBoundingClientRect();
+    if(r.width)return {left:r.left,top:r.top,width:r.width,height:r.height};
+  }
+  const p=$('#eHandN'),host=p?(p.closest('.pile')||p):null;
+  if(host&&host.getBoundingClientRect().width)return aimRect(host,86);
+  const f=$('#bField'),fr=f?f.getBoundingClientRect():null;
+  if(fr)return {left:fr.left+fr.width/2-25,top:fr.top-35,width:50,height:70};
+  return aimRect(null,86);
+}
+/* Веер рубашек по числу карт в руке врага. Перерисовываем только когда счёт
+   изменился: renderBattle зовут на каждый удар, а перестройка узлов посреди
+   полёта сбила бы точку вылета. */
+function syncEnemyHand(){
+  const eh=$('#eHand');if(!eh)return;
+  const n=Math.min(7,B&&B.e?B.e.hand.length:0);
+  if(+eh.dataset.n===n)return;
+  eh.dataset.n=n;
+  let h='';
+  for(let i=0;i<n;i++)h+=`<div class="ebCard" style="transform:rotate(${((i-(n-1)/2)*2.4).toFixed(1)}deg)"></div>`;
+  eh.innerHTML=h;
 }
 /* Карта не исчезает из руки, чтобы существо возникло на поле из ниоткуда, —
    она туда долетает. Летит копия поверх всего: настоящую карту в этот момент
@@ -4787,6 +4853,7 @@ function renderBattle(){
   if(!B)return;
   $('#eHp').textContent=B.e.hp;$('#pHp').textContent=B.p.hp;
   $('#eDeckN').textContent=B.e.deck.length;$('#eHandN').textContent=B.e.hand.length;
+  syncEnemyHand();
   $('#pManaT').textContent=B.p.mana+'/'+B.p.mmax;
   $('#eManaT').textContent=B.e.mana+'/'+B.e.mmax;
   $('#eBoardN').textContent=B.e.board.length+'/5';
