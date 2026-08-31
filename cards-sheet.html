@@ -1,0 +1,478 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>БАМ-БАМ: все карты</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--yel:#ffd52e;--mag:#ff4fd8;--cyn:#35f0ff;--red:#ff3355;--grn:#3dff8a;
+  --bg:#0a0a0f;--ink:#e9e9f0;--dim:#8a8a9e;
+  --disp:'Arial Black',Impact,sans-serif;--mono:ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;padding:22px;background:var(--bg);color:var(--ink);
+  font-family:'Segoe UI',Helvetica,Arial,sans-serif;
+  background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1.5px);
+  background-size:22px 22px}
+h1{font-family:var(--disp);font-style:italic;color:var(--yel);margin:0 0 4px;
+  text-shadow:3px 3px 0 #000;font-size:26px}
+.sub{font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:22px}
+h2{font-family:var(--disp);font-style:italic;color:var(--cyn);font-size:18px;
+  margin:30px 0 12px;text-shadow:2px 2px 0 #000;border-bottom:3px solid #000;padding-bottom:6px}
+h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim);
+  margin-left:10px;letter-spacing:.06em}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.c{background:#12121b;border:2px solid #2c2c38;border-left:6px solid var(--el);
+  padding:12px 14px;box-shadow:4px 5px 0 rgba(0,0,0,.5)}
+.c header{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.cost{font-family:var(--disp);background:var(--yel);color:#0a0a0e;width:30px;height:30px;
+  display:grid;place-items:center;border:2px solid #000;font-size:16px;flex:none}
+.c h3{font-family:var(--disp);font-size:15px;margin:0;flex:1;text-shadow:2px 2px 0 #000}
+.id{font-family:var(--mono);font-size:10px;color:#55556a}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:9px}
+.el{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:#0a0a0e;
+  background:var(--el);padding:2px 7px}
+.tier{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--dim)}
+.kw{font-family:var(--disp);font-size:10px;color:#0a0a0e;background:var(--yel);padding:2px 7px}
+.stats{display:flex;gap:14px;align-items:flex-start;margin-bottom:9px}
+.st{display:flex;flex-direction:column;align-items:center;gap:2px}
+.st b{font-family:var(--disp);font-size:17px;padding:2px 10px;border:2px solid #000;color:#fff}
+.st b.a{background:#c22b3f}.st b.h{background:#2b7ac2}
+.st i{font-family:var(--mono);font-style:normal;font-size:8px;color:var(--dim);letter-spacing:.06em}
+.echo{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--mag);
+  border:2px solid var(--mag);padding:3px 9px}
+.c p{margin:0 0 7px;font-size:13px;line-height:1.45}
+.c .desc b{color:var(--yel)}
+.c .desc .kw{background:none;color:var(--yel);padding:0;font-size:13px}
+.c > p:has(+ .desc),.c p:first-of-type{color:#cfccdd}
+.fl{font-style:italic;color:var(--dim);font-size:12px;border-left:3px solid #2c2c38;padding-left:9px}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--dim);
+  border:1px solid #2c2c38;padding:2px 6px;font-weight:400}
+.tag.no{color:var(--red);border-color:var(--red)}
+.tag.ok{color:var(--grn);border-color:var(--grn)}
+.tag.sec{color:var(--red);border-color:var(--red)}
+@media print{body{background:#fff;color:#000}.c{break-inside:avoid}}
+</style>
+<h1>БАМ-БАМ: КАСКАД — все карты</h1>
+<div class="sub">38 карт · без арта: 28 · собрано из index.html скриптом tools/cards_sheet.py</div>
+<h2>РЕКРУТ <span>★ · 11 карт · без арта: 1</span></h2>
+<div class="grid"><article class="c t0" style="--el:#c9d4dc">
+  <header><span class="cost">1</span>
+    <h3>Гончая Террас</h3>
+    <span class="id">r01</span></header>
+  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">1</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«Стережь провал. Провал не против.»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#c9d4dc">
+  <header><span class="cost">2</span>
+    <h3>Патрульный ГРАНИ</h3>
+    <span class="id">r02</span></header>
+  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">РЕКРУТ ★</b><b class="kw">ТАУНТ</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«Вахта — это не про сон. Вахта — это про всех.»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#35f0ff">
+  <header><span class="cost">2</span>
+    <h3>Санитар Дома</h3>
+    <span class="id">r03</span></header>
+  <div class="meta"><b class="el">ЛЁД</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="st"><b class="a">1</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> <b>+3 здоровья ТВОЕМУ герою</b>, но не выше его максимума. Юнитов не лечит.</p>
+  <p class="fl">«Бинт найдётся. Вопрос — для кого.»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#c9d4dc">
+  <header><span class="cost">3</span>
+    <h3>Курсант Аркадия</h3>
+    <span class="id">r04</span></header>
+  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«Первый данж — как первый борщ: страшно, но горячо.»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#ff6a1f">
+  <header><span class="cost">3</span>
+    <h3>Огнемётчик</h3>
+    <span class="id">r05</span></header>
+  <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> <b>1 урон</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
+  <p class="fl">«Пламя подчиняется только тому, кто не боится бровей.»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#ffd52e">
+  <header><span class="cost">2</span>
+    <h3>Стрелок Сирен</h3>
+    <span class="id">r06</span></header>
+  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">РЕКРУТ ★</b><b class="kw">РАШ</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">1</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«Стреляет раньше, чем просыхает.»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#c9d4dc">
+  <header><span class="cost">4</span>
+    <h3>Дежурный</h3>
+    <span class="id">r07</span></header>
+  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">РЕКРУТ ★</b><b class="kw">ТАУНТ</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«Смена длится, пока длится.»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#ffd52e">
+  <header><span class="cost">3</span>
+    <h3>Связист</h3>
+    <span class="id">r08</span></header>
+  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">2</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишняя сгорает.</p>
+  <p class="fl">««Приём… приём… они уже внутри, приём—»»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#ffd52e">
+  <header><span class="cost">1</span>
+    <h3>Искра</h3>
+    <span class="id">s01</span></header>
+  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> <b>2 урона</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
+  <p class="fl">«Мелкая, но честная.»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#ffd52e">
+  <header><span class="cost">2</span>
+    <h3>Подзарядка</h3>
+    <span class="id">s02</span></header>
+  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишняя сгорает.</p>
+  <p class="fl">«Кофе для колоды.»</p>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
+</article>
+<article class="c t0" style="--el:#ffd52e">
+  <header><span class="cost">0</span>
+    <h3>Перезарядка</h3>
+    <span class="id">zC0</span></header>
+  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> <b>+1 мана</b> прямо сейчас и только на этот ход. Дальше мана растёт как обычно.</p>
+  <p class="fl">«+1 маны в этот ход. Разовый буст за первый ход.»</p>
+  <div class="tags"><b class="tag">не выпадает из паков</b><b class="tag no">АРТА НЕТ</b></div>
+</article></div>
+<h2>ГОРОД <span>★★ · 9 карт · без арта: 9</span></h2>
+<div class="grid"><article class="c t1" style="--el:#c9d4dc">
+  <header><span class="cost">4</span>
+    <h3>Дизель</h3>
+    <span class="id">c01</span></header>
+  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">ГОРОД ★★</b><b class="kw">РАШ</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«Снял! …чёрт, не снял. Ещё раз!»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t1" style="--el:#ff4fd8">
+  <header><span class="cost">3</span>
+    <h3>Румба</h3>
+    <span class="id">c02</span></header>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">ГОРОД ★★</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> <b>+1 к урону и +1 к жизням</b> каждому <b>твоему</b> юниту на поле. Навсегда. Цель не выбирается.</p>
+  <p class="fl">«Ваш аплодисменты я слышу. Твои — нет.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t1" style="--el:#35f0ff">
+  <header><span class="cost">3</span>
+    <h3>Сэр Каштан</h3>
+    <span class="id">c03</span></header>
+  <div class="meta"><b class="el">ЛЁД</b><b class="tier">ГОРОД ★★</b><b class="kw">ТАУНТ</b></div>
+  <div class="stats"><span class="st"><b class="a">1</b><i>УРОН</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
+  <p class="desc"><b>Боевой клич:</b> <b>1 урон</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
+  <p class="fl">«Пыль — это то, что было кем-то забыто.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t1" style="--el:#ff6a1f">
+  <header><span class="cost">4</span>
+    <h3>Гоша «Клещ»</h3>
+    <span class="id">c05</span></header>
+  <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ГОРОД ★★</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> <b>2 урона</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
+  <p class="fl">«Я это ещё не копал! …ну, теперь копал.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t1" style="--el:#ffd52e">
+  <header><span class="cost">3</span>
+    <h3>Ноа «Прибой»</h3>
+    <span class="id">c08</span></header>
+  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">ГОРОД ★★</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«Волна всегда возвращается. И я.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t1" style="--el:#35f0ff">
+  <header><span class="cost">3</span>
+    <h3>Пилар «Пилюля»</h3>
+    <span class="id">c09</span></header>
+  <div class="meta"><b class="el">ЛЁД</b><b class="tier">ГОРОД ★★</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> <b>+4 здоровья ТВОЕМУ герою</b>, но не выше его максимума. Юнитов не лечит.</p>
+  <p class="fl">«Сядь. Не трогай. И конфету возьми.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t1" style="--el:#ff4fd8">
+  <header><span class="cost">2</span>
+    <h3>Профессор Моль</h3>
+    <span class="id">c11</span></header>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">ГОРОД ★★</b></div>
+  <div class="stats"><span class="st"><b class="a">1</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишняя сгорает.</p>
+  <p class="fl">«Тишина первого рода… НЕТ. Записывайте!!»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t1" style="--el:#35f0ff">
+  <header><span class="cost">3</span>
+    <h3>Ночной Чайник</h3>
+    <span class="id">s03</span></header>
+  <div class="meta"><b class="el">ЛЁД</b><b class="tier">ГОРОД ★★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> берёшь <b>2 карты</b> из своей колоды в руку. Если в руке уже 7 — лишняя сгорает.</p>
+  <p class="fl">«Чай крепкий. Собеседник — крепче.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t1" style="--el:#ff4fd8">
+  <header><span class="cost">2</span>
+    <h3>Пустая Клетка</h3>
+    <span class="id">s04</span></header>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">ГОРОД ★★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> <b>3 урона</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
+  <p class="fl">«Клетка честная. Аномалия — не очень.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article></div>
+<h2>ФРАКЦИЯ <span>★★★ · 9 карт · без арта: 9</span></h2>
+<div class="grid"><article class="c t2" style="--el:#ffd52e">
+  <header><span class="cost">2</span>
+    <h3>Зоя «Бабуля»</h3>
+    <span class="id">c04</span></header>
+  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">ФРАКЦИЯ ★★★</b><b class="kw">ТАУНТ</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
+  <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишняя сгорает.</p>
+  <p class="fl">«Не дёргайся, милый. Я жду, а он — нет.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t2" style="--el:#ff4fd8">
+  <header><span class="cost">3</span>
+    <h3>Хоси «Лис»</h3>
+    <span class="id">c06</span></header>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">ФРАКЦИЯ ★★★</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишняя сгорает.</p>
+  <p class="fl">«Эта карта бьёт. Эта — спасает. А эта — по любви.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t2" style="--el:#35f0ff">
+  <header><span class="cost">2</span>
+    <h3>Рэн</h3>
+    <span class="id">c07</span></header>
+  <div class="meta"><b class="el">ЛЁД</b><b class="tier">ФРАКЦИЯ ★★★</b><b class="kw">РАШ</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">1</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«…»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t2" style="--el:#ffd52e">
+  <header><span class="cost">4</span>
+    <h3>Бит и Байт</h3>
+    <span class="id">c10</span></header>
+  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">ФРАКЦИЯ ★★★</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> <b>1 урон КАЖДОМУ юниту врага</b> разом. Героя не задевает, цель не выбирается.</p>
+  <p class="fl">«— вдвоём быстрее. — вдвоём дороже. — молчи.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t2" style="--el:#c9d4dc">
+  <header><span class="cost">4</span>
+    <h3>Барон Бублик</h3>
+    <span class="id">c12</span></header>
+  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">ФРАКЦИЯ ★★★</b><b class="kw">ТАУНТ</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«Сдашь чисто — налью. Сдашь грязно — двойной.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t2" style="--el:#ff6a1f">
+  <header><span class="cost">5</span>
+    <h3>Тихон</h3>
+    <span class="id">c13</span></header>
+  <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ФРАКЦИЯ ★★★</b></div>
+  <div class="stats"><span class="st"><b class="a">5</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«(молча подметает провал по расписанию)»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t2" style="--el:#ff6a1f">
+  <header><span class="cost">2</span>
+    <h3>Гвоздь-Счастливчик</h3>
+    <span class="id">s05</span></header>
+  <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ФРАКЦИЯ ★★★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> <b>+3 к урону</b> одному <b>твоему</b> юниту на выбор. Навсегда, до конца боя.</p>
+  <p class="fl">««Продаю с болью» — Хоси, третий год подряд.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t2" style="--el:#35f0ff">
+  <header><span class="cost">2</span>
+    <h3>Осколок Часового</h3>
+    <span class="id">s06</span></header>
+  <div class="meta"><b class="el">ЛЁД</b><b class="tier">ФРАКЦИЯ ★★★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> <b>+1 к урону и +3 к жизням</b> одному <b>твоему</b> юниту на выбор. Навсегда, до конца боя.</p>
+  <p class="fl">«Стрелки выпали внутрь. Иногда слышно, как тикают.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t2" style="--el:#ff4fd8">
+  <header><span class="cost">3</span>
+    <h3>Фонотека Бездны</h3>
+    <span class="id">s07</span></header>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">ФРАКЦИЯ ★★★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> <b>2 урона КАЖДОМУ юниту врага</b> разом. Героя не задевает, цель не выбирается.</p>
+  <p class="fl">«Звук данжа, из которого никто не вернулся.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article></div>
+<h2>ЛЕГЕНДА <span>★★★★ · 8 карт · без арта: 8</span></h2>
+<div class="grid"><article class="c t3" style="--el:#ff4fd8">
+  <header><span class="cost">5</span>
+    <h3>Кайра «Кадр»</h3>
+    <span class="id">L01</span></header>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">ЛЕГЕНДА ★★★★</b><b class="kw">РАШ</b></div>
+  <div class="stats"><span class="st"><b class="a">5</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
+  <p class="desc"><b>Боевой клич:</b> <b>2 урона</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
+  <p class="fl">«Стой красиво. Это войдёт в историю.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t3" style="--el:#ffd52e">
+  <header><span class="cost">6</span>
+    <h3>Аркадий «Штурм»</h3>
+    <span class="id">L02</span></header>
+  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">ЛЕГЕНДА ★★★★</b><b class="kw">ТАУНТ</b></div>
+  <div class="stats"><span class="st"><b class="a">4</b><i>УРОН</i></span><span class="st"><b class="h">9</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
+  <p class="desc"><b>Боевой клич:</b> <b>+5 здоровья ТВОЕМУ герою</b>, но не выше его максимума. Юнитов не лечит.</p>
+  <p class="fl">«Сначала горячее, потом героика.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t3" style="--el:#ff4fd8">
+  <header><span class="cost">5</span>
+    <h3>Граф Дымм</h3>
+    <span class="id">L03</span></header>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">ЛЕГЕНДА ★★★★</b></div>
+  <div class="stats"><span class="st"><b class="a">4</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> <b>4 урона</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
+  <p class="fl">«У каждого провала есть мотив. Найди — и он признается.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t3" style="--el:#35f0ff">
+  <header><span class="cost">6</span>
+    <h3>Люмень</h3>
+    <span class="id">L04</span></header>
+  <div class="meta"><b class="el">ЛЁД</b><b class="tier">ЛЕГЕНДА ★★★★</b></div>
+  <div class="stats"><span class="st"><b class="a">5</b><i>УРОН</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> каждый юнит врага теряет <b>1 урон</b> (не ниже нуля). Жизни не трогает, цель не выбирается.</p>
+  <p class="fl">«Тебя тоже потеряли? Погоди. Я записываю.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t3" style="--el:#ff6a1f">
+  <header><span class="cost">7</span>
+    <h3>Ая Курона</h3>
+    <span class="id">L05</span></header>
+  <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ЛЕГЕНДА ★★★★</b><b class="kw">РАШ</b></div>
+  <div class="stats"><span class="st"><b class="a">7</b><i>УРОН</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
+  <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
+  <p class="fl">«(я всё отрепетировала. я готова. я… привет.)»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t3" style="--el:#ff6a1f">
+  <header><span class="cost">5</span>
+    <h3>Веста</h3>
+    <span class="id">L06</span></header>
+  <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ЛЕГЕНДА ★★★★</b></div>
+  <div class="stats"><span class="st"><b class="a">4</b><i>УРОН</i></span><span class="st"><b class="h">7</b><i>ЖИЗНИ</i></span></div>
+  
+  <p class="desc"><b>Боевой клич:</b> <b>+4 здоровья</b> твоему герою <b>и каждому твоему юниту</b> на поле. Цель не выбирается.</p>
+  <p class="fl">«Сначала суп. Подвиги — после.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t3" style="--el:#ff4fd8">
+  <header><span class="cost">5</span>
+    <h3>Сердце Провала</h3>
+    <span class="id">s08</span></header>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">ЛЕГЕНДА ★★★★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> <b>4 урона КАЖДОМУ юниту врага</b> разом. Героя не задевает, цель не выбирается.</p>
+  <p class="fl">«Кристалл, который бьётся. Не в такт твоему — в такт своему.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article>
+<article class="c t3" style="--el:#35f0ff">
+  <header><span class="cost">4</span>
+    <h3>Зуб Тишины</h3>
+    <span class="id">s09</span></header>
+  <div class="meta"><b class="el">ЛЁД</b><b class="tier">ЛЕГЕНДА ★★★★</b></div>
+  <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
+  
+  <p class="desc"><b>Эхо-заклятие:</b> <b>6 урона вражескому ГЕРОЮ</b> и <b>+6 здоровья твоему</b>. Бьёт только в героя — цель не выбирается.</p>
+  <p class="fl">«Тишина здесь — присутствие кого-то третьего.»</p>
+  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+</article></div>
+<h2>СЕКРЕТ <span>★★★★★ · 1 карт · без арта: 1</span></h2>
+<div class="grid"><article class="c t4" style="--el:#ff4fd8">
+  <header><span class="cost">9</span>
+    <h3>Билет в Один Конец</h3>
+    <span class="id">X01</span></header>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">СЕКРЕТ ★★★★★</b><b class="kw">РАШ</b></div>
+  <div class="stats"><span class="st"><b class="a">10</b><i>УРОН</i></span><span class="st"><b class="h">10</b><i>ЖИЗНИ</i></span></div>
+  <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
+  <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишняя сгорает.</p>
+  <p class="fl">«Компостер на входе. Обратного компостера не существует.»</p>
+  <div class="tags"><b class="tag sec">СЕКРЕТ</b><b class="tag no">АРТА НЕТ</b></div>
+</article></div>
