@@ -9,6 +9,7 @@
    файл. Именно нарушение этого дало вылезшее за панель поле промокода —
    правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
 
+@layer menu {
 /* ====== меню ====== */
 #scr-menu{align-items:center;justify-content:center;gap:0}
 .menuBg{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none}
@@ -130,3 +131,4 @@ body.menuOn .infoF{display:grid}
 .chipTok svg{color:var(--yel)}
 .chipTok b{font-family:var(--mono);font-size:15px;color:var(--yel)}
 .chipTok small{display:block;font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+}

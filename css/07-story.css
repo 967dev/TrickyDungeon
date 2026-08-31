@@ -9,6 +9,7 @@
    файл. Именно нарушение этого дало вылезшее за панель поле промокода —
    правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
 
+@layer story {
 /* ====== туториал ====== */
 /* ================= сюжет: визуальная новелла ================= */
 #scr-story{align-items:center;justify-content:center;padding:0;background:#07070b}
@@ -225,4 +226,5 @@
   .trBot{width:96px;left:6px;bottom:6px}
   .trSay{left:108px;width:calc(100vw - 118px);bottom:12px;padding:11px 12px 10px}
   .trSay .trTxt{font-size:12.5px;line-height:1.55}
+}
 }

@@ -9,6 +9,7 @@
    файл. Именно нарушение этого дало вылезшее за панель поле промокода —
    правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
 
+@layer battle {
 /* ====== бой ====== */
 #scr-battle{background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(255,213,46,.05),transparent 70%)}
 .bWrap{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
@@ -391,3 +392,4 @@
   border:3px solid var(--yel);font-family:var(--disp);font-size:14px;color:#fff;white-space:nowrap;
   transform:translate(-50%,-130%);box-shadow:6px 8px 0 rgba(0,0,0,.55)}
 .ghost small{display:block;font-family:var(--mono);font-size:9.5px;color:var(--yel);margin-top:4px;letter-spacing:.08em}
+}

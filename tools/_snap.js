@@ -14,6 +14,12 @@
    вёрстки постоянно едет (полосы, сетка, голография), поэтому перед каждым
    чтением все анимации ставим на паузу и отматываем в ноль.
 
+   И ещё одна ловушка, стоившая ложной тревоги на 330 элементов: снимать
+   можно только когда окно УЖЕ устоялось в нужном размере. Снимок сразу после
+   смены размера ловит страницу на полпути к мобильной эмуляции (hover,
+   pointer) и врёт. Меняешь размер — перейди на страницу заново и убедись, что
+   matchMedia('(hover:none)') отвечает ожидаемое, и только потом снимай.
+
    Порядок работы:
      перезагрузить → __сохранить('до')
      (перекладка)
@@ -200,3 +206,40 @@
   };
   return 'готово';
 })();
+
+/* Разовый разбор: полный дамп свойств поддерева руки после ТОЙ ЖЕ подготовки,
+   что делает снимок. Нужен, чтобы понять, ЧТО именно разошлось, — отпечаток
+   говорит только «разошлось». */
+window.__рука = async (метка) => {
+  await window.__снимок();
+  const h = document.getElementById('bHand');
+  if (!h) return 'нет руки';
+  const ПР = ['display','position','width','height','top','right','bottom','left','margin',
+    'padding','font-size','line-height','letter-spacing','transform','z-index','opacity',
+    'overflow','max-height','min-height','flex','box-shadow','border-width','color','background-color'];
+  const из = {};
+  const путь = el => { const ч=[]; while(el&&el!==h){ч.push([...el.parentNode.children].indexOf(el));el=el.parentElement} return ч.reverse().join('/') };
+  for (const el of h.querySelectorAll('*')) {
+    const c = getComputedStyle(el), r = el.getBoundingClientRect(), o = {};
+    for (const p of ПР) o[p] = c.getPropertyValue(p);
+    o.rect = [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)];
+    o.кл = String(el.className || '');
+    из[путь(el)] = o;
+  }
+  localStorage.setItem('рука:' + метка, JSON.stringify(из));
+  return Object.keys(из).length;
+};
+window.__сверитьРуку = () => {
+  const A = JSON.parse(localStorage.getItem('рука:безслоёв')||'null');
+  const B2 = JSON.parse(localStorage.getItem('рука:слои')||'null');
+  if(!A||!B2) return 'нет одного из дампов';
+  const разн = [];
+  for (const k of Object.keys(A)) {
+    const a=A[k], b=B2[k]||{};
+    for (const p of Object.keys(a)) {
+      const av=JSON.stringify(a[p]), bv=JSON.stringify(b[p]);
+      if(av!==bv) разн.push({узел:k+' .'+a.кл, свойство:p, было:a[p], стало:b[p]});
+    }
+  }
+  return { всего: разн.length, первые: разн.slice(0,20) };
+};

@@ -9,6 +9,7 @@
    файл. Именно нарушение этого дало вылезшее за панель поле промокода —
    правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
 
+@layer cards {
 /* ====== карточки ====== */
 .cWrap{outline:none;cursor:pointer;position:relative;perspective:1100px;animation:flyIn .6s cubic-bezier(.2,1.2,.3,1) backwards}
 @keyframes flyIn{from{transform:translateY(90px) rotate(6deg) scale(.5);opacity:0}}
@@ -196,3 +197,4 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .cfStk{position:absolute;top:8%;right:-5%;z-index:5;font-family:var(--disp);font-style:italic;font-size:10px;
   background:var(--yel);color:#0a0a0e;padding:3px 8px;border:2px solid #0a0a0e;box-shadow:2px 2px 0 rgba(0,0,0,.55)}
 .cWrap.sec .cfStk{background:var(--red);color:#fff}
+}

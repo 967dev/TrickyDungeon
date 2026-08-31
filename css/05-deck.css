@@ -9,6 +9,7 @@
    файл. Именно нарушение этого дало вылезшее за панель поле промокода —
    правило лежало за 400 строк от .setRow и проигрывало ему по порядку. */
 
+@layer deck {
 /* ====== колода ====== */
 #scr-deck .dBody{flex:1;display:flex;gap:0;overflow:hidden}
 .dColl{flex:1;overflow-y:auto;padding:18px;scrollbar-width:thin}
@@ -171,3 +172,4 @@
   max-height:0;opacity:0;transition:max-height .34s cubic-bezier(.2,.9,.3,1),opacity .22s,margin .34s}
 .actBody.open{max-height:2200px;opacity:1;margin-top:0}
 @media (prefers-reduced-motion:reduce){.actBody{transition:none}}
+}
