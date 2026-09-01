@@ -12,7 +12,11 @@
    Состояние игры сохраняется до прогона и возвращается после. */
 (() => {
   let провалы = [], всего = 0, текущий = '';
-  const жди = ms => new Promise(r => setTimeout(r, ms));
+  /* Ожидание. В БЫСТРОМ режиме — микрозадача, а не таймер: браузер душит
+     setTimeout в спрятанной вкладке до одного в минуту, и прогон вставал не
+     на своих ошибках, а на паузах подачи. Микрозадачи он не трогает. */
+  let БЫСТРО = false;
+  const жди = ms => БЫСТРО ? тик() : new Promise(r => setTimeout(r, ms));
 
   const ок = (условие, что, детали) => {
     всего++;
@@ -35,13 +39,25 @@
     /* Пауза перед новым боем: у прошлого могли остаться отложенные вызовы
        начала хода, и им надо дать сработать по СТАРОМУ бою, а не по новому. */
     await жди(900);
+    /* Бой отыгрывается на мгновенном темпе. Правила от этого не меняются —
+       в том и смысл их отделения: скорость показа их не касается. Анимации
+       тоже гасим: их обещания в спрятанной вкладке не резолвятся вовсе. */
+    const темпБыл = ТЕМП, анимБыла = S.anim;
+    ТЕМП = 0; S.anim = false; БЫСТРО = true;
+    const вернуть = () => { ТЕМП = темпБыл; S.anim = анимБыла; БЫСТРО = false };
     dropBattleSnap();
     startBattle(этап);
     const старт = performance.now();
     while (B && !B.over) {
-      if (performance.now() - старт > предел)
-        return { завис: true, ходовНаСрок: (B.log || []).filter(z => z.k === 'turn').length,
+      if (performance.now() - старт > предел) {
+        const р = { завис: true, ходовНаСрок: (B.log || []).filter(z => z.k === 'turn').length,
           hp: [B.p.hp, B.e.hp] };
+        вернуть(); return р;
+      }
+      /* Пока идёт показ, поле заперто и живой игрок ходить не может —
+         бот не имеет права ходить сквозь эту блокировку, иначе он проверяет
+         не ту игру, в которую играют. */
+      if (typeof ИДЁТ !== 'undefined' && ИДЁТ) { await жди(120); continue }
       if (B.phase === 'p' && !document.getElementById('bEnd').disabled) {
         /* Автоигрок ДЕЙСТВУЕТ, а не только жмёт «конец хода». Раньше хватало
            и пассивного: врага в обучении добивала его же усталость. Теперь её
@@ -52,7 +68,8 @@
           if (c.eff && c.eff.tg) continue;          /* прицельным нужен выбор */
           if (B.p.board.length >= 5) break;
           playCard(i, null);
-          await жди(900);
+          if (typeof ИДЁТ !== 'undefined' && ИДЁТ) await ИДЁТ;
+          await жди(120);
         }
         for (const u of [...B.p.board]) {
           if (B.over || B.phase !== 'p') break;
@@ -75,6 +92,11 @@
       }
       await жди(120);
     }
+    /* Правила кончают бой мгновенно, а итог — часть РАССКАЗА: строку
+       «— ПОБЕДА —» пишет finish, когда показ дойдёт до события 'over'.
+       Не дождавшись, тест читал журнал без итога и поле ещё запертым. */
+    if (typeof ИДЁТ !== 'undefined' && ИДЁТ) await ИДЁТ;
+    вернуть();
     const L = (B && B.log) || [];
     const хода = L.filter(z => z.k === 'turn').map(z => z.t);
     let сбойПорядка = null;
@@ -113,7 +135,11 @@
       /* Объявленные через function попадают на window, объявленные через
          const — нет. Проверяем то и другое одинаково, через сам идентификатор. */
       for (const имя of ['go','save','load','startBattle','renderBattle','endTurn','playCard',
-        'doAttack','dealDamage','damageHero','aiTurn','aiSpell','blog','openLog','openInspector',
+        'doAttack','dealDamage','damageHero','aiTurn','blog','openLog','openInspector',
+        /* слой правил — он же то, чем меряется баланс без экрана */
+        'newBattle','rDraw','rHeroDmg','rHeroHeal','rUnitDmg','rEffect','rPlayCard','rAttack',
+        'rStartTurn','rAiTurn','rTrainEnemyTurn','aiSpellTarget','simulate','simplePolicy',
+        'canTarget','needTargetCard','проиграть','сыграть','откат','effText',
         'openUnitCard','cardHTML','effDesc','kwLine','autoDeck','defaultDeck','mkUnit','byId',
         'redeemPromo','renderSettings','renderDeck','renderGacha','renderStages','renderMenu',
         'atkLine','flyCard','burst','elCols','elBurst','syncEnemyHand','placeEnemyHand',
@@ -125,7 +151,7 @@
         'scr-battle','scr-story','chWrap','toasts','fx'])
         ок(!!document.getElementById(id), 'есть узел #' + id);
       равно(document.querySelectorAll('link[rel=stylesheet]').length, 11, 'подключено 11 файлов стилей');
-      ок(document.querySelectorAll('script[src^="js/"]').length === 13, 'подключено 13 файлов скрипта',
+      ок(document.querySelectorAll('script[src^="js/"]').length === 14, 'подключено 14 файлов скрипта',
         document.querySelectorAll('script[src^="js/"]').length);
 
       /* ============ 2. данные карт ============ */

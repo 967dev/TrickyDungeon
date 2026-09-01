@@ -1,4 +1,4 @@
-/* 10-battle.js — бой целиком: движок, журнал, инспектор, перетаскивание, отрисовка
+/* 11-battle.js — ПОДАЧА боя: анимации, журнал, инспектор, перетаскивание, отрисовка
 
    Часть скрипта, разрезанного из одного файла. ПОРЯДОК ПОДКЛЮЧЕНИЯ В
    index.html ЗНАЧИМ: это обычные скрипты, они выполняются подряд, и вместе
@@ -14,20 +14,9 @@
    те же глобали. */
 
 /* ================= БОЙ ================= */
-let B=null,UID=1,DRAG=null,suppressClick=false,holdFired=false;
+let DRAG=null,suppressClick=false,holdFired=false;
 document.addEventListener('click',e=>{
   if(suppressClick){e.stopPropagation();e.preventDefault();suppressClick=false}},true);
-function mkUnit(card){
-  const rush=!!(card.kw&&card.kw.includes('rush'));
-  /* canAtk:rush — иначе РАШ не работает вовсе. Юнит создавался с canAtk:false,
-     и обе проверки атаки (перетаскивание в onDragUp и тап в onUnitTap) первым
-     делом требуют canAtk — так что «атакует в тот же ход» не срабатывало ни
-     разу, хотя обещано на шести картах и в справке.
-     sick при этом остаётся true: юнит действительно только что вышел, на этом
-     держится значок РАШ на портрете (u.rush && u.sick) и тусклая рамка. */
-  return{uid:UID++,card,atk:card.a||0,hp:card.h||0,maxhp:card.h||0,
-    taunt:!!(card.kw&&card.kw.includes('taunt')),rush,
-    canAtk:rush,sick:true}}
 /* ================= снапшот боя =================
    Прогресс по рейдам лежит в основном сейве, а сам бой жил только в памяти:
    перезагрузка страницы его теряла. В браузере это мелочь, в Telegram — нет,
@@ -40,6 +29,9 @@ function mkUnit(card){
 const BSNAP='bbduel_battle';
 function snapBattle(){
   if(!B||B.over||B.phase!=='p')return;
+  /* Посреди рассказа снимать нечего: состояние уже конечное, а на экране —
+     ещё нет. Снимок сделается сразу после, отрисовкой в конце показа. */
+  if(ИДЁТ||(B.ev&&B.ev.length))return;
   /* Тренировку не сохраняем: в снимке нет ни номера шага, ни позиции в
      сценарии врага, и восстановление вернуло бы игрока в сценарный бой без
      ведущего — тупик. Прерванная тренировка просто начинается заново. */
@@ -70,7 +62,7 @@ function restoreBattle(){
   const P=side(d.p),E=side(d.e);
   if(P.hp<=0||E.hp<=0){dropBattleSnap();return false}
   clearFeed();
-  B={si:d.si,st,phase:'p',over:false,skill:d.skill,p:P,e:E,sel:null,log:[],turnNo:0};
+  B={si:d.si,st,phase:'p',over:false,skill:d.skill,p:P,e:E,sel:null,log:[],turnNo:0,ev:[]};
   blog('sys','— бой восстановлен —','turn');
   /* Иначе следующий призванный юнит получит uid уже занятый на поле. */
   UID=Math.max(UID,(d.uid|0)+1);
@@ -134,102 +126,41 @@ function dressBattle(st){
   const cry=$('#bCry');cry.innerHTML='';
   sprinkleCrystals(cry,5,['#ffd52e','#35f0ff','#ff4fd8']);
 }
-/* ================= сценарий тренировки =================
-   Рука, колода и каждый ход врага заданы заранее. Иначе обучение невозможно
-   вести по шагам: подсказка «сыграй Гончую» бессмысленна, если Гончей в руке
-   не оказалось, а «атакуй его юнита» — если враг ничего не выставил.
-   Расклад подобран так, чтобы по дороге встретились ТАУНТ, РАШ, боевой клич,
-   заклятие, размен и удар в лицо. */
-const TRAIN={
-  hand:['zC0','r01','r06','s01','r04'],     /* Перезарядка, Гончая, Стрелок(РАШ), Искра, Курсант */
-  deck:['r03','r08','s02','r02','r07','r05','r04','r01'],
-  /* Ходы врага по номеру его хода. play — что выставляет, face — урон в лицо
-     игроку (эмулируем атаку, не завися от того, что стоит на доске). */
-  script:[
-    {play:'r02'},                            /* 1: Патрульный 2/3 ТАУНТ — стена */
-    {play:'r01',face:2},                     /* 2: Гончая 2/1 и щелчок по герою */
-    {face:3},                                /* 3: просто бьёт */
-    {}                                       /* дальше ничего — бой уже кончится */
-  ]
-};
+
+/* Заводка боя: состояние собирают правила, здесь — экран и обработчики. */
 function startBattle(si){
-  dropBattleSnap();lockUI(0);
-  const st=STAGES[si];
-  const pool=CARDS.filter(c=>!c.noColl&&c.t<=st.pool&&(c.ty==='u'||c.ty==='s'));
-  const aiDeck=[];
-  while(aiDeck.length<20){const c=pick(pool);if(aiDeck.filter(x=>x===c.id).length<2)aiDeck.push(c.id)}
-  clearFeed();
-  B={si,st,phase:'player',over:false,train:!!st.tutorial,eTurn:0,log:[],turnNo:0,
-    skill:clamp(.15+si*.09,0,1), /* 0.15 на первом рейде → 0.96 на финале */
-    p:{hp:30,max:30,mana:0,mmax:0,
-       deck:st.tutorial?[...TRAIN.deck].reverse():shuffle([...S.deck]),
-       hand:[],board:[],fatigue:0},
-    e:{hp:st.hp,max:st.hp,mana:0,mmax:0,deck:st.tutorial?[]:shuffle(aiDeck),hand:[],board:[],fatigue:0},
-    sel:null};
+  dropBattleSnap();lockUI(0);clearFeed();
+  B=newBattle(si,S.deck);
   go('battle');
-  dressBattle(st);
-  if(B.train){
-    B.p.hand=[...TRAIN.hand];
-    $('#bEnd').onclick=endTurn;$('#bEnd').disabled=false;$('#bGiveUp').onclick=askGiveUp;
-    $('#bLogBtn').onclick=openLog;
-    renderBattle();
-    turnBanner('ТРЕНИРОВКА');
-    setTimeout(()=>{startTurn('p');startTraining()},600);
-    return;
-  }
-  for(let i=0;i<3;i++)drawCard('p',true);
-  if(B.p.hand.every(id=>byId(id).c>2)){
-    const cheapIdx=B.p.deck.findIndex(id=>byId(id).c<=2);
-    if(cheapIdx>=0){
-      let worst=0;B.p.hand.forEach((id,i)=>{if(byId(id).c>byId(B.p.hand[worst]).c)worst=i});
-      const removed=B.p.hand[worst];
-      B.p.hand[worst]=B.p.deck[cheapIdx];
-      B.p.deck[cheapIdx]=removed;
-    }
-  }
-  B.p.hand.push('zC0');
-  for(let i=0;i<4;i++)drawCard('e',true);
+  dressBattle(B.st);
   $('#bEnd').onclick=endTurn;
   $('#bEnd').disabled=false;
   $('#bGiveUp').onclick=askGiveUp;
   $('#bLogBtn').onclick=openLog;
   renderBattle();
-  turnBanner('ТВОЙ ХОД!');
-  setTimeout(()=>{startTurn('p')},600);
+  turnBanner(B.train?'ТРЕНИРОВКА':'ТВОЙ ХОД!');
+  /* Отложенный вызов привязан к СВОЕМУ бою. Иначе он переживает конец боя и
+     заход в следующий и срабатывает уже по чужому B — игрок получает лишний
+     ход подряд, в журнале «ХОД 1 · ТЫ» сразу за «ХОД 2 · ТЫ». Раньше от этого
+     спасались паузой в 900мс перед новым боем, то есть надеждой. */
+  const бой=B;
+  позже(()=>{if(B!==бой)return;startTurn('p');if(B.train)startTraining()},600);
 }
+
+/* Обёртки над правилами: применить и рассказать. silent — раздача, о которой
+   рассказывать нечего. */
 function drawCard(who,silent){
-  const P=B[who];
-  if(!P.deck.length){
-    /* В обучении колоды у врага нет ПО ЗАМЫСЛУ: его ходы расписаны сценарием.
-       Усталость там не игровое событие, а побочный эффект пустого массива —
-       она молча съедала врагу 1, 2, 3 здоровья за ход и в итоге выигрывала
-       бой за игрока, попутно засоряя журнал понятием, которому обучение ещё
-       не научило. */
-    if(B.train&&who==='e')return null;
-    P.fatigue++;blog(who,`усталость · −${P.fatigue}`,'die');
-    damageHero(who,P.fatigue);return null}
-  const id=P.deck.pop();
-  if(P.hand.length>=7){blog(who,`сгорела: ${byId(id).n}`,'die');
-    if(!silent&&who==='p')toast(`Карта сгорела: ${byId(id).n}`);return null}
-  P.hand.push(id);
-  if(who==='p'&&!silent)sfx.draw();
-  return id}
+  if(!B)return null;
+  const было=B.ev.length;
+  const id=rDraw(B,who);
+  if(silent)B.ev.length=было;else проиграть();
+  return id;
+}
+
 function damageHero(who,v){
-  const P=B[who];P.hp=Math.max(0,P.hp-v);
-  popDmg(who==='p'?$('#pHp'):$('#eHp'),v,false);
-  sfx.hit();
-  /* По своему герою бьёт ощутимее, чем по вражескому. */
-  PF.hit(who==='p'?'heavy':'light');
-  if(who==='p')setMood('surp');
-  const ic=who==='p'?$('#pHp'):$('#eHp');
-  const r=ic.getBoundingClientRect();
-  burst(r.left+r.width/2,r.top+10,['#ff3355','#fff'],8,.9);
-  const sil=who==='p'?$('#silP'):$('#silE');
-  if(sil){sil.classList.remove('hurt');void sil.offsetWidth;sil.classList.add('hurt');
-    setTimeout(()=>sil.classList.remove('hurt'),360)}
-  if(who==='p')hurtFlash();
-  renderBattle();
-  if(P.hp<=0&&!B.over)finish(who==='e');
+  if(!B)return;
+  rHeroDmg(B,who,v);
+  проиграть();
 }
 /* Одна переиспользуемая плашка, а не новая на каждый удар: за бой их набегают
    десятки, и создавать узел ради полусекунды — лишняя работа на ровном месте. */
@@ -306,82 +237,31 @@ function enemyBanner(c){
 function startTurn(who){
   /* Ход мёртвого боя не начинаем. startBattle заводит начало хода отложенно,
      на 600мс, и этот таймер переживает и конец боя, и заход в следующий: он
-     сработает уже по ЧУЖОМУ B и подарит игроку лишний ход подряд. В обычной
-     игре окно узкое, но оно есть — выйти после победы и сразу зайти в
-     следующий рейд можно быстрее. */
+     сработает уже по ЧУЖОМУ B и подарит игроку лишний ход подряд. */
   if(!B||B.over)return;
-  const P=B[who];
-  P.mmax=Math.min(10,P.mmax+1);P.mana=P.mmax;
-  if(who==='p')B.turnNo=(B.turnNo||0)+1;
-  B.seq=(B.seq||0)+1;
-  blog('sys',`— ХОД ${B.turnNo||1} · ${who==='p'?'ТЫ':'ВРАГ'} —`,'turn');
-  for(const u of P.board){u.canAtk=true;u.sick=false}
-  drawCard(who);
-  /* Добор может ЗАКОНЧИТЬ бой прямо здесь: пустая колода бьёт усталостью, и
-     она добивает. Дальше идти нельзя — иначе мёртвому бою назначается фаза и
-     запирается поле, и оно так и остаётся запертым. В обучении у врага колода
-     пустая по замыслу, поэтому там это случалось каждый раз. */
-  if(B.over)return;
-  B.phase=who;B.sel=null;
-  renderBattle();
-  lockUI(who==='e');
-  if(who==='e'){turnBanner('ХОД ВРАГА');$('#bEnd').disabled=true;
-    setTimeout(safeEnemyTurn,1000)}
-  else{$('#bEnd').disabled=false}
+  const пошёл=rStartTurn(B,who);
+  $('#bEnd').disabled=(who==='e'||!пошёл);
+  /* Бой мог кончиться прямо внутри: пустая колода бьёт усталостью, и она
+     добивает. Тогда остаётся только досказать. */
+  const бой=B;
+  проиграть().then(()=>{
+    if(!пошёл||B!==бой||B.over||B.phase!=='e')return;
+    позже(()=>{if(B===бой&&!B.over&&B.phase==='e')safeEnemyTurn()},400);
+  });
 }
 function turnBanner(t){
   const b=document.createElement('div');b.className='bTurn';b.textContent=t;
   $('#bWrap').appendChild(b);setTimeout(()=>b.remove(),1150);
 }
-/* Ход врага в тренировке: строго по списку, без ИИ и без случайности. */
-async function trainEnemyTurn(){
-  const step=TRAIN.script[B.eTurn++]||{};
-  await sleep(700);
-  if(step.play&&B.e.board.length<5){
-    const c=byId(step.play);
-    if(c){enemyBanner(c);await sleep(400);
-      const откуда=enemyHandRect();
-      const u=mkUnit(c);B.e.board.push(u);renderBattle();
-      const el=$(`#rowE .unit[data-uid="${u.uid}"]`);
-      /* В обучении читаемость важнее всего: карта врага так же вылетает и
-         замирает посередине, а не появляется на доске сама собой. */
-      if(el)await flyToBoard(c,откуда,unitRect(el),el,{reveal:1})}
-  }
-  /* Удар в лицо по сценарию. Раньше он просто отнимал здоровье: ни замаха, ни
-     дуги, ни строки в журнале — только число молча уменьшалось. И это читалось
-     как чужое событие: на третьем ходу враг теряет 3 от своей усталости, а
-     игрок в ту же секунду получает свои 3, и единственная строка в журнале —
-     «усталость −3». Вывод напрашивался неверный.
-     Бьём тем, кто на доске: сценарий задаёт УРОН, а картинку берём настоящую. */
-  if(step.face){
-    await sleep(500);
-    const бьющий=B.e.board.find(u=>u.atk>0)||B.e.board[0]||null;
-    const elS=бьющий?$(`#rowE .unit[data-uid="${бьющий.uid}"]`):null;
-    const elT=$('#pStats');
-    if(elS&&elT&&gfxAnim()){
-      atkLine(elS.getBoundingClientRect(),elT.getBoundingClientRect(),580,'e');
-      elS.classList.remove('tell');void elS.offsetWidth;elS.classList.add('tell');
-      await sleep(320);
-      elS.classList.remove('tell');
-      const b=elT.getBoundingClientRect();
-      await lunge(elS,{x:b.left+b.width/2,y:b.top+b.height/2},520,.5);
-    }else await sleep(200);
-    blog('e',`${бьющий?бьющий.card.n:'ВРАГ'} → ТВОЙ ГЕРОЙ · ${step.face}`,'atk');
-    damageHero('p',step.face);
-    shake($('#bWrap'));
-  }
-  /* Хвост тот же, что у настоящего хода ИИ: смерти и проверка победы
-     разрешаются внутри damageHero/doAttack, отдельного «подведения итогов»
-     в этой боёвке нет. */
-  if(B.over)return;
-  await sleep(350);
-  startTurn('p');
-}
+
 async function endTurn(){
-  if(B.phase!=='p'||B.over)return;
+  if(!B||B.phase!=='p'||B.over)return;
+  if(ИДЁТ)return;   /* пока идёт показ, ход не закрываем: события ещё не сыграны */
   sfx.ui();B.phase='wait';B.seq=(B.seq||0)+1;$('#bEnd').disabled=true;
   B.sel=null;renderBattle();
-  await sleep(200);
+  const бой=B;
+  await пауза(200);
+  if(B!==бой)return;
   startTurn('e');
 }
 /* Ход врага в обёртке. На время хода кнопка «конец хода» выключена, и любое
@@ -409,302 +289,64 @@ async function safeEnemyTurn(){
     }
   }finally{ if(!B||B.phase==='p'||B.over)lockUI(0) }
 }
+/* Ход врага: правила отыгрывают его целиком и мгновенно, дальше остаётся
+   рассказать. Раньше решение и показ шли вперемешку — из-за этого ход врага
+   нельзя было ни проверить, ни прогнать без экрана. */
 async function aiTurn(){
-  if(B.train){return trainEnemyTurn()}
-  const E=B.e,P=B.p,sk=B.skill;
-  await sleep(500);
-  /* ранние враги мешкают и играют что попало; финальные — идеальную кривую */
-  const lazy=Math.random()<(1-sk)*.35;
-  const tradeP=.25+.55*sk;
-  let guard=0,played=0;
-  while(B.phase==='e'&&!B.over&&guard++<12){
-    if(lazy&&played>=1)break;
-    const cands=E.hand.map((id,i)=>({id,i,c:byId(id)}))
-      .filter(x=>x.c.c<=E.mana&&E.board.length<5);
-    if(!cands.length)break;
-    let idx;
-    if(Math.random()<sk)idx=cands.sort((a,b)=>b.c.c-a.c.c)[0];
-    else idx=pick(cands);
-    E.mana-=idx.c.c;
-    /* Точку вылета снимаем ДО перерисовки руки: через миг рубашки
-       перестроятся под новый счёт, и карта полетела бы из чужого места. */
-    const откуда=enemyHandRect();
-    E.hand.splice(idx.i,1);
-    const c=idx.c;played++;
-    blog('e',`⚡ ${c.n}${c.ty==='u'?` ${c.a}/${c.h}`:''} · ${c.c} ${plural(c.c,'мана','маны','маны')}`,'card');
-    enemyBanner(c);
-    if(c.ty==='u'){
-      const u=mkUnit(c);E.board.push(u);
-      sfx.play(c.t,c.el);
-      renderBattle();
-      const el=$(`#rowE .unit[data-uid="${u.uid}"]`);
-      if(el){
-        const r=unitRect(el);
-        await flyToBoard(c,откуда,r,el,{reveal:1});
-        burst(r.left+r.width/2,r.top+r.height/2,elCols(c),8+c.t*6,.9);
-        bang(pick(c.stk||['БАМ!']),50,46);
-      }
-      /* Боевой клич уже вылетевшей карты второй раз не летит. */
-      if(c.eff)await aiSpell(c,1);
-      await sleep(240);
-    }else{
-      sfx.play(c.t,c.el);
-      await aiSpell(c,0,откуда);
-    }
-  }
-  guard=0;
-  while(B.phase==='e'&&!B.over&&guard++<14){
-    const atk=E.board.filter(u=>u.canAtk&&u.atk>0);
-    if(!atk.length)break;
-    const u=atk[0];
-    const taunts=P.board.filter(x=>x.taunt);
-    const totalAtk=E.board.reduce((s,x)=>s+(x.canAtk?x.atk:0),0);
-    const lethal=!taunts.length&&totalAtk>=P.hp;
-    let tgt=null;
-    if(taunts.length)tgt=taunts.sort((a,b)=>a.hp-b.hp)[0];
-    else{
-      const victim=P.board.filter(x=>x.hp<=u.atk&&x.atk<=u.hp).sort((a,b)=>b.atk-a.atk)[0];
-      if(sk>.45&&lethal)tgt={hero:1};
-      else if(victim&&Math.random()<tradeP)tgt=victim;
-      else tgt={hero:1};
-    }
-    u.canAtk=false;
-    await doAttack('e',u,tgt,{tell:320,ms:520});
-    await sleep(340);
-  }
-  if(B.over)return;
-  await sleep(350);
+  if(!B||B.over)return;
+  await пауза(500);
+  rAiTurn(B);
+  const бой=B;
+  await проиграть();
+  if(B!==бой||B.over)return;
+  await пауза(350);
+  if(B!==бой)return;
   startTurn('p');
 }
-/* Куда летит заклятие врага — в то, что оно затронет. Раньше всё, что видел
-   игрок, — плашка в углу: карта тратилась, где-то менялись числа, и связать
-   одно с другим было не с чем. */
-function aiSpellAim(c){
-  const e=c.eff,P=B.p,E=B.e;
+
+/* Куда заклятие врага летит НА ЭКРАНЕ. Цель как таковую выбрали правила
+   (aiSpellTarget), здесь только место, куда это показать. Раньше всё, что
+   видел игрок, — плашка в углу: карта тратилась, где-то менялись числа, и
+   связать одно с другим было не с чем. */
+function aiSpellAim(c,tgt){
+  const e=c&&c.eff;if(!e)return $('#rowP');
   const un=u=>u?$(`#rowE .unit[data-uid="${u.uid}"],#rowP .unit[data-uid="${u.uid}"]`):null;
-  if(e.k==='dmg'||e.k==='drain'){
-    const t=P.board.filter(x=>x.hp<=e.v).sort((a,b)=>b.atk-a.atk)[0]||P.board[0];
-    return {tgt:t||null,el:t?un(t):$('#pHp')};
-  }
-  if(e.k==='healHero')return {el:$('#eHp')};
-  if(e.k==='draw')return {el:$('#eHandN')};
-  if(e.k==='mana')return {el:$('#eMana')};
-  if(e.k==='buff')return {el:un(E.board[0])||$('#rowE')};
-  if(e.k==='healAll'||e.k==='buffAll')return {el:$('#rowE')};
-  return {el:$('#rowP')};   /* aoe, weaken и всё прочее — по нашему ряду */
-}
-async function aiSpell(c,noFly,откуда){
-  const E=B.e,P=B.p;
-  const e=c.eff;if(!e)return;
-  const aim=aiSpellAim(c);
-  if(!noFly){
-    await flyCard(c,откуда||enemyHandRect(),[
-      {r:revealRect(),ms:290,hold:440,rot:-3},
-      {r:aimRect(aim.el),ms:300,k:.82,fade:0}]);
-    elBurst(aim.el,c,12+c.t*4,1.05);
-    bang(pick(c.stk||['БАМ!']),50,44);
-    await sleep(110);
-  }
-  if(e.k==='dmg'||e.k==='drain'){
-    /* Цель выбрана до полёта — за это время доска не менялась, но если
-       выбранного юнита всё же нет, бьём по тому, кто стоит первым. */
-    let tgt=aim.tgt&&P.board.includes(aim.tgt)?aim.tgt:P.board[0];
-    blog('e',`${c.n} → ${tgt?tgt.card.n:'ТВОЙ ГЕРОЙ'} · ${e.v}`
-      +(e.k==='drain'?`, себе ♥ +${e.v}`:''),'atk');
-    if(tgt)await dealDamage('p',tgt,e.v);
-    else damageHero('p',e.v);
-    if(e.k==='drain'){E.hp=Math.min(E.max,E.hp+e.v);popDmg($('#eHp'),e.v,true);sfx.heal();renderBattle()}
-  }else if(e.k==='healHero'){blog('e',`♥ +${e.v} своему герою`);
-    E.hp=Math.min(E.max,E.hp+e.v);popDmg($('#eHp'),e.v,true);sfx.heal();renderBattle()}
-  else if(e.k==='healAll'){blog('e',`♥ +${e.v} всем своим`);
-    for(const u of E.board)u.hp=Math.min(u.maxhp,u.hp+e.v);sfx.heal();renderBattle()}
-  else if(e.k==='draw'){blog('e',`+${e.v} ${plural(e.v,'карта','карты','карт')} в руку`);
-    for(let k=0;k<e.v;k++)drawCard('e');renderBattle()}
-  /* Прибавку маны врагу раньше не обрабатывали вовсе: карта тратилась
-     впустую. В пул ИИ такие карты сейчас не попадают, но ветка обязана быть —
-     иначе первая же добавленная станет молчаливой дырой. */
-  else if(e.k==='mana'){blog('e',`+${e.v} маны`);
-    E.mana=Math.min(10,E.mana+e.v);bang('ВРАГУ +'+e.v+' МАНЫ!',50,40);sfx.sparks();renderBattle()}
-  else if(e.k==='aoe'){blog('e',`${c.n} → по всем твоим · ${e.v}`,'atk');
-    for(const u of [...P.board])await dealDamage('p',u,e.v)}
-  else if(e.k==='buff'||e.k==='buffAll'||e.k==='weaken'){
-    if(e.k==='buff'&&E.board[0]){blog('e',`▲ ${E.board[0].card.n} +${e.a||0}/+${e.h||0}`);
-      E.board[0].atk+=e.a||0;E.board[0].hp+=e.h||0;E.board[0].maxhp+=e.h||0}
-    if(e.k==='buffAll'){blog('e',`▲ всем своим +${e.a||0}/+${e.h||0}`);
-      for(const u of E.board){u.atk+=e.a||0;u.hp+=e.h||0;u.maxhp+=e.h||0}}
-    if(e.k==='weaken'){blog('e',`▼ твоим −${e.v} атаки`);
-      for(const u of P.board)u.atk=Math.max(0,u.atk-e.v)}
-    renderBattle()}
-  await sleep(380);
+  if(e.k==='dmg'||e.k==='drain')return (tgt&&un(tgt))||$('#pHp');
+  if(e.k==='healHero')return $('#eHp');
+  if(e.k==='draw')return $('#eHandN');
+  if(e.k==='mana')return $('#eMana');
+  if(e.k==='buff')return un(tgt)||$('#rowE');
+  if(e.k==='healAll'||e.k==='buffAll')return $('#rowE');
+  return $('#rowP');   /* aoe, weaken и всё прочее — по нашему ряду */
 }
 
+
 /* --- розыгрыш --- */
-function needTargetCard(c){return !!(c.eff&&(c.eff.tg==='any'||c.eff.tg==='ally'))}
-/* Единственное место, где решается, законна ли цель. Раньше это решали три
-   разных обработчика вразнобой, и каждый ошибался по-своему:
-   — тап по вражескому ЮНИТУ заклятием «на своего» усиливал юнита ВРАГА
-     (Гвоздь-Счастливчик делал вражеского 2/3 пятёркой за твою ману);
-   — тап по вражескому ГЕРОЮ тем же заклятием съедал карту вхолостую;
-   — тап по СВОЕМУ юниту заклятием урона бил по своему же, хотя текст карты
-     обещает «вражеский юнит или вражеский герой», да ещё и проводил урон с
-     чужой стороной ('e'), что при летальном уроне рассинхронит доски.
-   side: 'p' — свой юнит, 'e' — вражеский, 'hero' — вражеский герой. */
-function canTarget(c,side){
-  const tg=c&&c.eff&&c.eff.tg;
-  if(!tg)return false;
-  if(tg==='ally')return side==='p';
-  if(tg==='any')return side==='e'||side==='hero';
-  return false;
-}
+
+/* Правила решают, можно ли; подача переводит отказ в слова — про тосты
+   правила не знают. */
 function playCard(i,targetUnit){
-  const P=B.p,id=P.hand[i],c=byId(id);
-  if(!c)return;
-  if(c.ty==='u'&&P.board.length>=5){
-    toast('Поле заполнено — максимум 5 юнитов',1);tone(130,.12,{v:.09});return}
-  if(c.c>P.mana){tone(130,.12,{v:.09});toast('Мало маны!',1);return}
-  /* Последний рубеж: карта, которой нужна цель на своём юните, без цели
-     просто исчезала бы вместе с маной — эффект-то не к чему применять. */
-  if(c.eff&&c.eff.tg==='ally'&&!(targetUnit&&P.board.includes(targetUnit))){
-    toast('Нужен свой юнит на поле',1);tone(160,.08,{v:.06});return}
-  /* Позицию карты в руке снимаем ДО перерисовки: через миг этого узла уже
-     не будет, а без точки старта карте неоткуда лететь. */
-  const откуда=(()=>{const h=$(`#bHand .hCard[data-i="${i}"]`);
-    return h?h.getBoundingClientRect():null})();
-  P.mana-=c.c;P.hand.splice(i,1);
-  blog('p',`⚡ ${c.n}${c.ty==='u'?` ${c.a}/${c.h}`:''} · ${c.c} ${plural(c.c,'мана','маны','маны')}`,'card');
-  sfx.play(c.t,c.el);
-  if(c.ty==='u'){
-    const u=mkUnit(c);P.board.push(u);
-    renderBattle();
-    const el=$(`#rowP .unit[data-uid="${u.uid}"]`);
-    if(el){const r=unitRect(el);
-      flyToBoard(c,откуда,r,el);
-      burst(r.left+r.width/2,r.top+r.height/2,elCols(c),10+c.t*8,1);
-      bang(pick(c.stk||['БАМ!']),50,46)}
-    if(c.eff)playerEff(c,targetUnit);
-    B.sel=null;
-    renderBattle();
-  }else{
-    /* Заклятие тоже долетает до цели. Раньше карта просто исчезала, а где-то
-       на поле менялись числа — на размене из трёх карт подряд связать одно с
-       другим было не с чем. Эффект применяем на касании, а не при нажатии,
-       поэтому на время полёта поле заперто: иначе доска успела бы измениться
-       между прицеливанием и попаданием. */
-    const цельEl=targetUnit
-      ? $(`#rowP .unit[data-uid="${targetUnit.uid}"],#rowE .unit[data-uid="${targetUnit.uid}"]`)
-      : spellAimP(c);
-    B.sel=null;
-    renderBattle();
-    const попал=()=>{
-      lockUI(0);
-      if(!B||B.over)return;
-      elBurst(цельEl,c,12+c.t*4,1.05);
-      bang(pick(c.stk||['БАМ!']),50,46);
-      playerEff(c,targetUnit);
-      renderBattle();
-    };
-    if(gfxAnim()&&откуда){
-      lockUI(1);
-      flyCard(c,откуда,[{r:aimRect(цельEl),ms:300,k:.85,fade:0}]).then(попал);
-    }else попал();
+  if(!B||B.over)return;
+  /* Позицию карты в руке снимаем ДО того, как правила уберут её оттуда: через
+     миг этого узла не будет, а без точки старта карте неоткуда лететь. */
+  const h=$(`#bHand .hCard[data-i="${i}"]`);
+  ОТКУДА=h?h.getBoundingClientRect():null;
+  const р=rPlayCard(B,'p',i,targetUnit||null);
+  if(!р.ok){
+    if(р.why==='поле полно'){toast('Поле заполнено — максимум 5 юнитов',1);tone(130,.12,{v:.09})}
+    else if(р.why==='мало маны'){tone(130,.12,{v:.09});toast('Мало маны!',1)}
+    else if(р.why==='нужен свой юнит'){toast('Нужен свой юнит на поле',1);tone(160,.08,{v:.06})}
+    return;
   }
+  B.sel=null;
+  проиграть();
 }
-function playerEff(c,tgt){
-  const P=B.p,E=B.e,e=c.eff;if(!e)return;
-  /* Что именно сделала карта — отдельной строкой: «сыграл Искру» без
-     продолжения не говорит, кому и сколько прилетело. */
-  const цель=tgt?tgt.card.n:'ГЕРОЙ ВРАГА';
-  switch(e.k){
-    case 'mana':
-      blog('p',`+${e.v} маны`);
-      P.mana=Math.min(10,P.mana+e.v);
-      bang('+1 МАНА!',50,55);sfx.sparks();renderBattle();break;
-    case 'dmg':
-      blog('p',`${c.n} → ${цель} · ${e.v}`,'atk');
-      if(tgt)dealDamage('e',tgt,e.v);
-      else damageHero('e',e.v);
-      break;
-    case 'healHero':
-      blog('p',`♥ +${e.v} герою`);
-      P.hp=Math.min(P.max,P.hp+e.v);popDmg($('#pHp'),e.v,true);sfx.heal();renderBattle();break;
-    case 'healAll':
-      blog('p',`♥ +${e.v} герою и всем своим`);
-      P.hp=Math.min(P.max,P.hp+e.v);popDmg($('#pHp'),e.v,true);
-      for(const u of P.board)u.hp=Math.min(u.maxhp,u.hp+e.v);
-      sfx.heal();renderBattle();break;
-    case 'draw':
-      blog('p',`+${e.v} ${plural(e.v,'карта','карты','карт')} в руку`);
-      for(let k=0;k<e.v;k++)drawCard('p');renderBattle();break;
-    case 'buff':
-      if(tgt){blog('p',`▲ ${tgt.card.n} +${e.a||0}/+${e.h||0}`);
-        tgt.atk+=e.a||0;tgt.hp+=e.h||0;tgt.maxhp+=e.h||0;tgt.buffed=1;
-        sfx.heal();renderBattle()}break;
-    case 'buffAll':
-      blog('p',`▲ всем своим +${e.a||0}/+${e.h||0}`);
-      for(const u of P.board){u.atk+=e.a||0;u.hp+=e.h||0;u.maxhp+=e.h||0;u.buffed=1}
-      sfx.heal();renderBattle();break;
-    case 'aoe':
-      blog('p',`${c.n} → по всем врагам · ${e.v}`,'atk');
-      for(const u of [...E.board])dealDamage('e',u,e.v);break;
-    case 'weaken':
-      blog('p',`▼ врагам −${e.v} атаки`);
-      for(const u of E.board)u.atk=Math.max(0,u.atk-e.v);
-      bang('Ш-Ш-Ш…',50,46);renderBattle();break;
-    case 'drain':
-      blog('p',`${c.n} → ${цель} · ${e.v}, себе ♥ +${e.v}`,'atk');
-      if(tgt)dealDamage('e',tgt,e.v);else damageHero('e',e.v);
-      P.hp=Math.min(P.max,P.hp+e.v);popDmg($('#pHp'),e.v,true);sfx.heal();
-      renderBattle();break;
-  }
-}
+
+
 async function dealDamage(side,u,v){
-  u.hp-=v;
-  const row=side==='p'?$('#rowP'):$('#rowE');
-  const el=row.querySelector(`.unit[data-uid="${u.uid}"]`);
-  if(el){
-    popDmg(el,v,false);
-    const r=el.getBoundingClientRect();
-    burst(r.left+r.width/2,r.top+r.height/2,['#ff3355','#fff'],7,.8);
-    /* Вспышка и отдача — на цели, вместе. Раньше была только дрожь, и на
-       быстром размене было неясно, попали в кого-то вообще или нет. */
-    el.classList.remove('hit');void el.offsetWidth;el.classList.add('hit');
-    setTimeout(()=>el.classList.remove('hit'),280);
-    if(gfxAnim())el.animate([
-      {transform:'translate(0,0) rotate(0)'},
-      {transform:'translate(-7px,2px) rotate(-4deg)',offset:.25},
-      {transform:'translate(5px,-1px) rotate(2.5deg)',offset:.55},
-      {transform:'translate(0,0) rotate(0)'}],
-      {duration:300,easing:'cubic-bezier(.2,.9,.3,1)'});
-  }
-  sfx.hit();
-  /* Остановка кадра на сильном ударе. Пауза перед продолжением — самый дешёвый
-     способ придать удару вес: глаз воспринимает её как инерцию от попадания. */
-  await sleep(v>=4?190:120);
-  if(u.hp<=0){
-    blog(side,`✖ ${u.card.n} погиб`,'die');
-    sfx.die();PF.hit('rigid');
-    /* Злость — только когда выбили НАШЕГО. В dealDamage side это владелец
-       получающего урон юнита (из B[side].board его и удаляют), поэтому
-       наш — это 'p'. */
-    if(side==='p')setMood('angry',1900);
-    if(el){
-      el.classList.add('dying');
-      const r=el.getBoundingClientRect();
-      burst(r.left+r.width/2,r.top+r.height/2,elCols(u.card),18,1.15);
-      /* Ждём саму анимацию, а не круглое число: правка длительности в CSS
-         иначе разъехалась бы с этой задержкой, и существо либо исчезало
-         рывком, либо висело уже невидимым. */
-      const an=el.getAnimations().find(x=>x.animationName==='unitDie');
-      if(an){try{await an.finished}catch(e){}}else await sleep(420);
-      /* Убираем узел здесь же. Пересборка ряда его нарочно не трогает, пока на
-         нём метка dying, — иначе существо исчезало бы в первый же кадр
-         падения, — так что снять его обязан тот, кто это падение запустил. */
-      el.remove();
-    }
-    const arr=B[side].board;
-    const ix=arr.indexOf(u);if(ix>=0)arr.splice(ix,1);
-  }
-  renderBattle();
+  if(!B)return;
+  rUnitDmg(B,side,u,v);
+  await проиграть();
 }
 /* Выпад: замах назад, бросок к цели, возврат. Одна кривая на удар по юниту и
    по герою — иначе два одинаковых по смыслу события читаются как разные.
@@ -733,50 +375,346 @@ async function lunge(elS,цель,ms,reach){
   elS.style.zIndex='';
 }
 async function doAttack(side,u,tgt,opts){
-  const o=opts||{};
-  const foe=side==='p'?'e':'p';
-  const rowS=side==='p'?$('#rowP'):$('#rowE');
-  const rowT=side==='p'?$('#rowE'):$('#rowP');
-  const elS=rowS?rowS.querySelector(`.unit[data-uid="${u.uid}"]`):null;
-  const elT=tgt.hero?(side==='p'?$('#bTop'):$('#pStats'))
-                    :(rowT?rowT.querySelector(`.unit[data-uid="${tgt.uid}"]`):null);
-  /* Черту и подсветку показываем ДО удара, а не вместе с ним: удар врага
-     игрок не начинал сам, и без этой доли секунды взгляд не успевал найти,
-     кто по кому бьёт. Своему удару замах не нужен — цель выбрал сам. */
-  if(elS&&elT){
-    atkLine(elS.getBoundingClientRect(),elT.getBoundingClientRect(),260+(o.tell||0),side);
-    if(o.tell&&gfxAnim()){
-      elS.classList.remove('tell');void elS.offsetWidth;elS.classList.add('tell');
-      await sleep(o.tell);
-      elS.classList.remove('tell');
-    }
-  }
   if(!B||B.over)return;
-  const sil=side==='p'?$('#silP'):$('#silE');
-  if(sil){sil.classList.remove('att','attE');void sil.offsetWidth;
-    sil.classList.add(side==='p'?'att':'attE');
-    setTimeout(()=>sil.classList.remove('att','attE'),460)}
-  const sf=$('#spFlash');
-  if(sf){sf.classList.remove('go');void sf.offsetWidth;sf.classList.add('go')}
-  const ms=o.ms||400;
-  blog(side,tgt.hero?`${u.card.n} → ${side==='p'?'ГЕРОЙ ВРАГА':'ТВОЙ ГЕРОЙ'} · ${u.atk}`
-                    :`${u.card.n} → ${tgt.card.n} · ${u.atk}`,'atk');
-  if(tgt.hero){
-    /* Удар в героя тоже должен быть виден: раньше юнит не двигался вообще,
-       и всё событие сводилось к дрожи экрана и убывающему числу. */
-    if(elS&&elT){const b=elT.getBoundingClientRect();
-      await lunge(elS,{x:b.left+b.width/2,y:b.top+b.height/2},ms,.5)}
-    damageHero(foe,u.atk);shake($('#bWrap'));
+  rAttack(B,side,u,tgt);
+  await проиграть();
+}
+
+/* ================= показ событий =================
+   Правила (10-rules.js) отыгрывают действие целиком и мгновенно и складывают
+   в B.ev, ЧТО произошло. Дальше дело подачи: пройти по списку и каждое
+   событие рассказать — анимацией, звуком, строкой в журнале.
+
+   Отсюда главная местная забота. Состояние УЖЕ конечное, а рассказ только
+   начался: если рисовать прямо по нему, здоровье упадёт сразу на весь ход
+   врага, три его существа появятся разом, а погибшие исчезнут раньше, чем по
+   ним успеют ударить. Поэтому перед каждой отрисовкой числа ОТМАТЫВАЮТСЯ на
+   непоказанные события — см. откат(). */
+/* Темп рассказа. 1 — как задумано; 0 — мгновенно, без единого таймера.
+   Ноль нужен прогонам: в спрятанной вкладке браузер душит setTimeout до
+   одного в минуту (после пяти минут фона — «интенсивное» замедление), и на
+   паузах подачи прогон вставал на часы. Микрозадача этому не подвержена.
+   Разведение правил и подачи это и дало: скорость показа теперь ручка, а не
+   свойство боя. Пригодится и игроку — «ускорить бои» в настройках. */
+let ТЕМП=1;
+/* Мгновенная уступка управления. Ни setTimeout, ни микрозадача не годятся:
+   первый в спрятанной вкладке душится до одного раза в минуту, вторая
+   вообще не отдаёт управление — цикл на Promise.resolve() подвешивает
+   страницу насмерть (проверено: вкладка перестала отвечать). MessageChannel
+   даёт настоящую задачу и под замедление таймеров не попадает. */
+const тик=(()=>{try{
+  const ch=new MessageChannel(),q=[];
+  ch.port1.onmessage=()=>{const f=q.shift();if(f)f()};
+  return ()=>new Promise(r=>{q.push(r);ch.port2.postMessage(0)});
+}catch(e){return ()=>new Promise(r=>setTimeout(r,0))}})();
+const пауза=ms=>ТЕМП<=0?тик():sleep(ms*ТЕМП);
+const позже=(fn,ms)=>{if(ТЕМП<=0)тик().then(fn);else setTimeout(fn,ms*ТЕМП)};
+
+let ИДЁТ=null;                 /* обещание текущего показа */
+let ОТКУДА=null;               /* откуда летит карта — снято до перерисовки */
+const СМЕРТИ_ЖДУТ=new Set();   /* uid тех, чьё падение играется прямо сейчас */
+
+function проиграть(){
+  if(ИДЁТ)return ИДЁТ;
+  if(!B||!B.ev||!B.ev.length){renderBattle();return Promise.resolve()}
+  lockUI(1);
+  ИДЁТ=(async()=>{
+    try{
+      while(B&&B.ev&&B.ev.length){
+        const e=B.ev.shift();
+        /* Упавший показ не имеет права оставить бой мёртвым: правила своё уже
+           отыграли, состояние верное, потерян только кадр. */
+        try{await сыграть(e)}
+        catch(err){try{console.error('[bbduel] показ события',e&&e.t,err)}catch(_){}}
+        const жд=ритм(e,B&&B.ev?B.ev[0]:null);
+        if(жд)await пауза(жд);
+      }
+    }finally{
+      ИДЁТ=null;
+      lockUI(!!(B&&!B.over&&B.phase!=='p'));
+      renderBattle();
+    }
+  })();
+  return ИДЁТ;
+}
+
+/* Ритм рассказа. Раньше паузы были вшиты в сам ход врага (`await sleep(340)`
+   между ударами) — то есть правила ждали анимацию. Теперь это отдельная
+   табличка подачи, и править её можно, не трогая бой. */
+function ритм(было,будет){
+  if(!B||B.over||!будет)return 0;
+  if(будет.t==='atk'&&будет.side==='e')return 340;
+  if(будет.t==='play'&&будет.who==='e')return 260;
+  if(было.t==='summon'&&было.who==='e')return 240;
+  if(было.t==='eff'&&было.who==='e')return 260;
+  return 0;
+}
+
+async function сыграть(e){
+  switch(e.t){
+
+  case 'turn':
+    blog('sys',`— ХОД ${e.no} · ${e.who==='p'?'ТЫ':'ВРАГ'} —`,'turn');
+    renderBattle();
+    if(e.who==='e')turnBanner('ХОД ВРАГА');
+    return;
+
+  case 'draw':
+    if(e.who==='p')sfx.draw();
+    renderBattle();
+    return;
+
+  case 'burn':{
+    const c=byId(e.id);
+    blog(e.who,`сгорела: ${c?c.n:e.id}`,'die');
+    if(e.who==='p')toast(`Карта сгорела: ${c?c.n:e.id}`);
+    renderBattle();
+    return;
   }
-  else{
-    const back=tgt.atk||0;
-    if(back>0)blog(foe,`${tgt.card.n} в ответ → ${u.card.n} · ${back}`,'atk');
-    if(elS&&elT){const b=elT.getBoundingClientRect();
-      await lunge(elS,{x:b.left+b.width/2,y:b.top+b.height/2},ms)}
-    await dealDamage(foe,tgt,u.atk);
-    if(back>0)await dealDamage(side,u,back);
+
+  case 'fatigue':
+    blog(e.who,`усталость · −${e.v}`,'die');
+    return;
+
+  case 'dmgHero':{
+    renderBattle();
+    const ic=e.who==='p'?$('#pHp'):$('#eHp');
+    if(ic){
+      popDmg(ic,e.v,false);
+      const r=ic.getBoundingClientRect();
+      burst(r.left+r.width/2,r.top+10,['#ff3355','#fff'],8,.9);
+    }
+    sfx.hit();
+    /* По своему герою бьёт ощутимее, чем по вражескому. */
+    PF.hit(e.who==='p'?'heavy':'light');
+    if(e.who==='p'){setMood('surp');hurtFlash()}
+    const sil=e.who==='p'?$('#silP'):$('#silE');
+    if(sil){sil.classList.remove('hurt');void sil.offsetWidth;sil.classList.add('hurt');
+      setTimeout(()=>sil.classList.remove('hurt'),360)}
+    return;
+  }
+
+  case 'healHero':
+    renderBattle();
+    popDmg(e.who==='p'?$('#pHp'):$('#eHp'),e.v,true);
+    sfx.heal();
+    return;
+
+  case 'play':{
+    const c=e.c;
+    blog(e.who,`⚡ ${c.n}${c.ty==='u'?` ${c.a}/${c.h}`:''} · ${c.c} ${plural(c.c,'мана','маны','маны')}`,'card');
+    sfx.play(c.t,c.el);
+    if(e.who==='e'){
+      /* Точку вылета снимаем ДО перерисовки руки: через миг рубашки
+         перестроятся под новый счёт, и карта полетела бы из чужого места. */
+      ОТКУДА=enemyHandRect();
+      enemyBanner(c);
+      await пауза(400);
+    }
+    renderBattle();
+    /* Юнит долетает до своей клетки — это делает событие 'summon', ему нужен
+       уже созданный узел. Заклятию ждать нечего: цель известна сейчас. */
+    if(c.ty==='u')return;
+    const цельEl=e.who==='p'
+      ? (e.tgt?$(`#rowP .unit[data-uid="${e.tgt.uid}"],#rowE .unit[data-uid="${e.tgt.uid}"]`)
+             :spellAimP(c))
+      : aiSpellAim(c,e.tgt);
+    if(gfxAnim()&&ОТКУДА){
+      const остановки=[];
+      /* Карту врага сначала показываем крупно посередине: свою руку он игроку
+         не показывает, и без этой остановки заклятие просто срабатывает. */
+      if(e.who==='e')остановки.push({r:revealRect(),ms:290,hold:440,rot:-3});
+      остановки.push({r:aimRect(цельEl),ms:300,k:.85,fade:0});
+      await flyCard(c,ОТКУДА,остановки);
+    }
+    elBurst(цельEl,c,12+c.t*4,1.05);
+    bang(pick(c.stk||['БАМ!']),50,e.who==='e'?44:46);
+    if(e.who==='e')await пауза(110);
+    return;
+  }
+
+  case 'summon':{
+    renderBattle();
+    const el=$(`#row${e.who==='p'?'P':'E'} .unit[data-uid="${e.u.uid}"]`);
+    if(!el)return;
+    const r=unitRect(el);
+    const полёт=flyToBoard(e.u.card,ОТКУДА,r,el,{reveal:e.who==='e'});
+    /* Своей карте не ждём: боевой клич должен успевать за полётом, так было
+       всегда. Вражеской ждём — её показ и есть объяснение хода. */
+    if(e.who==='e')await полёт;
+    const t=e.u.card.t;
+    burst(r.left+r.width/2,r.top+r.height/2,elCols(e.u.card),
+      e.who==='p'?10+t*8:8+t*6, e.who==='p'?1:.9);
+    bang(pick(e.u.card.stk||['БАМ!']),50,46);
+    return;
+  }
+
+  case 'eff':
+    blog(e.who,effText(e),effKind(e));
+    if(e.k==='mana'){
+      bang(e.who==='p'?`+${e.v} МАНА!`:`ВРАГУ +${e.v} МАНЫ!`,50,e.who==='p'?55:40);
+      sfx.sparks();
+    }
+    else if(e.k==='healHero'||e.k==='healAll'||e.k==='buff'||e.k==='buffAll')sfx.heal();
+    else if(e.k==='weaken')bang('Ш-Ш-Ш…',50,46);
+    renderBattle();
+    return;
+
+  case 'dmgUnit':{
+    const row=e.side==='p'?$('#rowP'):$('#rowE');
+    const el=row?row.querySelector(`.unit[data-uid="${e.u.uid}"]`):null;
+    renderBattle();
+    /* Смертельный удар: клетки уже нет на доске, значит пересборка ряда её не
+       тронет — цифру правим руками, иначе последнее попадание не видно. */
+    if(el&&!B[e.side].board.includes(e.u))updateUnit(el,e.u,e.side,false);
+    if(el){
+      popDmg(el,e.v,false);
+      const r=el.getBoundingClientRect();
+      burst(r.left+r.width/2,r.top+r.height/2,['#ff3355','#fff'],7,.8);
+      /* Вспышка и отдача — на цели, вместе. Раньше была только дрожь, и на
+         быстром размене было неясно, попали в кого-то вообще или нет. */
+      el.classList.remove('hit');void el.offsetWidth;el.classList.add('hit');
+      setTimeout(()=>el.classList.remove('hit'),280);
+      if(gfxAnim())el.animate([
+        {transform:'translate(0,0) rotate(0)'},
+        {transform:'translate(-7px,2px) rotate(-4deg)',offset:.25},
+        {transform:'translate(5px,-1px) rotate(2.5deg)',offset:.55},
+        {transform:'translate(0,0) rotate(0)'}],
+        {duration:300,easing:'cubic-bezier(.2,.9,.3,1)'});
+    }
+    sfx.hit();
+    /* Остановка кадра на сильном ударе — самый дешёвый способ придать удару
+       вес: глаз воспринимает паузу как инерцию от попадания. */
+    await пауза(e.v>=4?190:120);
+    return;
+  }
+
+  case 'die':{
+    СМЕРТИ_ЖДУТ.add(e.u.uid);
+    blog(e.side,`✖ ${e.u.card.n} погиб`,'die');
+    sfx.die();PF.hit('rigid');
+    /* Злость — только когда выбили НАШЕГО. */
+    if(e.side==='p')setMood('angry',1900);
+    const row=e.side==='p'?$('#rowP'):$('#rowE');
+    const el=row?row.querySelector(`.unit[data-uid="${e.u.uid}"]`):null;
+    if(el){
+      el.classList.add('dying');
+      const r=el.getBoundingClientRect();
+      burst(r.left+r.width/2,r.top+r.height/2,elCols(e.u.card),18,1.15);
+      /* Ждём саму анимацию, а не круглое число: правка длительности в CSS
+         иначе разъехалась бы с этой задержкой. Срок жёсткий — в фоновой
+         вкладке кадры встают, а на этом ожидании висит весь рассказ. */
+      const an=el.getAnimations().find(x=>x.animationName==='unitDie');
+      if(an)await Promise.race([an.finished.catch(()=>{}),пауза(700)]);
+      else await пауза(420);
+      el.remove();
+    }
+    СМЕРТИ_ЖДУТ.delete(e.u.uid);
+    renderBattle();
+    return;
+  }
+
+  case 'atk':{
+    const side=e.side,u=e.u,tgt=e.tgt;
+    const rowS=side==='p'?$('#rowP'):$('#rowE');
+    const rowT=side==='p'?$('#rowE'):$('#rowP');
+    const elS=u&&rowS?rowS.querySelector(`.unit[data-uid="${u.uid}"]`):null;
+    const elT=tgt.hero?(side==='p'?$('#bTop'):$('#pStats'))
+                      :(rowT?rowT.querySelector(`.unit[data-uid="${tgt.uid}"]`):null);
+    blog(side,tgt.hero
+      ?`${u?u.card.n:'ВРАГ'} → ${side==='p'?'ГЕРОЙ ВРАГА':'ТВОЙ ГЕРОЙ'} · ${e.v}`
+      :`${u.card.n} → ${tgt.card.n} · ${e.v}`,'atk');
+    if(!tgt.hero&&e.back>0)
+      blog(side==='p'?'e':'p',`${tgt.card.n} в ответ → ${u.card.n} · ${e.back}`,'atk');
+    /* Черту и подсветку показываем ДО удара, а не вместе с ним: удар врага
+       игрок не начинал сам, и без этой доли секунды взгляд не успевает найти,
+       кто по кому бьёт. Своему удару замах не нужен — цель выбрал сам. */
+    const замах=side==='e'?320:0;
+    if(elS&&elT){
+      atkLine(elS.getBoundingClientRect(),elT.getBoundingClientRect(),260+замах,side);
+      if(замах&&gfxAnim()){
+        elS.classList.remove('tell');void elS.offsetWidth;elS.classList.add('tell');
+        await пауза(замах);
+        elS.classList.remove('tell');
+      }
+    }
+    const sil=side==='p'?$('#silP'):$('#silE');
+    if(sil){sil.classList.remove('att','attE');void sil.offsetWidth;
+      sil.classList.add(side==='p'?'att':'attE');
+      setTimeout(()=>sil.classList.remove('att','attE'),460)}
+    const sf=$('#spFlash');
+    if(sf){sf.classList.remove('go');void sf.offsetWidth;sf.classList.add('go')}
+    if(elS&&elT){
+      const b=elT.getBoundingClientRect();
+      /* В героя не долетаем: там панель поверх поля. */
+      await lunge(elS,{x:b.left+b.width/2,y:b.top+b.height/2},side==='e'?520:400,
+        tgt.hero?.5:undefined);
+    }
+    if(tgt.hero)shake($('#bWrap'));
+    return;
+  }
+
+  case 'over':
+    finish(e.win,e.forfeit);
+    return;
   }
 }
+
+/* Строка журнала по событию эффекта. Слова живут здесь, а не в правилах:
+   правила отдают «что и на сколько», а как это назвать — вопрос подачи. */
+function effText(e){
+  const c=e.c,своя=e.who==='p';
+  const цель=e.tgt?e.tgt.card.n:(своя?'ГЕРОЙ ВРАГА':'ТВОЙ ГЕРОЙ');
+  switch(e.k){
+    case 'mana':return `+${e.v} маны`;
+    case 'dmg':return `${c.n} → ${цель} · ${e.v}`;
+    case 'healHero':return `♥ +${e.v} ${своя?'герою':'своему герою'}`;
+    case 'healAll':return `♥ +${e.v} герою и всем своим`;
+    case 'draw':return `+${e.v} ${plural(e.v,'карта','карты','карт')} в руку`;
+    case 'buff':return `▲ ${e.tgt?e.tgt.card.n:''} +${e.a}/+${e.h}`;
+    case 'buffAll':return `▲ всем своим +${e.a}/+${e.h}`;
+    case 'aoe':return `${c.n} → по всем ${своя?'врагам':'твоим'} · ${e.v}`;
+    case 'weaken':return `▼ ${своя?'врагам':'твоим'} −${e.v} атаки`;
+    case 'drain':return `${c.n} → ${цель} · ${e.v}, себе ♥ +${e.v}`;
+  }
+  return e.k;
+}
+function effKind(e){return (e.k==='dmg'||e.k==='aoe'||e.k==='drain')?'atk':''}
+
+/* ================= отмотка =================
+   Числа на экране — не конечное состояние, а состояние НА ТОТ МОМЕНТ, до
+   которого дошёл рассказ. Считается один раз на отрисовку и лежит в ОТКАТ,
+   чтобы его видели syncRow/updateUnit/unitHTML, не таская параметром. */
+let ОТКАТ=null;
+function откат(){
+  const о={hp:{p:0,e:0},рука:{p:0,e:0},мана:{p:0,e:0},колода:{p:0,e:0},
+    ед:new Map(),атк:new Map(),непоявились:new Set()};
+  if(!B||!B.ev)return о;
+  const плюс=(m,u,v)=>m.set(u,(m.get(u)||0)+v);
+  for(const e of B.ev){
+    switch(e.t){
+      case 'dmgHero':о.hp[e.who]+=e.v;break;
+      case 'healHero':о.hp[e.who]-=e.v;break;
+      case 'draw':о.рука[e.who]--;о.колода[e.who]++;break;
+      case 'burn':о.колода[e.who]++;break;
+      case 'play':if(e.i>=0){о.рука[e.who]++;о.мана[e.who]+=e.c.c}break;
+      case 'summon':о.непоявились.add(e.u.uid);break;
+      case 'dmgUnit':плюс(о.ед,e.u,e.v);break;
+      case 'eff':
+        if(e.k==='mana')о.мана[e.who]-=e.v;
+        else if(e.k==='buff'&&e.tgt){плюс(о.ед,e.tgt,-(e.h||0));плюс(о.атк,e.tgt,-(e.a||0))}
+        else if(e.k==='buffAll')for(const u of B[e.who].board){плюс(о.ед,u,-(e.h||0));плюс(о.атк,u,-(e.a||0))}
+        else if(e.k==='weaken')for(const u of B[e.who==='p'?'e':'p'].board)плюс(о.атк,u,e.v);
+        break;
+    }
+  }
+  return о;
+}
+function показHp(u){return u.hp+((ОТКАТ&&ОТКАТ.ед.get(u))||0)}
+function показAtk(u){return Math.max(0,u.atk+((ОТКАТ&&ОТКАТ.атк.get(u))||0))}
+/* Видно ли клетку прямо сейчас: только что призванную скрываем, пока рассказ
+   до неё не дошёл. */
+function ужеНаПоле(u){return !(ОТКАТ&&ОТКАТ.непоявились.has(u.uid))}
 
 /* Полёт копии карты по цепочке остановок — один механизм на всё: розыгрыш
    игроком, вскрытие карты врагом, бросок заклятия в цель.
@@ -904,9 +842,9 @@ function enemyHandRect(){
 /* Веер рубашек по числу карт в руке врага. Перерисовываем только когда счёт
    изменился: renderBattle зовут на каждый удар, а перестройка узлов посреди
    полёта сбила бы точку вылета. */
-function syncEnemyHand(){
+function syncEnemyHand(сколько){
   const eh=$('#eHand');if(!eh)return;
-  const n=Math.min(7,B&&B.e?B.e.hand.length:0);
+  const n=Math.min(7,сколько===undefined?(B&&B.e?B.e.hand.length:0):сколько);
   if(+eh.dataset.n!==n){
     eh.dataset.n=n;
     let h='';
@@ -1364,21 +1302,27 @@ function fitHand(){
 
 function renderBattle(){
   if(!B)return;
-  $('#eHp').textContent=B.e.hp;$('#pHp').textContent=B.p.hp;
-  $('#eDeckN').textContent=B.e.deck.length;$('#eHandN').textContent=B.e.hand.length;
-  syncEnemyHand();
-  $('#pManaT').textContent=B.p.mana+'/'+B.p.mmax;
-  $('#eManaT').textContent=B.e.mana+'/'+B.e.mmax;
-  $('#eBoardN').textContent=B.e.board.length+'/5';
-  $('#eBoardN').classList.toggle('full',B.e.board.length>=5);
-  $('#pBoardN').innerHTML='ПОЛЕ <b>'+B.p.board.length+'/5</b>';
-  $('#pBoardN').classList.toggle('full',B.p.board.length>=5);
-  const playCount=B.p.hand.filter(id=>byId(id).c<=B.p.mana).length;
+  /* Рисуем не конечное состояние, а то, до которого дошёл рассказ. */
+  ОТКАТ=откат();
+  const hpP=clamp(B.p.hp+ОТКАТ.hp.p,0,B.p.max),hpE=clamp(B.e.hp+ОТКАТ.hp.e,0,B.e.max);
+  const манаP=Math.max(0,B.p.mana+ОТКАТ.мана.p),манаE=Math.max(0,B.e.mana+ОТКАТ.мана.e);
+  const рукаE=Math.max(0,B.e.hand.length+ОТКАТ.рука.e);
+  const полеP=B.p.board.filter(ужеНаПоле).length,полеE=B.e.board.filter(ужеНаПоле).length;
+  $('#eHp').textContent=hpE;$('#pHp').textContent=hpP;
+  $('#eDeckN').textContent=B.e.deck.length+ОТКАТ.колода.e;$('#eHandN').textContent=рукаE;
+  syncEnemyHand(рукаE);
+  $('#pManaT').textContent=манаP+'/'+B.p.mmax;
+  $('#eManaT').textContent=манаE+'/'+B.e.mmax;
+  $('#eBoardN').textContent=полеE+'/5';
+  $('#eBoardN').classList.toggle('full',полеE>=5);
+  $('#pBoardN').innerHTML='ПОЛЕ <b>'+полеP+'/5</b>';
+  $('#pBoardN').classList.toggle('full',полеP>=5);
+  const playCount=B.p.hand.filter(id=>byId(id).c<=манаP).length;
   $('#pManaBox').classList.toggle('pulse',B.phase==='p'&&playCount>0);
   const manaRow=(P,max)=>{let s='';for(let i=0;i<Math.max(max,P);i++)
     s+=`<span class="mGem ${i<P?'on':''}"></span>`;return s};
-  $('#pMana').innerHTML=manaRow(B.p.mana,B.p.mmax);
-  $('#eMana').innerHTML=manaRow(B.e.mana,B.e.mmax);
+  $('#pMana').innerHTML=manaRow(манаP,B.p.mmax);
+  $('#eMana').innerHTML=manaRow(манаE,B.e.mmax);
   const canTargetE=B.sel&&(B.sel.type==='unit'||(B.sel.type==='hand'&&byId(B.p.hand[B.sel.i])?.eff?.tg==='any'));
   syncRow($('#rowE'),B.e.board,'e',!!canTargetE,canTargetE?'<div class="slot canDrop" data-slot="e-hero"></div>':'<div class="slot" data-slot="e-hero"></div>');
   const canTargetP=B.sel&&B.sel.type==='hand'&&byId(B.p.hand[B.sel.i])?.eff?.tg==='ally';
@@ -1457,7 +1401,10 @@ function syncRow(row,board,side,targetable,slotHTML){
   const было=new Map();
   row.querySelectorAll('.unit').forEach(el=>было.set(el.dataset.uid,el));
   const порядок=[];
-  for(const u of board){
+  /* Только что призванных пропускаем, пока рассказ до них не дошёл: правила
+     ставят их на доску сразу, а появиться они должны по очереди. */
+  const видимые=board.filter(ужеНаПоле);
+  for(const u of видимые){
     const key=String(u.uid);
     let el=было.get(key);
     if(el){было.delete(key);updateUnit(el,u,side,targetable)}
@@ -1468,16 +1415,21 @@ function syncRow(row,board,side,targetable,slotHTML){
     }
     порядок.push(el);
   }
-  /* Узел, помеченный .dying, не трогаем: его анимация смерти ещё идёт, и
-     удалит его тот, кто её запустил. Иначе существо исчезало бы мгновенно,
-     а размен становился нечитаемым. */
-  было.forEach(el=>{if(!el.classList.contains('dying'))el.remove()});
+  /* Узел павшего не трогаем: правила убрали его с доски сразу, но показать
+     падение ещё только предстоит. .dying — падение уже играется, СМЕРТИ_ЖДУТ —
+     играется прямо сейчас, а очередь событий держит тех, до кого не дошли. */
+  было.forEach(el=>{
+    if(el.classList.contains('dying'))return;
+    if(СМЕРТИ_ЖДУТ.has(+el.dataset.uid))return;
+    if(B&&B.ev&&B.ev.some(e=>e.t==='die'&&String(e.u.uid)===el.dataset.uid))return;
+    el.remove();
+  });
   row.querySelectorAll('.slot').forEach(el=>el.remove());
   порядок.forEach((el,i)=>{
     const cur=row.children[i];
     if(cur!==el)row.insertBefore(el,cur||null);
   });
-  const пусто=Math.max(0,5-board.length);
+  const пусто=Math.max(0,5-видимые.length);
   if(пусто){
     const t=document.createElement('div');
     t.innerHTML=slotHTML.repeat(пусто);
@@ -1494,18 +1446,19 @@ function updateUnit(el,u,side,targetable){
   el.classList.toggle('tired',!!tired);
   el.classList.toggle('buffed',!!u.buffed);
   const a=el.querySelector('.uA'), h=el.querySelector('.uH');
-  if(a&&a.textContent!=String(u.atk))a.textContent=u.atk;
+  const атк=показAtk(u),здор=показHp(u);
+  if(a&&a.textContent!=String(атк))a.textContent=атк;
   if(h){
     /* Цифру здоровья не просто подменяем: при убыли она вспыхивает и
        вздрагивает, иначе размен читается только по всплывающему числу. */
-    if(h.textContent!=String(u.hp)){
+    if(h.textContent!=String(здор)){
       const было=+h.textContent;
-      h.textContent=u.hp;
-      if(u.hp<было&&gfxAnim())h.animate(
+      h.textContent=здор;
+      if(здор<было&&gfxAnim())h.animate(
         [{transform:'scale(1)'},{transform:'scale(1.45)',offset:.3},{transform:'scale(1)'}],
         {duration:280,easing:'cubic-bezier(.3,1.4,.4,1)'});
     }
-    h.classList.toggle('hurt',u.hp<u.maxhp);
+    h.classList.toggle('hurt',здор<u.maxhp);
   }
   const kw=el.querySelector('.uKw');
   const want=(u.taunt?'<i>ТАУНТ</i>':'')+(u.rush&&u.sick?'<i class="r">РАШ</i>':'');
@@ -1545,13 +1498,17 @@ function unitHTML(u,side,targetable){
       ? `<img class="uArtImg" src="art/cards/${u.card.id}.webp" alt="" draggable="false">`
       : `<svg class="uArt" viewBox="0 0 24 24">${EMB[u.card.el]||EMB.steel}</svg>`}
     <span class="uHit"></span>
-    <span class="uA">${u.atk}</span><span class="uH ${u.hp<u.maxhp?'hurt':''}">${u.hp}</span>
+    <span class="uA">${показAtk(u)}</span><span class="uH ${показHp(u)<u.maxhp?'hurt':''}">${показHp(u)}</span>
   </div>`;
 }
 /* forfeit — досрочная сдача. Награду за неё не даём принципиально: утешительные
    15% превратили бы «начать десятый рейд и сразу сдаться» в ферму по 45 искр за
    пару секунд, что после починки экономики паков было бы единственной дырой. */
 function finish(win,forfeit){
+  /* Сюда приходят двумя дорогами: по событию 'over' от правил и напрямую при
+     сдаче. Показать итоги обязаны ровно раз. */
+  if(!B||B.итогПоказан)return;
+  B.итогПоказан=1;
   B.over=true;dropBattleSnap();$('#bEnd').disabled=true;lockUI(0);
   blog('sys',forfeit?'— СДАЛСЯ —':(win?'— ПОБЕДА —':'— ПОРАЖЕНИЕ —'),'turn');
   const si=B.si;   /* запоминаем: к моменту показа итогов B могут обнулить */
@@ -1583,7 +1540,7 @@ function finish(win,forfeit){
     bang(forfeit?'СДАЛСЯ…':'ОБЛОМ…',50,30);
   }
   S.sparks+=gained;save();
-  setTimeout(()=>{
+  позже(()=>{
     const box=document.createElement('div');box.className='bResult';
     box.innerHTML=`<div class="bResBox">
       <div class="bResT ${win?'win':'lose'}">${win?'ПОБЕДА!!':forfeit?'ОТСТУПЛЕНИЕ':'ПРОВАЛ'}</div>
