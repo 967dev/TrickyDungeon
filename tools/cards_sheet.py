@@ -6,8 +6,8 @@
 арта, и чтобы вычитывать тексты целиком.
 
 Тексты НЕ переписываются руками: и сами карты, и описания эффектов берутся из
-index.html и считаются его же кодом. Значит страница не может разойтись с
-игрой — достаточно перегенерировать.
+кода игры и считаются им же. Значит страница не может разойтись с игрой —
+достаточно перегенерировать.
 
     python tools/cards_sheet.py
 """
@@ -27,7 +27,7 @@ def кусок(js, начало, конец=';\n'):
     """Вырезает объявление по его началу до первого конца строки-разделителя."""
     i = js.find(начало)
     if i < 0:
-        raise SystemExit('не найдено в index.html: ' + начало[:40])
+        raise SystemExit('не найдено в скрипте игры: ' + начало[:40])
     j = js.find(конец, i)
     if j < 0:
         raise SystemExit('не закрыто: ' + начало[:40])
@@ -51,9 +51,20 @@ def функция(js, имя):
     raise SystemExit('не закрыта функция ' + имя)
 
 
-def main():
+def собрать_js():
+    """Скрипт лежит в js/ отдельными файлами, порядок подключения значим (см.
+    CLAUDE.md). Склеиваем их в том же порядке — для вырезания кусков это ровно
+    тот же текст, что был когда-то одним файлом."""
     html = io.open(ИСХОДНИК, encoding='utf-8').read()
-    js = max(re.findall(r'<script(?![^>]*src=)[^>]*>(.*?)</script>', html, re.S), key=len)
+    имена = re.findall(r'<script src="(js/[^"]+)"></script>', html)
+    if not имена:
+        raise SystemExit('в index.html нет ни одного <script src="js/...">')
+    return '\n'.join(io.open(os.path.join(КОРЕНЬ, н), encoding='utf-8').read()
+                     for н in имена)
+
+
+def main():
+    js = собрать_js()
 
     # Берём только то, что нужно для текста карты. Остальной скрипт трогать
     # нельзя: он при загрузке лезет в DOM, звук и хранилище.
@@ -184,7 +195,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
 @media print{body{background:#fff;color:#000}.c{break-inside:avoid}}
 </style>
 <h1>БАМ-БАМ: КАСКАД — все карты</h1>
-<div class="sub">%d карт · без арта: %d · собрано из index.html скриптом tools/cards_sheet.py</div>
+<div class="sub">%d карт · без арта: %d · тексты посчитаны кодом игры · tools/cards_sheet.py</div>
 %s
 ''' % (всего, без, '\n'.join(группы))
 

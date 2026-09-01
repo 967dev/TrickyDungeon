@@ -236,8 +236,8 @@ function renderStages(){
       <button class="actHead ${act1Open?'open':''}" id="act1Head">
         <span class="actN">I</span>
         <div class="actC">
-          <div class="actT">ПЕРВЫЙ АКТ · ПРОВАЛ</div>
-          <div class="actS">${acts.length} боёв · ${doneN}/${acts.length} зачищено</div>
+          <div class="actT">ИЗ ГРЯЗИ В КАРТЫ!</div>
+          <div class="actS">сегодня повезёт</div>
         </div>
         <span class="actArrow">▼</span>
       </button>
