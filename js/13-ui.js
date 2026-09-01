@@ -152,7 +152,7 @@ function redeemPromo(сырое){
   S.sparks+=p.sparks;
   save();
   sfx.sparks();PF.hit('medium');
-  /* Счётчик искр живёт на экране круток — если он сейчас в разметке,
+  /* Счётчик искр живёт в ларьке — если он сейчас в разметке,
      обновляем сразу, иначе игрок увидит старое число, когда туда придёт. */
   const t=$('#gTok'); if(t)t.textContent=fmtN(S.sparks);
   toast(`${p.t} +${fmtN(p.sparks)} искр`);

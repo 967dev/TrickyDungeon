@@ -88,7 +88,7 @@ function rollOne(){
   else card=pick(CARDS.filter(c=>c.t===tier&&!c.noColl));
   return card}
 function renderGacha(){
-  crumb('экран-круток');
+  crumb('экран-ларька');
   tearing=false;
   $('#gTok').textContent=fmtN(S.sparks);
   const broke=S.sparks<PACK;
@@ -109,7 +109,7 @@ function renderGacha(){
      по верху пачки. */
   primePackVideo();
   wirePack();
-  crumb('круткиготовы');
+  crumb('ларёк-готов');
 }
 /* Единый порядок функций трансформа для полосы: и перетаскивание, и кадры
    анимации строят строку только через него. */
@@ -122,12 +122,12 @@ function renderGacha(){
 const PACK_VIDEO='art/pack-open.mp4', PACK_VIDEO_CUT=4.6;
 let packVid=null,packVidDead=false;
 function primePackVideo(){
-  /* Заходя на экран круток, просим догрузиться ещё раз. preload="auto" —
+  /* Заходя в ларёк, просим догрузиться ещё раз. preload="auto" —
      всего лишь пожелание, и Safari его игнорирует: до жеста пользователя
      файл может не качаться вовсе. Поэтому ролик оказывался не готов ровно
      тогда, когда он нужен. load() на уже готовом элементе безвреден. */
   /* load() ровно один раз. Повторный вызов бросает уже скачанное и тянет
-     822 КБ заново — а сюда заходят при каждом показе экрана круток. */
+     822 КБ заново — а сюда заходят при каждом показе ларька. */
   if(packVid){
     if(!packVidDead&&!packVid.__pulled&&packVid.readyState<3){
       packVid.__pulled=1;crumb('догружаю-ролик');try{packVid.load()}catch(e){}

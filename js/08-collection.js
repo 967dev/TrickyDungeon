@@ -22,7 +22,7 @@ let cvEl=null,cvId=null;
 function openCardView(id){
   const c=byId(id); if(!c)return;
   const have=S.inv[id]||0;
-  if(!have){toast('Нет такой карты — крути паки!',1);return}
+  if(!have){toast('Нет такой карты — открой пак в ларьке!',1);return}
   closeCardView(true);
   cvId=id;
   cvEl=document.createElement('div');
@@ -113,7 +113,7 @@ function cvWireTilt(box){
 /* Уход с экрана коллекции обязан гасить превью: без этого оно оставалось бы
    висеть поверх боя, если увести мышь с карты уже после смены экрана. */
 function toggleDeck(id){
-  const have=S.inv[id]||0;if(!have){toast('Нет такой карты — крути паки!',1);return}
+  const have=S.inv[id]||0;if(!have){toast('Нет такой карты — открой пак в ларьке!',1);return}
   const inDeck=deckCount(id);
   if(inDeck>0&&inDeck>=Math.min(have,2)){
     S.deck=S.deck.filter(x=>x!==id);sfx.ui();
@@ -237,7 +237,7 @@ function renderStages(){
         <span class="actN">I</span>
         <div class="actC">
           <div class="actT">ИЗ ГРЯЗИ В КАРТЫ!</div>
-          <div class="actS">сегодня повезёт</div>
+          <div class="actS">${acts.length} боёв · ${doneN}/${acts.length} зачищено</div>
         </div>
         <span class="actArrow">▼</span>
       </button>

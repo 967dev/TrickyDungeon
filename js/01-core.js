@@ -164,7 +164,7 @@ const store=(()=>{try{const k='__bbt';localStorage.setItem(k,'1');localStorage.r
    подключить, поэтому единственный способ узнать, на каком шаге всё умерло —
    записать шаг в хранилище заранее и прочитать после перезапуска.
    Ключ отдельный от сейва: он не должен ни ехать в облако, ни попадать в
-   миграции. Метка 'ok' ставится, когда экран круток покинут по-человечески. */
+   миграции. Метка 'ok' ставится, когда ларёк покинут по-человечески. */
 const CRUMB='bbduel_crumb';
 function crumb(step){try{store.setLocal(CRUMB,step+'|'+Math.round(performance.now()/100)/10)}catch(e){}}
 function crumbRead(){

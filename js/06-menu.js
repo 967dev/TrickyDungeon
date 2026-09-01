@@ -27,7 +27,7 @@ function renderMenu(){
   </button>
   <button class="mTile" data-go="gacha">
     <span class="tIc">${svgWrap('<path d="M13 2 L4 14 H11 L10 22 L20 9 H13 Z" fill="currentColor"/>')}</span>
-    <span class="tT">КАРТОЧНЫЙ ЛАРЁК</span><span class="tS">пак 5 карт · 100 искр</span>
+    <span class="tT">КАРТОЧНЫЙ ЛАРЁК</span><span class="tS">сегодня повезёт</span>
     ${S.sparks>=100?'<span class="tBadge">ЕСТЬ!</span>':''}
   </button>
   <button class="mTile" data-go="deck">
