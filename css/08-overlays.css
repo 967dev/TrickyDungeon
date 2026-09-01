@@ -38,6 +38,9 @@
 .insView{display:flex;gap:20px;align-items:flex-start}
 .insCard{width:200px;flex:none}
 .insCard .cWrap{width:100%;animation:none;pointer-events:none}
+/* В инспекторе флейвор уже стоит отдельной крупной строкой (.insFl), и на
+   карте он был бы вторым таким же — мелким. Оставляем читаемый. */
+.insCard .cfFl{display:none}
 .insInfo{flex:1;min-width:0}
 .insMeta{font-family:var(--disp);font-size:11px;color:var(--yel);letter-spacing:.04em;margin-bottom:10px;line-height:1.6}
 .insDesc{font-size:13px;line-height:1.6;color:#d8d5e2;margin-bottom:10px}

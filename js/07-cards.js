@@ -46,7 +46,14 @@ function cardHTML(c,opts={}){
       <div class="cfHead"><span class="cfCost">${c.c}</span><span class="cfStars">${stars}</span></div>
       <div class="cfArt">${svgWrap(c.ty==='u'?(EMB[c.el]||EMB.steel):(EMB[spellIcon(c)]||EMB.boom))}</div>
       <div class="cfName">${c.n}</div>
-      <div class="cfText">${kw?`<span class="cfKw">${kw}.</span> `:''}${eff||c.fl}</div>
+      ${/* Коробка с эффектом появляется, только если есть что написать: у
+            ванильного бойца пустая рамка читалась бы как потерянный текст. */''}
+      ${kw||eff?`<div class="cfText">${kw?`<span class="cfKw">${kw}.</span> `:''}${eff}</div>`:''}
+      ${/* Голос карты — отдельной строкой и ВСЕГДА. Раньше он стоял запасным
+            вариантом описания (`eff||c.fl`) и потому доставался одним лишь
+            бойцам без эффекта; на остальных 26 картах его не видел никто, он
+            жил только в справочнике tools/cards_sheet.py. */''}
+      ${c.fl?`<div class="cfFl">${c.fl}</div>`:''}
       ${atkHp}
       <div class="cfFoot"><span>${c.ty==='u'?'ЮНИТ':'ЭХО'}</span><span>${TIER_NAMES[c.t]}</span></div>
       ${opts.stk?`<div class="cfStk">${pick(c.stk||['!'])}</div>`:''}

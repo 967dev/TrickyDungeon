@@ -349,6 +349,10 @@
    поэтому читается одинаково. Подвал в руке убран: тир уже говорят звёзды,
    а юнит это или эхо — само наличие пары. */
 .hCard .cfFoot{display:none}
+/* Флейвор в руке не помещается: 106×146 минус имя, эффект и статы. Место
+   отдаём эффекту — по нему принимают решение. Голос карты читается долгим
+   нажатием, в крупном виде. */
+.hCard .cfFl{display:none}
 .hCard .cFront{padding-bottom:42px}
 .hCard .cfAtkHp{position:absolute;left:7px;right:7px;bottom:7px;margin:0;z-index:3}
 .hCard .cfAtkHp b{box-shadow:2px 2px 0 rgba(0,0,0,.55)}

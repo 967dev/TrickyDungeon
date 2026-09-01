@@ -138,22 +138,22 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .cWrap.tilt .cShine{translate:calc(var(--tx) * var(--dep) * 1.6px) calc(var(--ty) * var(--dep) * 1.6px)}
 .cWrap.tilt .holo i{translate:calc(var(--tx) * var(--dep) * 1.1px) 0}
 .cWrap.tilt .cfHead,.cWrap.tilt .cfName,.cWrap.tilt .cfText,
-.cWrap.tilt .cfAtkHp,.cWrap.tilt .cfFoot{
+.cWrap.tilt .cfFl,.cWrap.tilt .cfAtkHp,.cWrap.tilt .cfFoot{
   translate:calc(var(--tx) * var(--dep) * -.3px) calc(var(--ty) * var(--dep) * -.3px)}
 /* Слежение почти мгновенное, возврат плавный: длинный переход на слежении
    ощущается как задержка, а резкий возврат — как рывок. */
 .cWrap.tilt .cFront,.cWrap.tilt .cfArtImg,.cWrap.tilt .cScan,.cWrap.tilt .cGrain,
 .cWrap.tilt .cShine,.cWrap.tilt .holo i,.cWrap.tilt .cfHead,.cWrap.tilt .cfName,
-.cWrap.tilt .cfText,.cWrap.tilt .cfAtkHp,.cWrap.tilt .cfFoot{
+.cWrap.tilt .cfText,.cWrap.tilt .cfFl,.cWrap.tilt .cfAtkHp,.cWrap.tilt .cfFoot{
   transition:transform .1s linear,translate .1s linear}
 .cWrap.tilt.rest .cFront,.cWrap.tilt.rest .cfArtImg,.cWrap.tilt.rest .cScan,
 .cWrap.tilt.rest .cGrain,.cWrap.tilt.rest .cShine,.cWrap.tilt.rest .holo i,
 .cWrap.tilt.rest .cfHead,.cWrap.tilt.rest .cfName,.cWrap.tilt.rest .cfText,
-.cWrap.tilt.rest .cfAtkHp,.cWrap.tilt.rest .cfFoot{
+.cWrap.tilt.rest .cfFl,.cWrap.tilt.rest .cfAtkHp,.cWrap.tilt.rest .cfFoot{
   transition:transform .5s cubic-bezier(.2,.9,.3,1),translate .5s cubic-bezier(.2,.9,.3,1)}
 /* Слои проекции лежат на z-index 0..1, поэтому содержимому нужен свой уровень —
    иначе перелив и зерно ложились бы поверх текста. */
-.cfName,.cfText,.cfAtkHp,.cfFoot,.cfArt{position:relative;z-index:2}
+.cfName,.cfText,.cfFl,.cfAtkHp,.cfFoot,.cfArt{position:relative;z-index:2}
 .cfHead{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:2}
 .cfCost{font-family:var(--disp);font-size:19px;width:32px;height:32px;display:grid;place-items:center;
   background:var(--yel);color:#0a0a0e;border:2px solid #000;transform:rotate(-4deg);
@@ -186,6 +186,15 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .cfText{position:relative;z-index:2;font-size:9.5px;line-height:1.35;color:#cfccdd;text-align:center;
   font-style:italic;padding:4px 6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
 .cfKw{color:var(--yel);font-style:normal;font-family:var(--disp);font-size:8.5px;letter-spacing:.03em}
+/* Голос карты. Лежит ПОД описанием эффекта и заметно тише его: сперва игрок
+   читает, что карта делает, и только потом — кто это говорит. Кавычки в CSS,
+   а не в данных: во внутриигровой карте они нужны, а в справочнике карточка
+   ставит свои — иначе выходило «„Продаю с болью.“».
+   В руке боя строки нет (css/06-battle.css): там карта 106×146, и место
+   принадлежит эффекту. Прочитать целиком — долгим нажатием. */
+.cfFl{position:relative;z-index:2;font-size:8.5px;line-height:1.3;color:#8f8fa4;
+  text-align:center;font-style:italic;margin-top:5px}
+.cfFl::before{content:'«'}.cfFl::after{content:'»'}
 .cfFoot{position:relative;z-index:2;display:flex;justify-content:space-between;margin-top:6px;font-family:var(--mono);font-size:8px;color:var(--dim)}
 .cfAtkHp{position:relative;z-index:2;display:flex;justify-content:space-between;
   align-items:flex-start;margin-top:5px}
