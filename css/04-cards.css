@@ -131,7 +131,15 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 .cWrap.tilt .cFront{transform:rotateY(180deg)
   rotateY(calc(var(--tx) * var(--tilt) * 1deg))
   rotateX(calc(var(--ty) * var(--tilt) * -1deg))}
-.cWrap.tilt .cfArtImg{translate:calc(var(--tx) * var(--dep) * -1px) calc(var(--ty) * var(--dep) * -1px);
+/* Ход арта — в ПРОЦЕНТАХ от него самого, а не в пикселях. Запас, из которого
+   он ходит, даёт увеличение (scale), то есть он тоже доля карты: в пикселях
+   ход и запас меряются в разном, и совпадают они только при одном размере
+   карты. В колоде (330px, --dep:26) запаса 14,4% против хода 7,9% — держит;
+   в инспекторе боя (200px, --dep:10) уже 5,6% против 5,0%, и на повороте край
+   арта вылезал наружу. В процентах отношение постоянно при любом размере и
+   любом --dep: 0,555% запаса против 0,35% хода. */
+.cWrap.tilt .cfArtImg{
+  translate:calc(var(--tx) * var(--dep) * -.35%) calc(var(--ty) * var(--dep) * -.35%);
   scale:calc(1 + var(--dep) / 90)}
 .cWrap.tilt .cScan,.cWrap.tilt .cGrain{
   translate:calc(var(--tx) * var(--dep) * .5px) calc(var(--ty) * var(--dep) * .5px)}
