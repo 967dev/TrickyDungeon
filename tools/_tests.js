@@ -674,6 +674,28 @@
         ок(!р.ok, 'шестой юнит на поле не встаёт', JSON.stringify(р));
       }
 
+      /* --- ряд не разъезжается, пока падают клетки ---
+         Пустые клетки считались по ЖИВЫМ юнитам, а в ряду при этом ещё висят
+         узлы падающих: ячеек становилось больше пяти, ряд расползался шире
+         соседнего и живые клетки съезжали в сторону. Видно было в размене. */
+      {
+        dropBattleSnap(); startBattle(4);
+        B.p.hand = []; B.e.hand = [];
+        const св = [], вр = [];
+        for (let i = 0; i < 4; i++) { const u = mkUnit(byId('r02')); B.p.board.push(u); св.push(u) }
+        for (let i = 0; i < 2; i++) { const u = mkUnit(byId('r06')); u.canAtk = true; u.sick = false; B.e.board.push(u); вр.push(u) }
+        B.ev.length = 0; renderBattle();
+        равно(document.getElementById('rowP').children.length, 5, 'ряд: пять ячеек до размена');
+        B.ev.length = 0;
+        rAttack(B, 'e', вр[0], св[0]);
+        rAttack(B, 'e', вр[1], св[1]);
+        renderBattle();
+        равно(document.getElementById('rowP').children.length, 5,
+          'ряд: пять ячеек и посреди размена, пока падение не показано');
+        ок(B.p.board.length === 2, 'правила убрали павших с доски сразу', B.p.board.length);
+        B = null; чисто();
+      }
+
       /* --- ни одна карта не осталась без описания --- */
       for (const c of CARDS) {
         const т = тихо(() => effDesc(c).replace(/<[^>]+>/g, '').trim());

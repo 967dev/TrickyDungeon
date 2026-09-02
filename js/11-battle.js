@@ -1417,11 +1417,18 @@ function syncRow(row,board,side,targetable,slotHTML){
   }
   /* Узел павшего не трогаем: правила убрали его с доски сразу, но показать
      падение ещё только предстоит. .dying — падение уже играется, СМЕРТИ_ЖДУТ —
-     играется прямо сейчас, а очередь событий держит тех, до кого не дошли. */
+     играется прямо сейчас, а очередь событий держит тех, до кого не дошли.
+     Считаем их: такой узел ЗАНИМАЕТ клетку, и её надо вычесть из пустых —
+     иначе в ряду оказывается больше пяти ячеек. Видно это в размене, когда
+     падают двое: живые клетки съезжают в сторону, а ряд разъезжается шире
+     соседнего. */
+  let доигрывают=0;
   было.forEach(el=>{
-    if(el.classList.contains('dying'))return;
-    if(СМЕРТИ_ЖДУТ.has(+el.dataset.uid))return;
-    if(B&&B.ev&&B.ev.some(e=>e.t==='die'&&String(e.u.uid)===el.dataset.uid))return;
+    if(el.classList.contains('dying')
+      ||СМЕРТИ_ЖДУТ.has(+el.dataset.uid)
+      ||(B&&B.ev&&B.ev.some(e=>e.t==='die'&&String(e.u.uid)===el.dataset.uid))){
+      доигрывают++;return;
+    }
     el.remove();
   });
   row.querySelectorAll('.slot').forEach(el=>el.remove());
@@ -1429,7 +1436,7 @@ function syncRow(row,board,side,targetable,slotHTML){
     const cur=row.children[i];
     if(cur!==el)row.insertBefore(el,cur||null);
   });
-  const пусто=Math.max(0,5-видимые.length);
+  const пусто=Math.max(0,5-видимые.length-доигрывают);
   if(пусто){
     const t=document.createElement('div');
     t.innerHTML=slotHTML.repeat(пусто);
