@@ -48,21 +48,45 @@ body{margin:0;background:var(--bg,#0a0a0f);color:#e9e9f0;overflow:hidden;
   color:var(--yel);text-shadow:3px 3px 0 #000;letter-spacing:.01em}
 #шапка .под{font-family:var(--mono);font-size:10px;color:#8a8a9e;margin-top:3px}
 
-/* Подложка — своя, а не картинка. Точечная сетка и косые полосы уже язык игры,
-   под туманом фотографии всё равно не видно, а весит это ноль. Фон города
-   добавим, если станет пусто. */
-#карта{position:absolute;inset:0;
-  background-color:#0a0a0f;
-  background-image:
-    radial-gradient(rgba(255,255,255,.05) 1px,transparent 1.7px),
-    radial-gradient(ellipse 70% 55% at 30% 30%,rgba(90,120,190,.07),transparent 70%);
-  background-size:28px 28px,auto;
+#карта{position:absolute;inset:0;background-color:#08080c;
   transform-origin:22% 50%;
   transition:transform .5s cubic-bezier(.2,.9,.3,1)}
+
+/* ================= город под районами =================
+   Настоящая карта улиц, но НАРИСОВАННАЯ градиентами, а не картинкой. Три
+   причины: весит ноль, не разъезжается по стилю от партии к партии (наша
+   главная беда с артом) и её видно ровно настолько, насколько нужно — район
+   должен быть героем, а город фоном.
+   Слоя два и они повёрнуты по-разному: одна сетка, выровненная по экрану,
+   читается как таблица, а не как город. */
+#город,#город2{position:absolute;inset:-25%;z-index:0;pointer-events:none}
+#город{transform:rotate(-3.5deg);
+  background-image:
+    /* проспекты */
+    repeating-linear-gradient(90deg,rgba(155,195,255,.13) 0 2px,transparent 2px 172px),
+    repeating-linear-gradient(0deg, rgba(155,195,255,.12) 0 2px,transparent 2px 208px),
+    /* улицы */
+    repeating-linear-gradient(90deg,rgba(155,195,255,.055) 0 1px,transparent 1px 43px),
+    repeating-linear-gradient(0deg, rgba(155,195,255,.05) 0 1px,transparent 1px 52px)}
+#город2{transform:rotate(24deg);
+  background-image:
+    /* пара косых магистралей — они и ломают ощущение сетки */
+    repeating-linear-gradient(90deg,rgba(155,195,255,.085) 0 2px,transparent 2px 430px),
+    repeating-linear-gradient(0deg, rgba(155,195,255,.06) 0 1px,transparent 1px 96px)}
+
+/* Кварталы и свечение центра: без них улицы выглядят чертежом, а не местом. */
+#кварталы{position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    radial-gradient(ellipse 30% 22% at 26% 30%,rgba(90,130,210,.10),transparent 70%),
+    radial-gradient(ellipse 26% 20% at 76% 62%,rgba(210,90,170,.07),transparent 70%),
+    radial-gradient(ellipse 40% 30% at 52% 88%,rgba(90,130,210,.06),transparent 70%)}
+/* Края города уходят в темноту — карта не должна обрываться рамкой экрана. */
+#винь{position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 75% 70% at 50% 48%,transparent 40%,rgba(8,8,12,.85) 100%)}
 body.открыт #карта{transform:translateX(-16%) scale(.9)}
 
 /* ================= район ================= */
-.район{position:absolute;width:var(--ш);aspect-ratio:1.35/1;
+.район{position:absolute;z-index:2;width:var(--ш);aspect-ratio:1.35/1;
   transform:translate(-50%,-50%);cursor:pointer;
   transition:filter .35s,opacity .35s}
 .район>.жила{position:absolute;inset:0}
@@ -181,6 +205,10 @@ body.открыт #панель{transform:translateX(0)}
 
 <div id="сцена">
   <div id="карта">
+    <div id="город"></div>
+    <div id="город2"></div>
+    <div id="кварталы"></div>
+    <div id="винь"></div>
     <svg id="путь"></svg>
   </div>
 
@@ -317,12 +345,30 @@ function нарисоватьПуть(){
     const ax = ма.x/100*W, ay = ма.y/100*H;
     const bx = мб.x/100*W, by = мб.y/100*H;
     const глухой = b.акт > С.актов ? ' class="глухой"' : '';
+    /* От КРАЯ к краю, а не от центра к центру: дорога, выходящая из середины
+       района, читается как воткнутая в него булавка.
+       Район считаем эллипсом по его коробке — контур у него рваный, но
+       вписанный эллипс от него почти не отличается, а точка выхода тогда
+       берётся формулой, без обхода полигона. */
+    const кр = (м, dx, dy) => {
+      const пол = м.ш.replace('%','')/100*W/2;      /* полуось по ширине */
+      const a2 = пол, b2 = пол/1.35;                /* и по высоте: коробка 1.35:1 */
+      const t = 1/Math.hypot(dx/a2, dy/b2);
+      return [dx*t, dy*t];
+    };
+    const dx = bx-ax, dy = by-ay;
+    const [ox,oy] = кр(ма, dx, dy);
+    const [ix,iy] = кр(мб, -dx, -dy);
+    const зазор = 7;                                 /* чтобы пунктир не лип к обводке */
+    const дл = Math.hypot(dx,dy) || 1;
+    const нx = ax + ox + dx/дл*зазор, нy = ay + oy + dy/дл*зазор;
+    const кx = bx + ix - dx/дл*зазор, кy = by + iy - dy/дл*зазор;
     /* Небольшой изгиб в сторону — прямая между районами читается как линейка,
        а не как дорога. */
-    const cx = (ax+bx)/2 + (by-ay)*0.14, cy = (ay+by)/2 + (ax-bx)*0.14;
-    s += '<path' + глухой + ' d="M' + ax.toFixed(1) + ' ' + ay.toFixed(1) +
-         ' Q' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ' + bx.toFixed(1) + ' ' + by.toFixed(1) + '"/>';
-    s += '<circle' + глухой + ' cx="' + bx.toFixed(1) + '" cy="' + by.toFixed(1) + '" r="5"/>';
+    const cx = (нx+кx)/2 + (кy-нy)*0.14, cy = (нy+кy)/2 + (нx-кx)*0.14;
+    s += '<path' + глухой + ' d="M' + нx.toFixed(1) + ' ' + нy.toFixed(1) +
+         ' Q' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ' + кx.toFixed(1) + ' ' + кy.toFixed(1) + '"/>';
+    s += '<circle' + глухой + ' cx="' + кx.toFixed(1) + '" cy="' + кy.toFixed(1) + '" r="4.5"/>';
   }
   путь.innerHTML = s;
 }
