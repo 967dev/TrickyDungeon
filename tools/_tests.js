@@ -696,6 +696,22 @@
         B = null; чисто();
       }
 
+      /* --- поле вокруг арта того же цвета, что подложка самих артов ---
+         У всех артов верхний ряд пикселей = 0,0,0 (замерено по файлам).
+         Карта заливает поле вокруг картинки своим цветом, и стоило там
+         оказаться #0b0b11, как расхождения в 17 по синему хватало на еле
+         заметную рамку вокруг арта. Держим ноль. */
+      {
+        const к = document.createElement('div');
+        к.style.cssText = 'position:fixed;left:-9999px;width:200px';
+        к.innerHTML = cardHTML(byId('r05'), { open: 1, noAnim: 1 });
+        document.body.appendChild(к);
+        const арт = к.querySelector('.cfArtImg');
+        равно(арт ? getComputedStyle(арт).backgroundColor : 'нет узла', 'rgb(0, 0, 0)',
+          'поле вокруг арта — чистый чёрный, как подложка картинок');
+        к.remove();
+      }
+
       /* --- ни одна карта не осталась без описания --- */
       for (const c of CARDS) {
         const т = тихо(() => effDesc(c).replace(/<[^>]+>/g, '').trim());

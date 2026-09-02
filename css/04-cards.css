@@ -203,7 +203,13 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
    минус девять (была такая правка) выталкивал арт ЗА рамку, поверх светящейся
    кромки, и бока выглядели рваными. */
 .cFront.art .cfArtImg{position:absolute;inset:0;padding-top:10%;
-  background-color:#0b0b11;background-origin:content-box;
+  /* Заливка — ЧИСТЫЙ ЧЁРНЫЙ, ровно как подложка самих картинок (замерено: у
+     всех двадцати восьми верхний ряд пикселей = 0,0,0). Стояло #0b0b11 —
+     цвет карты, — и расхождение в 17 по синему рисовало вокруг арта еле
+     заметный прямоугольник. На наведении арт увеличивается и часть заливки
+     заслоняет, поэтому рамка не пропадала, а «слегка уменьшалась»: по этому
+     признаку баг и нашёлся. */
+  background-color:#000;background-origin:content-box;
   background-position:center top;background-size:100% auto;background-repeat:no-repeat;
   z-index:0}
 /* Растворение НИЗА картинки в ту же черноту — чтобы имя и текст лежали на
@@ -212,8 +218,8 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
    до 80% (10% отступа + 100% ширины на высоту карты в 1,38 ширины). Верх не
    трогаем вовсе — там нечего растворять. */
 .cFront.art .cfArtImg::after{content:'';position:absolute;inset:0;
-  background:linear-gradient(180deg,transparent 46%,rgba(11,11,17,.7) 66%,
-    #0b0b11 80%,#0b0b11 100%)}
+  background:linear-gradient(180deg,transparent 46%,rgba(0,0,0,.7) 66%,
+    #000 80%,#000 100%)}
 .cFront.art .cfArt{z-index:1}
 .cFront.art .cfArt svg{display:none}
 /* Имя поверх арта нуждается в подложке — иначе тонет в светлых местах. */
