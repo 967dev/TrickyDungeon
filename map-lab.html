@@ -22,7 +22,10 @@ body{margin:0;background:var(--bg,#0a0a0f);color:#e9e9f0;overflow:hidden;
   border-top:2px solid #2c2c38;font-family:var(--mono);font-size:11px}
 #пульт b{font-family:var(--disp);font-style:italic;color:var(--yel);font-size:12px}
 #пульт input[type=range]{width:170px;accent-color:var(--yel)}
-#пульт .знач{color:var(--yel);min-width:52px}
+#пульт .знач{color:var(--yel);min-width:44px}
+#пульт .разд{width:1px;height:20px;background:#2c2c38}
+#пульт label{display:flex;align-items:center;gap:5px;color:#8a8a9e;cursor:pointer}
+#пульт input[type=checkbox]{accent-color:var(--yel)}
 #пульт button{font-family:var(--mono);font-size:10px;letter-spacing:.08em;
   background:#16161f;color:#cfccdd;border:2px solid #2c2c38;padding:5px 9px;cursor:pointer}
 #пульт button:hover{border-color:var(--yel);color:var(--yel)}
@@ -97,6 +100,11 @@ body.открыт #карта{transform:translateX(-16%) scale(.9)}
    обвести clip-path напрямую нельзя. */
 .район .кайма{position:absolute;inset:-4px;clip-path:var(--блоб);background:#3a3a4c}
 .район .кадр{position:absolute;inset:0;clip-path:var(--блоб);overflow:hidden;background:#000}
+/* Район без арта — пустая площадка: расчищено, а смотреть пока нечего. Так
+   видно, что туман отошёл, и видно, что за ним ничего не приготовлено. */
+.район.пусто .кадр{background:
+  repeating-linear-gradient(-45deg,#101018 0 9px,#0b0b12 9px 20px)}
+.район.пусто .имя{color:#5a5a6e}
 .район .кадр img{width:100%;height:100%;object-fit:cover;display:block}
 /* Низ кадра гасим — на нём лежат имя и номер акта. */
 .район .кадр::after{content:'';position:absolute;inset:0;
@@ -266,12 +274,16 @@ body.открыт #панель{transform:translateX(0)}
 
 <div id="пульт">
   <b>СТЕНД</b>
-  <span>зачищено в акте:</span>
+  <span>районов открыто:</span>
+  <input type="range" id="пРайоны" min="1" max="6" value="1">
+  <span class="знач" id="пРайоныЗнач">1 / 6</span>
+  <span class="разд"></span>
+  <span>зачищено в текущем:</span>
   <input type="range" id="пПрогресс" min="0" max="10" value="0">
   <span class="знач" id="пПрогрессЗнач">0 / 10</span>
-  <button id="кАкт2">+ открыть акт 2</button>
+  <span class="разд"></span>
+  <label><input type="checkbox" id="пЖдать" checked> держать туман, пока нет содержимого</label>
   <button id="кСброс">сброс</button>
-  <span style="color:#5a5a6e">туман сходит только с района, за которым что-то есть</span>
 </div>
 
 <script>
@@ -289,14 +301,17 @@ const РАЙОНЫ = [
   {акт:1, имя:'ДОМ',          под:'ТВОЯ БАЗА',       боёв:10, арт:'art/story/scene4.webp', x:26, y:29, ш:'30%', блоб:1},
   {акт:2, имя:'БАР',          под:'«ЧЁРНАЯ ЗВЕЗДА»', боёв:10, арт:'art/story/boy1.webp',   x:71, y:25, ш:'27%', блоб:2},
   {акт:3, имя:'УЛИЦЫ ГОРОДА', под:'',                боёв:10, арт:'art/cards/c13.webp',    x:79, y:57, ш:'25%', блоб:3},
-  {акт:4, x:47, y:60, ш:'24%', блоб:2},
-  {акт:5, x:16, y:63, ш:'24%', блоб:1},
-  {акт:6, x:45, y:87, ш:'25%', блоб:3},
+  {акт:4, боёв:10, x:47, y:60, ш:'24%', блоб:2},
+  {акт:5, боёв:10, x:16, y:63, ш:'24%', блоб:1},
+  {акт:6, боёв:10, x:45, y:87, ш:'25%', блоб:3},
 ];
 /* Район готов к показу, только если за ним что-то есть. Отсюда и правило:
    туман сходит с района, а не с номера. */
 const есть = р => !!(р.имя && р.арт);
-const ПОСЛЕДНИЙ_ГОТОВЫЙ = РАЙОНЫ.filter(есть).length;
+const ждатьСодержимое = () => {
+  const г = document.getElementById('пЖдать');
+  return !г || г.checked;
+};
 
 /* Телефон: та же карта, но вытянутая вниз — на 375px район шириной в четверть
    экрана нечитаем. Раскладка ОТДЕЛЬНАЯ, а не пересчёт первой: на узком экране
@@ -336,9 +351,11 @@ const туман = document.getElementById('туман');
 function узкий(){ return innerWidth <= 700 }
 
 function состояние(р){
-  /* За районом ничего нет — он в тумане, сколько бы игрок ни прошёл.
-     Показать силуэт места, которого не существует, значит соврать. */
-  if (!есть(р)) return 'туман';
+  /* Правило игры: за районом ничего нет — он в тумане, сколько бы игрок ни
+     прошёл. Показать силуэт места, которого не существует, значит соврать.
+     В стенде это правило можно снять галочкой — иначе не посмотреть, как
+     туман отходит по всем шести. */
+  if (ждатьСодержимое() && !есть(р)) return 'туман';
   if (р.акт < С.актов) return 'пройден';
   if (р.акт === С.актов) return 'открыт';
   if (р.акт === С.актов + 1) return 'след';   /* один шаг вперёд виден всегда */
@@ -350,7 +367,7 @@ function нарисовать(){
   for (const р of РАЙОНЫ){
     const сост = состояние(р);
     const el = document.createElement('div');
-    el.className = 'район ' + сост;
+    el.className = 'район ' + сост + (есть(р) ? '' : ' пусто');
     el.style.setProperty('--блоб', БЛОБЫ[р.блоб]);
     const м = место(р);
     el.style.setProperty('--ш', м.ш);
@@ -361,7 +378,7 @@ function нарисовать(){
       '<div class="кадр">' +
         (р.арт ? '<img src="' + р.арт + '" alt="" draggable="false">' : '') + '</div>' +
       '<div class="бирка">АКТ ' + р.акт + '</div>' +
-      '<div class="имя">' + (р.имя || '') + '</div>' +
+      '<div class="имя">' + (р.имя || '—') + '</div>' +
       (р.под ? '<div class="подимя">' + р.под + '</div>' : '') +
       '<div class="замок"><svg viewBox="0 0 24 24">' +
         '<rect x="5" y="11" width="14" height="10"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>';
@@ -533,27 +550,31 @@ function открыть(р){
 document.getElementById('пЗакр').onclick = () => document.body.classList.remove('открыт');
 
 /* ================= пульт стенда ================= */
-const пр = document.getElementById('пПрогресс');
-пр.oninput = () => {
-  С.зачищено = +пр.value;
+/* Два ползунка нарочно РАЗВЯЗАНЫ. Туман ходит по районам, а не по боям, и
+   смотреть на него удобнее, дёргая районы напрямую. Зачистка внутри района на
+   туман не влияет — только на список квестов справа. */
+const прР = document.getElementById('пРайоны');
+const прЗ = document.getElementById('пПрогресс');
+const жд  = document.getElementById('пЖдать');
+
+function обновить(){
+  С.актов   = +прР.value;
+  С.зачищено = +прЗ.value;
+  document.getElementById('пРайоныЗнач').textContent = С.актов + ' / ' + РАЙОНЫ.length;
   document.getElementById('пПрогрессЗнач').textContent = С.зачищено + ' / 10';
-  /* Зачистил район целиком — туман отступает, открывается соседний. Но не
-     дальше того, за чем есть содержимое. */
-  if (С.зачищено >= РАЙОНЫ[С.актов-1].боёв && С.актов < ПОСЛЕДНИЙ_ГОТОВЫЙ){
-    С.актов++; С.зачищено = 0; пр.value = 0;
-    document.getElementById('пПрогрессЗнач').textContent = '0 / 10';
-  }
   нарисовать();
-  if (выбран) открыть(выбран);
-};
-document.getElementById('кАкт2').onclick = () => {
-  if (С.актов < ПОСЛЕДНИЙ_ГОТОВЫЙ){ С.актов++; С.зачищено = 0; пр.value = 0;
-    document.getElementById('пПрогрессЗнач').textContent = '0 / 10'; нарисовать() }
-};
+  /* Открытая панель могла смотреть на район, который только что ушёл в туман. */
+  if (выбран && состояние(выбран) === 'туман'){
+    выбран = null; document.body.classList.remove('открыт');
+  } else if (выбран) открыть(выбран);
+}
+прР.oninput = обновить;
+прЗ.oninput = обновить;
+жд.onchange = обновить;
 document.getElementById('кСброс').onclick = () => {
-  С.актов = 1; С.зачищено = 0; пр.value = 0;
-  document.getElementById('пПрогрессЗнач').textContent = '0 / 10';
-  document.body.classList.remove('открыт'); выбран = null; нарисовать();
+  прР.value = 1; прЗ.value = 0; жд.checked = true;
+  выбран = null; document.body.classList.remove('открыт');
+  обновить();
 };
 
 addEventListener('resize', () => { нарисовать(); if (выбран) открыть(выбран) });
