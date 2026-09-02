@@ -125,7 +125,7 @@ body.открыт #карта{transform:translateX(-16%) scale(.9)}
    что-то есть, и карта читается как тупик. */
 .район.след{cursor:default}
 .район.след .кайма{background:#23232e}
-.район.след .кадр img{filter:brightness(.17) contrast(.75) grayscale(.85)}
+.район.след .кадр img{filter:brightness(.42) contrast(.8) grayscale(.7)}
 .район.след .имя,.район.след .подимя,.район.след .бирка{display:none}
 .район.след .замок{display:block}
 
@@ -133,40 +133,34 @@ body.открыт #карта{transform:translateX(-16%) scale(.9)}
    Именно это отличает туман от восьми замков: замки читаются как «игру не
    доделали», туман — как «я туда ещё не дошёл». И картинка такому району не
    нужна вовсе: арт понадобится ровно тогда, когда появится акт. */
-.район.туман{cursor:default}
-.район.туман .кайма{background:#20202b;animation:дышит 9s ease-in-out infinite}
-.район.туман .кадр{background:
-  radial-gradient(ellipse at 50% 40%,#13131b,#0a0a10 78%)}
-.район.туман .кадр img{display:none}
-.район.туман .кадр::after{display:none}
-.район.туман .имя,.район.туман .подимя,.район.туман .бирка{display:none}
-.район.туман .дым{display:block}
-@keyframes дышит{50%{background:#2b2b39}}
+/* ================= туман =================
+   Туман лежит НА ВСЕЙ КАРТЕ одним слоем и открывает прогалы там, где игрок
+   был. Раньше он был у каждого района свой — и тогда по тёмным пятнам можно
+   было посчитать, сколько районов впереди, и увидеть их форму. То есть
+   «неизвестно» превращалось в «известно, но заперто».
+   Теперь неизведанное — сплошная муть: ни числа районов, ни их очертаний,
+   ни даже улиц под ними.
 
-/* Туман ЖИВОЙ: две пелены ползут в разные стороны с разной скоростью. Это и
-   есть разница между «тут ещё ничего нет» и «сюда я не дошёл» — неподвижное
-   пятно читается как недоделка, ползущее — как погода.
-   Клубы уходят за края района: их обрезает тот же clip-path, поэтому пелена
-   не выдаёт своей прямоугольной формы. */
-.район .дым{display:none;position:absolute;inset:0;z-index:2}
-.район .дым i{position:absolute;inset:-35%;
-  background:
-    radial-gradient(ellipse 40% 34% at 32% 42%,rgba(150,172,215,.17),transparent 66%),
-    radial-gradient(ellipse 34% 28% at 72% 62%,rgba(122,140,192,.14),transparent 64%);
-  animation:дым1 19s ease-in-out infinite alternate}
-.район .дым i+i{
-  background:
-    radial-gradient(ellipse 46% 30% at 64% 30%,rgba(172,152,212,.14),transparent 62%),
-    radial-gradient(ellipse 30% 26% at 26% 74%,rgba(140,160,200,.12),transparent 62%);
-  animation:дым2 27s ease-in-out infinite alternate-reverse}
-@keyframes дым1{
-  0%  {transform:translate(-7%,-4%) scale(1)}
-  55% {transform:translate(5%,5%)   scale(1.14)}
-  100%{transform:translate(8%,-3%)  scale(1.05)}}
-@keyframes дым2{
-  0%  {transform:translate(6%,3%)   scale(1.08)}
-  45% {transform:translate(-6%,-5%) scale(1)}
-  100%{transform:translate(-3%,6%)  scale(1.12)}}
+   Слой стоит ПОВЕРХ районов и дорог (z-index 3): дорога, уходящая в туман,
+   должна в нём и растворяться, а не обрываться на границе. */
+#туман{position:absolute;inset:0;z-index:3;pointer-events:none}
+/* Клубы ползут навстречу друг другу с разной скоростью: неподвижная муть
+   читается как недоделка, ползущая — как погода. Анимируем transform на
+   группах, без фильтров — фильтры на такой площади дорого стоят на телефоне. */
+#туман .клубы1{animation:клубы1 23s ease-in-out infinite alternate}
+#туман .клубы2{animation:клубы2 31s ease-in-out infinite alternate-reverse}
+@keyframes клубы1{
+  0%  {transform:translate(-2%,-1.5%) scale(1)}
+  55% {transform:translate(2%,2%)     scale(1.07)}
+  100%{transform:translate(3%,-1%)    scale(1.03)}}
+@keyframes клубы2{
+  0%  {transform:translate(2.5%,1%)   scale(1.05)}
+  45% {transform:translate(-2%,-2%)   scale(1)}
+  100%{transform:translate(-1%,2.5%)  scale(1.08)}}
+
+/* Район, до которого не дошли, не рисуем вовсе: под туманом его всё равно не
+   видно, а не отрисованного точно не подсмотришь. */
+.район.туман{display:none}
 
 .район .замок{display:none;position:absolute;left:50%;top:50%;z-index:3;
   transform:translate(-50%,-50%);width:17%;opacity:.42}
@@ -238,6 +232,7 @@ body.открыт #панель{transform:translateX(0)}
     <div id="кварталы"></div>
     <div id="винь"></div>
     <svg id="путь"></svg>
+    <svg id="туман"></svg>
   </div>
 
   <div id="шапка">
@@ -324,6 +319,7 @@ let выбран = null;
 /* ================= отрисовка ================= */
 const карта = document.getElementById('карта');
 const путь  = document.getElementById('путь');
+const туман = document.getElementById('туман');
 
 function узкий(){ return innerWidth <= 700 }
 
@@ -350,9 +346,8 @@ function нарисовать(){
     el.style.top  = м.y + '%';
     el.innerHTML =
       '<div class="кайма"></div>' +
-      '<div class="кадр">' + (сост === 'туман'
-        ? '<div class="дым"><i></i><i></i></div>'
-        : '<img src="' + р.арт + '" alt="" draggable="false">') + '</div>' +
+      '<div class="кадр">' +
+        (р.арт ? '<img src="' + р.арт + '" alt="" draggable="false">' : '') + '</div>' +
       '<div class="бирка">АКТ ' + р.акт + '</div>' +
       '<div class="имя">' + (р.имя || '') + '</div>' +
       (р.под ? '<div class="подимя">' + р.под + '</div>' : '') +
@@ -362,6 +357,7 @@ function нарисовать(){
     карта.appendChild(el);
   }
   нарисоватьПуть();
+  нарисоватьТуман();
   const п = document.getElementById('подзаг');
   п.textContent = 'акт ' + С.актов + ' из ' + РАЙОНЫ.length +
     ' · зачищено ' + С.зачищено + '/' + РАЙОНЫ[С.актов-1].боёв;
@@ -409,6 +405,54 @@ function нарисоватьПуть(){
     s += '<circle' + глухой + ' cx="' + кx.toFixed(1) + '" cy="' + кy.toFixed(1) + '" r="4.5"/>';
   }
   путь.innerHTML = s;
+}
+
+/* ================= туман =================
+   Прогал — чёрный эллипс в маске: маска считается по яркости, поэтому белое
+   оставляет туман, чёрное его убирает. Градиент от чёрного к белому даёт
+   мягкий край сам, без фильтра размытия — фильтр на такой площади дорог, а
+   на телефоне особенно.
+   Прогал ШИРЕ района: расчистить только его коробку значит вырезать в тумане
+   аккуратное окно, а нам нужно, чтобы вокруг обжитого места было видно и
+   улицы. */
+function нарисоватьТуман(){
+  const W = карта.clientWidth, H = карта.clientHeight;
+  туман.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  let прогалы = '', градиенты = '';
+  РАЙОНЫ.forEach((р, i) => {
+    const с = состояние(р);
+    if (с === 'туман') return;
+    /* Пройденное и открытое расчищаем совсем, а следующий район оставляем
+       ПОД РЕДЕЮЩЕЙ мутью: он должен угадываться, а не открываться. */
+    const глубина = с === 'след' ? '#6b6b6b' : '#000';
+    const м = место(р);
+    const cx = м.x/100*W, cy = м.y/100*H;
+    const rx = м.ш.replace('%','')/100*W * (с === 'след' ? 0.72 : 1.05);
+    градиенты += '<radialGradient id="пг' + i + '">' +
+      '<stop offset="0" stop-color="' + глубина + '"/>' +
+      '<stop offset="' + (с === 'след' ? '0.34' : '0.46') + '" stop-color="' + глубина + '"/>' +
+      '<stop offset="1" stop-color="#fff"/></radialGradient>';
+    прогалы += '<ellipse cx="' + cx.toFixed(0) + '" cy="' + cy.toFixed(0) + '" rx="' +
+      rx.toFixed(0) + '" ry="' + (rx*0.82).toFixed(0) + '" fill="url(#пг' + i + ')"/>';
+  });
+  /* Клубы — крупные светлые пятна с мягкими краями. Их немного и они большие:
+     муть должна дышать, а не рябить. */
+  const клуб = (x,y,r,a) => '<ellipse cx="' + (x*W).toFixed(0) + '" cy="' + (y*H).toFixed(0) +
+    '" rx="' + (r*W).toFixed(0) + '" ry="' + (r*W*0.7).toFixed(0) + '" fill="url(#клуб)" opacity="' + a + '"/>';
+  туман.innerHTML =
+    '<defs>' + градиенты +
+      '<radialGradient id="клуб">' +
+        '<stop offset="0" stop-color="#9fb0d4" stop-opacity=".5"/>' +
+        '<stop offset="1" stop-color="#9fb0d4" stop-opacity="0"/></radialGradient>' +
+      '<mask id="прогалы" maskUnits="userSpaceOnUse" x="0" y="0" width="' + W + '" height="' + H + '">' +
+        '<rect width="' + W + '" height="' + H + '" fill="#fff"/>' + прогалы +
+      '</mask>' +
+    '</defs>' +
+    '<g mask="url(#прогалы)">' +
+      '<rect width="' + W + '" height="' + H + '" fill="#08080d" opacity=".97"/>' +
+      '<g class="клубы1">' + клуб(.22,.72,.26,.55) + клуб(.62,.9,.3,.45) + '</g>' +
+      '<g class="клубы2">' + клуб(.45,.66,.24,.5)  + клуб(.8,.78,.22,.4) + '</g>' +
+    '</g>';
 }
 
 /* ================= панель ================= */
