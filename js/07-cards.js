@@ -68,6 +68,8 @@ function cardHTML(c,opts={}){
 const CARD_ART=new Set([
   'r01','r02','r03','r04','r05','r06','r07','r08','s01','s02',
   'c01','c02','c03','c05','c08','c09','c11','s03','s04',
+  /* третья партия, 2 сентября 2026 — тир ФРАКЦИЯ целиком */
+  'c04','c06','c07','c10','c12','c13','s05','s06','s07',
 ]);
 function spellIcon(c){return{dmg:'boom',healHero:'heal',healAll:'heal',draw:'card',buff:'up',buffAll:'up',aoe:'boom',weaken:'skull',drain:'skull',mana:'up'}[c.eff.k]||'boom'}
 
