@@ -56,6 +56,13 @@ OUT  = os.path.join(ROOT, 'art', 'cards')
 
 ДОЛЯ = 0.94   # какую часть квадрата занимает сюжет
 
+# Текстура тумана карты. Собирается отдельно от артов карт: ей не нужны ни
+# вписывание в квадрат, ни гашение каймы — у неё края и так чёрные, и именно
+# на этом держится бесшовное наложение копий (кладутся режимом screen, где
+# чёрное не рисуется вовсе). Контраст НЕ поднимаем: текстура тусклая нарочно,
+# а копий три, и яркости складываются — с подъёмом карта белеет.
+ТУМАН = ('smoke.png', 'fog.webp', 768, 80)
+
 
 def сюжет(im, порог=14):
     """Прямоугольник, за которым начинается чёрный фон. У всех артов подложка
@@ -138,8 +145,22 @@ def build(cid, src):
         im.resize((size, size), Image.LANCZOS).save(f, 'WEBP', quality=q, method=6)
         print('  %-4s %4d px -> %6.0f КБ  %s' % (cid, size, os.path.getsize(f) / 1024, f[len(ROOT) + 1:]))
 
+def build_fog():
+    src, out, size, q = ТУМАН
+    p = os.path.join(RAW, src)
+    if not os.path.exists(p):
+        print('  нет оригинала тумана: %s' % src); return
+    f = os.path.join(ROOT, 'art', out)
+    Image.open(p).convert('L').resize((size, size), Image.LANCZOS)         .save(f, 'WEBP', quality=q, method=6)
+    print('  %-6s %4d px -> %6.0f КБ  art/%s' % ('туман', size, os.path.getsize(f) / 1024, out))
+
+
 if __name__ == '__main__':
     only = sys.argv[1:]
+    if not only or 'fog' in only:
+        build_fog()
+    if only == ['fog']:
+        sys.exit(0)
     for cid, src in sorted(MAP.items()):
         if not only or cid in only:
             build(cid, src)

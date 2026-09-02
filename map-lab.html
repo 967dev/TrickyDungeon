@@ -147,16 +147,28 @@ body.открыт #карта{transform:translateX(-16%) scale(.9)}
 /* Клубы ползут навстречу друг другу с разной скоростью: неподвижная муть
    читается как недоделка, ползущая — как погода. Анимируем transform на
    группах, без фильтров — фильтры на такой площади дорого стоят на телефоне. */
-#туман .клубы1{animation:клубы1 23s ease-in-out infinite alternate}
-#туман .клубы2{animation:клубы2 31s ease-in-out infinite alternate-reverse}
+/* Три пелены одной и той же текстуры, разного размера и скорости. Одна копия
+   выдала бы себя формой, три перекрывающиеся дают клубы без узнаваемого
+   рисунка. Текстура тёмно-серая на ЧЁРНОМ, и рисуется она в режиме screen:
+   чёрное тогда не кладётся вовсе, поэтому копии стыкуются без швов — по краям
+   у каждой чистый ноль. */
+#туман .пелена{mix-blend-mode:screen}
+#туман .клубы1{animation:клубы1 34s ease-in-out infinite alternate}
+#туман .клубы2{animation:клубы2 47s ease-in-out infinite alternate-reverse}
+#туман .клубы3{animation:клубы3 61s linear infinite}
 @keyframes клубы1{
-  0%  {transform:translate(-2%,-1.5%) scale(1)}
-  55% {transform:translate(2%,2%)     scale(1.07)}
-  100%{transform:translate(3%,-1%)    scale(1.03)}}
+  0%  {transform:translate(-3%,-2%) scale(1)}
+  55% {transform:translate(3%,3%)   scale(1.09)}
+  100%{transform:translate(4%,-1%)  scale(1.04)}}
 @keyframes клубы2{
-  0%  {transform:translate(2.5%,1%)   scale(1.05)}
-  45% {transform:translate(-2%,-2%)   scale(1)}
-  100%{transform:translate(-1%,2.5%)  scale(1.08)}}
+  0%  {transform:translate(4%,2%)    scale(1.06)}
+  45% {transform:translate(-3%,-3%)  scale(1)}
+  100%{transform:translate(-2%,4%)   scale(1.1)}}
+/* Третья идёт в одну сторону без возврата: две пелены, ходящие туда-обратно,
+   вместе дают заметный ритм «вдох-выдох». Третья его ломает. */
+@keyframes клубы3{
+  0%  {transform:translate(-6%,2%)  scale(1.12)}
+  100%{transform:translate(6%,-2%)  scale(1.12)}}
 
 /* Район, до которого не дошли, не рисуем вовсе: под туманом его всё равно не
    видно, а не отрисованного точно не подсмотришь. */
@@ -435,23 +447,25 @@ function нарисоватьТуман(){
     прогалы += '<ellipse cx="' + cx.toFixed(0) + '" cy="' + cy.toFixed(0) + '" rx="' +
       rx.toFixed(0) + '" ry="' + (rx*0.82).toFixed(0) + '" fill="url(#пг' + i + ')"/>';
   });
-  /* Клубы — крупные светлые пятна с мягкими краями. Их немного и они большие:
-     муть должна дышать, а не рябить. */
-  const клуб = (x,y,r,a) => '<ellipse cx="' + (x*W).toFixed(0) + '" cy="' + (y*H).toFixed(0) +
-    '" rx="' + (r*W).toFixed(0) + '" ry="' + (r*W*0.7).toFixed(0) + '" fill="url(#клуб)" opacity="' + a + '"/>';
+  /* Пелена — копия текстуры, растянутая шире карты. Шире нарочно: она ещё и
+     ездит, и на краю не должно проступать её собственное чёрное поле. */
+  const пелена = (мш, dx, dy, a) => {
+    const ш = W*мш, в = ш;                        /* текстура квадратная */
+    return '<image class="пелена" href="art/fog.webp" preserveAspectRatio="none"' +
+      ' x="' + ((W-ш)/2 + W*dx).toFixed(0) + '" y="' + ((H-в)/2 + H*dy).toFixed(0) +
+      '" width="' + ш.toFixed(0) + '" height="' + в.toFixed(0) + '" opacity="' + a + '"/>';
+  };
   туман.innerHTML =
     '<defs>' + градиенты +
-      '<radialGradient id="клуб">' +
-        '<stop offset="0" stop-color="#9fb0d4" stop-opacity=".5"/>' +
-        '<stop offset="1" stop-color="#9fb0d4" stop-opacity="0"/></radialGradient>' +
       '<mask id="прогалы" maskUnits="userSpaceOnUse" x="0" y="0" width="' + W + '" height="' + H + '">' +
         '<rect width="' + W + '" height="' + H + '" fill="#fff"/>' + прогалы +
       '</mask>' +
     '</defs>' +
     '<g mask="url(#прогалы)">' +
       '<rect width="' + W + '" height="' + H + '" fill="#08080d" opacity=".97"/>' +
-      '<g class="клубы1">' + клуб(.22,.72,.26,.55) + клуб(.62,.9,.3,.45) + '</g>' +
-      '<g class="клубы2">' + клуб(.45,.66,.24,.5)  + клуб(.8,.78,.22,.4) + '</g>' +
+      '<g class="клубы1">' + пелена(1.5, -.06,  .12, .52) + '</g>' +
+      '<g class="клубы2">' + пелена(1.15, .10,  .22, .36) + '</g>' +
+      '<g class="клубы3">' + пелена(1.9,  .02, -.02, .24) + '</g>' +
     '</g>';
 }
 
