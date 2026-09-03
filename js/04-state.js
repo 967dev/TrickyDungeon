@@ -65,6 +65,7 @@ const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'
      как задумана, а урезать пусть решает тот, кому тяжело. */
   gfx:{irid:1,spec:1,scan:1,grain:1,glow:1,tilt:1},
   chats:{},   /* какие переписки уже прочитаны — по номеру этапа */
+  gifts:{},   /* какие подарки из переписок уже начислены — чтобы не дважды */
   /* Сколько районов карта УЖЕ показала открытыми. Отдельно от прогресса
      нарочно: прогресс говорит, сколько актов зачищено, а это — что игрок уже
      видел, как туман сходит. Без второго числа открытие района играло бы при
@@ -87,6 +88,7 @@ function fixS(s){
      по ключам, а не подменяем объект целиком: иначе будущий новый флаг
      затирал бы уже выбранное игроком. */
   if(!s.chats||typeof s.chats!=='object')s.chats={};
+  if(!s.gifts||typeof s.gifts!=='object')s.gifts={};
   if(!Number.isFinite(s.mapAct)||s.mapAct<1)s.mapAct=1;
   s.theEnd=s.theEnd?1:0;
   if(!s.promo||typeof s.promo!=='object')s.promo={};

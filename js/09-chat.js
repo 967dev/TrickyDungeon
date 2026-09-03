@@ -111,6 +111,22 @@ async function chStep(){
        момента, когда собеседник просто ушёл. */
     if(k==='sys'){ await sleep(620); if(!chOn){chBusy=false;return}
       chPush('sys',text); chI++; continue }
+    /* Подарок. Начисление стоит ЗДЕСЬ, а не в chatDone, ровно по одной
+       причине: строка «получено 300 искр» и изменившийся баланс обязаны
+       случиться в один момент. В chatDone искры приходили бы и тому, кто
+       закрыл переписку на первой реплике и обещания не видел. */
+    if(k==='gift'){ await sleep(620); if(!chOn){chBusy=false;return}
+      const сколько=text|0, от=emo||'', ключ=chatKey(chSi,chPart);
+      if(!S.gifts)S.gifts={};
+      if(!S.gifts[ключ]){
+        S.gifts[ключ]=1; S.sparks+=сколько; save();
+        sfx.sparks(); PF.notify&&PF.notify('success');
+        toast('+'+fmtN(сколько)+' '+plural(сколько,'искра','искры','искр')+
+          (от?' от '+от:''));
+      }
+      chPush('sys','Получено '+fmtN(сколько)+' '+
+        plural(сколько,'искра','искры','искр')+(от?'. Отправитель '+от:''));
+      chI++; continue }
     chFace('t',emo);
     await chTyping(260+Math.min(900,text.length*24));
     if(!chOn){chBusy=false;return}
