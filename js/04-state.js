@@ -71,6 +71,10 @@ const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'
      каждом заходе на карту, а без сохранения — не играло бы ни разу, если
      последний бой акта закончился выходом из игры. */
   mapAct:1,
+  /* Показывали ли уже «ПРОДОЛЖЕНИЕ СЛЕДУЕТ». Один раз само, дальше — только по
+     кнопке в табло района: экран-заглушка, который встаёт на пути каждый раз,
+     быстро превращается из события в помеху. */
+  theEnd:0,
   promo:{},   /* какие промокоды уже активированы — чтобы не вводить дважды */
   stats:{packs:0,wins:0,battles:0}};
 let S=load();
@@ -84,6 +88,7 @@ function fixS(s){
      затирал бы уже выбранное игроком. */
   if(!s.chats||typeof s.chats!=='object')s.chats={};
   if(!Number.isFinite(s.mapAct)||s.mapAct<1)s.mapAct=1;
+  s.theEnd=s.theEnd?1:0;
   if(!s.promo||typeof s.promo!=='object')s.promo={};
   if(!s.gfx||typeof s.gfx!=='object')s.gfx={};
   for(const k in DEF.gfx)if(s.gfx[k]!==0&&s.gfx[k]!==1)s.gfx[k]=DEF.gfx[k];
@@ -157,6 +162,7 @@ function go(id){
   if(id==='gacha')renderGacha(); else if(CUR==='gacha')crumb('ok-ушёл');
   if(id==='deck')renderDeck();
   if(id==='stages')renderStages();
+  if(id==='end')renderEnd();
   if(id==='settings')renderSettings();
 }
 document.addEventListener('click',e=>{

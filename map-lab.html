@@ -112,7 +112,9 @@ body{margin:0;background:var(--bg,#0a0a0f);color:#e9e9f0;overflow:hidden;
    а не игру, и любая логика здесь была бы второй реализацией. */
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
-const S  = {done:{}, stage:99, hero:'m', story:1, mapAct:1};
+/* theEnd сразу 1: финал доступного содержимого — экран игры, у стенда его нет,
+   и вставать он тут не должен. */
+const S  = {done:{}, stage:99, hero:'m', story:1, mapAct:1, theEnd:1};
 const save = () => {};
 let CUR = 'stages';
 const sfx = {ui(){}};
@@ -157,6 +159,9 @@ const enterStage = i => {
   });
   /* DIFF индексируется этапом, а этапов стало вшестеро больше. */
   while (DIFF.length < STAGES.length) DIFF.push('стенд');
+  /* Граница выпуска поднимается до всех районов: в игре она стоит на втором
+     акте, и с ней стенд не смог бы показать ни одного открытия. */
+  ФИНАЛ = АКТЫ.length;
 })();
 </script>
 

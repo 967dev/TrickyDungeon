@@ -146,6 +146,21 @@
   </div>
 </div>
 
+<!-- ===== ФИНАЛ ДОСТУПНОГО СОДЕРЖИМОГО =====
+     Наполнение — renderEnd() в js/13-map.js: там же живёт ФИНАЛ и подсчёт
+     пройденного, и разносить один вопрос по двум файлам незачем. -->
+<div class="screen" id="scr-end">
+  <div class="endWrap">
+    <div class="endBox">
+      <div class="endOver">КОНЕЦ ПЕРВОЙ ЧАСТИ</div>
+      <div class="endT">ПРОДОЛЖЕНИЕ<br>СЛЕДУЕТ<span class="endDots">...</span></div>
+      <div class="endS" id="endS"></div>
+      <div class="endActs" id="endActs"></div>
+      <button class="btn pri endGo" data-go="menu">◄ В МЕНЮ</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== КАРТА ГОРОДА (рейды) =====
      Акт — это район города, а не строка списка. Слои идут снизу вверх: город,
      дороги, районы, трасса открытия, туман, задник, табло. Порядок задан

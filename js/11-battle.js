@@ -1553,7 +1553,11 @@ function finish(win,forfeit){
       <div class="bResT ${win?'win':'lose'}">${win?'ПОБЕДА!!':forfeit?'ОТСТУПЛЕНИЕ':'ПРОВАЛ'}</div>
       <div class="bResS">${B.st.n} · <b>${gained?'+'+fmtN(gained)+' искр':'без награды'}</b> · побед: ${S.stats.wins}/${S.stats.battles}</div>
       <div class="bResB">
-        ${win&&B.si+1<STAGES.length?'<button class="btn pri" id="rNext">ДАЛЬШЕ ►</button>':''}
+        ${win&&мВсёПройдено()
+          /* Последний бой последнего готового акта: вести «ДАЛЬШЕ» некуда, и
+             отпускать игрока молча — значит закончить историю ничем. */
+          ?'<button class="btn pri" id="rEnd">ПРОДОЛЖЕНИЕ ►</button>'
+          :win&&B.si+1<STAGES.length?'<button class="btn pri" id="rNext">ДАЛЬШЕ ►</button>':''}
         <button class="btn" id="rRetry">ЕЩЁ РАЗ</button>
         <button class="btn" id="rMenu">В МЕНЮ</button>
       </div></div>`;
@@ -1579,6 +1583,11 @@ function finish(win,forfeit){
        начале finish, — к этому моменту B уже могут обнулить. */
     if(box.querySelector('#rNext'))
       box.querySelector('#rNext').onclick=()=>продолжить(()=>{close();enterStage(si+1)});
+    /* На финал идём МИМО показатьФинал: разговор уже отыграл «продолжить», и
+       вторая проверка предложила бы его снова тому, кто только что отказался. */
+    if(box.querySelector('#rEnd'))
+      box.querySelector('#rEnd').onclick=()=>продолжить(()=>{
+        close();B=null;S.theEnd=1;save();go('end')});
     box.querySelector('#rRetry').onclick=()=>продолжить(()=>{close();enterStage(si)});
     box.querySelector('#rMenu').onclick=()=>продолжить(()=>{close();B=null;go('menu')});
   },900);
