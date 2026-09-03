@@ -15,20 +15,32 @@
      объект Telegram лениво, а onload добирает телеграмную инициализацию. -->
 <script async id="tgsdk" src="https://telegram.org/js/telegram-web-app.js"
         onload="window.__tgReady&&window.__tgReady()"></script>
-<!-- Стили разрезаны по темам. ПОРЯДОК ССЫЛОК ЗНАЧИМ: правила одной силы
+<!-- МЕТКА СБОРКИ ?v=N на КАЖДОМ своём файле. Поднимать при каждой заливке.
+
+     Зачем. GitHub Pages отдаёт файлы с Cache-Control: max-age=600, а сборки у
+     нас нет — имена файлов постоянные. Значит вернувшийся в эти десять минут
+     игрок получает НОВЫЙ index.html и СТАРЫЕ скрипты из кеша, и это не
+     «немного устаревший вид», а поломка: на заливке карты города старый
+     08-collection.js и новый 13-map.js оба объявляли const ACT_STORY, и весь
+     модуль карты падал с SyntaxError, не начав выполняться. Экран рейдов у
+     такого игрока просто не открывался бы.
+     В webview Telegram кеш ещё упрямее, чем в браузере, — там это тем более
+     обязательно.
+
+     Стили разрезаны по темам. ПОРЯДОК ССЫЛОК ЗНАЧИМ: правила одной силы
      разрешаются по нему. Адаптив идёт последним, чтобы выигрывать всегда. -->
-<link rel="stylesheet" href="css/01-base.css">
-  <link rel="stylesheet" href="css/02-menu.css">
-  <link rel="stylesheet" href="css/03-gacha.css">
-  <link rel="stylesheet" href="css/04-cards.css">
-  <link rel="stylesheet" href="css/05-deck.css">
-  <link rel="stylesheet" href="css/06-battle.css">
-  <link rel="stylesheet" href="css/07-story.css">
-  <link rel="stylesheet" href="css/08-overlays.css">
-  <link rel="stylesheet" href="css/09-chat.css">
-  <link rel="stylesheet" href="css/10-settings.css">
-  <link rel="stylesheet" href="css/11-map.css">
-  <link rel="stylesheet" href="css/12-responsive.css">
+<link rel="stylesheet" href="css/01-base.css?v=2">
+  <link rel="stylesheet" href="css/02-menu.css?v=2">
+  <link rel="stylesheet" href="css/03-gacha.css?v=2">
+  <link rel="stylesheet" href="css/04-cards.css?v=2">
+  <link rel="stylesheet" href="css/05-deck.css?v=2">
+  <link rel="stylesheet" href="css/06-battle.css?v=2">
+  <link rel="stylesheet" href="css/07-story.css?v=2">
+  <link rel="stylesheet" href="css/08-overlays.css?v=2">
+  <link rel="stylesheet" href="css/09-chat.css?v=2">
+  <link rel="stylesheet" href="css/10-settings.css?v=2">
+  <link rel="stylesheet" href="css/11-map.css?v=2">
+  <link rel="stylesheet" href="css/12-responsive.css?v=2">
 </head>
 <body>
 
@@ -293,20 +305,20 @@
 <!-- Скрипт разрезан по темам. ПОРЯДОК ЗНАЧИМ: обычные скрипты выполняются
      подряд и вместе дают ровно тот порядок, что был в одном файле.
      Запуск идёт последним. -->
-<script src="js/01-core.js"></script>
-<script src="js/02-data.js"></script>
-<script src="js/03-fx.js"></script>
-<script src="js/04-state.js"></script>
-<script src="js/05-story.js"></script>
-<script src="js/06-menu.js"></script>
-<script src="js/07-cards.js"></script>
-<script src="js/08-collection.js"></script>
-<script src="js/09-chat.js"></script>
-<script src="js/10-rules.js"></script>
-<script src="js/11-battle.js"></script>
-<script src="js/12-training.js"></script>
-<script src="js/13-map.js"></script>
-<script src="js/14-ui.js"></script>
-<script src="js/15-boot.js"></script>
+<script src="js/01-core.js?v=2"></script>
+<script src="js/02-data.js?v=2"></script>
+<script src="js/03-fx.js?v=2"></script>
+<script src="js/04-state.js?v=2"></script>
+<script src="js/05-story.js?v=2"></script>
+<script src="js/06-menu.js?v=2"></script>
+<script src="js/07-cards.js?v=2"></script>
+<script src="js/08-collection.js?v=2"></script>
+<script src="js/09-chat.js?v=2"></script>
+<script src="js/10-rules.js?v=2"></script>
+<script src="js/11-battle.js?v=2"></script>
+<script src="js/12-training.js?v=2"></script>
+<script src="js/13-map.js?v=2"></script>
+<script src="js/14-ui.js?v=2"></script>
+<script src="js/15-boot.js?v=2"></script>
 </body>
 </html>
