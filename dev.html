@@ -24,12 +24,23 @@
 
      Данные (карты, этапы, районы) берутся из НАСТОЯЩЕГО js/02-data.js: своей
      копии здесь нет специально, копия разошлась бы с игрой.
+
+     Метки сборки ?v=N тут НЕТ, в отличие от index.html: чем больше файлов её
+     несут, тем вернее её забудут поднять, а забыть на index.html дорого, на
+     инструменте — нет. Если панель показывает старое, обнови жёстко
+     (Ctrl+Shift+R).
      ========================================================================= -->
 <link rel="stylesheet" href="css/01-base.css">
 
 <style>
+/* Отменяем то, что css/01-base.css делает для ИГРЫ. Игра — приложение из
+   экранов position:fixed, поэтому там html,body ростом ровно в экран и
+   overflow:hidden, а выделение текста выключено, чтобы драг карт не превращался
+   в выделение. Панель — обычная длинная страница: без этих трёх отмен она не
+   прокручивается вовсе, а стек ошибки из неё не скопировать. */
+html,body{height:auto;min-height:100%;overflow:visible}
 body{margin:0;background:#0a0a0f;color:#e9e9f0;font-family:'Segoe UI',Helvetica,Arial,sans-serif;
-  padding:0 0 40px}
+  padding:0 0 40px;user-select:text;-webkit-user-select:text}
 *{box-sizing:border-box}
 a{color:var(--cyn)}
 .шапка{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
