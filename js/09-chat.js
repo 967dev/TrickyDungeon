@@ -106,6 +106,11 @@ async function chStep(){
     const [k,text,emo]=bt[chI];
     if(k==='th'){ await sleep(420); if(!chOn){chBusy=false;return}
       chPush('think',text); chI++; continue }
+    /* Служебная строка идёт БЕЗ «печатает»: мессенджер не печатает, он
+       сообщает. Пауза чуть длиннее мысли — на ней держится вся неловкость
+       момента, когда собеседник просто ушёл. */
+    if(k==='sys'){ await sleep(620); if(!chOn){chBusy=false;return}
+      chPush('sys',text); chI++; continue }
     chFace('t',emo);
     await chTyping(260+Math.min(900,text.length*24));
     if(!chOn){chBusy=false;return}
@@ -137,7 +142,7 @@ function chatSend(){
 }
 function chPush(kind,text){
   const d=document.createElement('div');
-  d.className=kind==='think'?'chThink':'chMsg '+kind;
+  d.className=kind==='think'?'chThink':kind==='sys'?'chSys':'chMsg '+kind;
   d.textContent=sub(text);
   $('#chBody').appendChild(d);
   chBottom();

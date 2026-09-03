@@ -149,6 +149,16 @@
   line-height:1.45;color:#bda85a;padding:4px 8px;animation:chIn .26s cubic-bezier(.2,1.1,.3,1)}
 .chThink::before{content:'( '}
 .chThink::after{content:' )'}
+/* Служебная строка мессенджера. Ни пузырь, ни мысль: это говорит не человек, а
+   приложение. Поэтому по центру, серым, моно и без скобок — скобки у нас уже
+   значат мысль, и путать эти две вещи нельзя. */
+/* Подложка обязательна. Фон переписки в диагональную полосу, и служебная
+   строка серым по нему просто не читалась: мелкий капс на полосатом — худший
+   случай, какой бывает. Подложка отделяет её от полос, оставаясь тише пузыря. */
+.chSys{align-self:center;max-width:88%;text-align:center;font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#8a8a9e;
+  background:rgba(10,10,15,.72);border:1px solid #24242e;padding:5px 11px;
+  margin:2px 0;animation:chIn .26s cubic-bezier(.2,1.1,.3,1)}
 
 /* «Печатает» — то, что делает переписку живой: без паузы перед репликой чат
    читается как простыня текста, а не как разговор. */
