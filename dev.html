@@ -122,6 +122,7 @@ label.поле span{display:block;margin-bottom:4px}
   <h1>ДЕВ-ПАНЕЛЬ</h1>
   <span class="где" id="где"></span>
   <button class="важно" id="кИгра">▶ открыть игру</button>
+  <button id="кТексты">все тексты</button>
   <button id="кСтенд">карта: стенд</button>
   <button id="кОбновить">перечитать сейв</button>
 </div>
@@ -377,6 +378,7 @@ function связатьКнопки(){
   /* Метка времени в адресе, а не метка сборки: панель не должна знать её
      номер, а свежий index.html тут нужен всегда. */
   $('#кИгра').onclick=()=>location.href='index.html?t='+Date.now();
+  $('#кТексты').onclick=()=>location.href='story.html';
   $('#кСтенд').onclick=()=>location.href='map-lab.html';
   $('#кОбновить').onclick=()=>{ всё() };
 

@@ -1,0 +1,327 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Все тексты игры · БАМ-БАМ</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<!-- =========================================================================
+     ВСЕ ТЕКСТЫ ИГРЫ НА ОДНОЙ СТРАНИЦЕ
+
+     Читалка, а не редактор: правок тут нет, только показ. Нужна затем, что в
+     игре текст выдаётся по одной реплике и по одному бою — прочитать акт
+     целиком и увидеть, где он провисает, изнутри игры нельзя.
+
+     Данные берутся из НАСТОЯЩИХ файлов игры: js/05-story.js (сцены и чаты),
+     js/02-data.js (этапы), js/12-training.js (шаги обучения). Своих копий
+     текста тут нет специально — копия разошлась бы с игрой, а смысл страницы
+     ровно в том, чтобы показывать то, что игрок увидит.
+
+     Пол переключается кнопкой: род размечен внутри реплик ({ж|м}), и половина
+     текста читается по-разному. Кнопка «разметка» показывает исходную запись —
+     тем и проверяется, что варианты вообще расставлены.
+
+     Метки сборки ?v=N тут НЕТ (как и в dev.html): показывает старое — обнови
+     жёстко, Ctrl+Shift+R.
+     ========================================================================= -->
+<link rel="stylesheet" href="css/01-base.css">
+
+<style>
+/* Отменяем то, что css/01-base.css делает для ИГРЫ: там html,body ростом ровно
+   в экран, overflow:hidden и выключено выделение текста — верно для игры из
+   экранов position:fixed и смертельно для длинной читалки. Без этих трёх строк
+   страница не прокручивается и из неё нельзя скопировать реплику. */
+html,body{height:auto;min-height:100%;overflow:visible}
+body{margin:0;background:#0a0a0f;color:#e9e9f0;font-family:'Segoe UI',Helvetica,Arial,sans-serif;
+  padding:0 0 60px;user-select:text;-webkit-user-select:text}
+*{box-sizing:border-box}
+
+.шапка{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 14px;background:#0d0d14;border-bottom:3px solid var(--yel)}
+.шапка h1{font-family:var(--disp);font-style:italic;font-size:17px;margin:0;color:var(--yel)}
+.шапка .счёт{font-family:var(--mono);font-size:10px;color:#6a6a80;flex:1;min-width:110px}
+button{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;background:#16161f;
+  color:#cfccdd;border:2px solid #2c2c38;padding:6px 10px;cursor:pointer}
+button:hover{border-color:var(--yel);color:var(--yel)}
+button.вкл{background:var(--yel);color:#0a0a0e;border-color:#000}
+button.вкл:hover{color:#0a0a0e}
+input[type=text]{background:#0a0a0f;border:2px solid #2c2c38;color:#fff;
+  font-family:var(--mono);font-size:11px;padding:5px 8px;min-width:150px}
+
+.обёртка{max-width:820px;margin:0 auto;padding:16px 14px}
+.разд{font-family:var(--disp);font-style:italic;font-size:20px;color:var(--yel);
+  margin:26px 0 4px;text-shadow:3px 3px 0 #000}
+.разд:first-child{margin-top:0}
+.подразд{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:#6a6a80;margin-bottom:12px}
+
+/* Блок одного разговора или сцены. */
+.блок{border:2px solid #2c2c38;background:#101017;margin-bottom:14px}
+.блок>h3{font-family:var(--disp);font-size:13.5px;margin:0;padding:9px 12px;
+  background:#16161f;border-bottom:2px solid #2c2c38;color:#fff;
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.блок>h3 .ном{font-family:var(--disp);font-style:italic;color:var(--yel);flex:none}
+.блок>h3 small{font-family:var(--mono);font-size:9.5px;color:#6a6a80;font-weight:400;
+  letter-spacing:.1em;text-transform:uppercase;margin-left:auto}
+.часть{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:#8a8a9e;padding:10px 12px 2px}
+.лента{padding:6px 12px 12px;display:flex;flex-direction:column;gap:5px}
+
+/* Реплики. Оформление повторяет смысл, а не вид из игры: читалке важно, КТО
+   говорит, а не как выглядит пузырь. */
+.р{font-size:13.5px;line-height:1.5;padding:6px 10px;border-left:3px solid #2c2c38;
+  background:rgba(255,255,255,.03)}
+.р .кто{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  color:#5a5a6e;display:block;margin-bottom:3px}
+.р.них{border-left-color:#3a3a4c}
+.р.мы{border-left-color:var(--yel);background:rgba(255,213,46,.06)}
+.р.мы .кто{color:#8a7a30}
+.р.мысль{border-left-color:#bda85a;background:rgba(189,168,90,.06);font-style:italic;
+  color:#d8c98a}
+.р.служ{border-left-color:#5a5a6e;background:transparent;color:#8a8a9e;
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.р.клиент{border-left-color:var(--red)}
+.р.клиент .кто{color:#a04050}
+.р .эмо{font-family:var(--mono);font-size:9px;color:#4a4a5c;float:right;margin-left:8px}
+.р b{color:var(--yel);font-weight:400}
+/* Ключевое слово в подсказках обучения — там он и живёт. */
+.р .kw{font-family:var(--disp);font-size:11px;color:#0a0a0e;background:var(--cyn);
+  padding:1px 5px;letter-spacing:.04em}
+/* Кадр сцены: у сюжета реплики сгруппированы по картинкам. */
+.кадр{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:#454559;
+  padding:6px 12px 0;text-transform:uppercase}
+
+.пусто{font-family:var(--mono);font-size:11px;color:#5a5a6e;font-style:italic;
+  padding:10px 12px}
+.не-в-коде{border:2px dashed #3a3a4c;background:rgba(255,255,255,.02);padding:12px 14px;
+  font-size:13px;line-height:1.6}
+.не-в-коде a{color:var(--cyn)}
+.не-в-коде ul{margin:8px 0 0;padding-left:20px}
+.не-в-коде li{margin-bottom:4px}
+</style>
+
+<div class="шапка">
+  <h1>ВСЕ ТЕКСТЫ</h1>
+  <span class="счёт" id="счёт"></span>
+  <button id="кПол" class="вкл">играем за девушку</button>
+  <button id="кРазметка">разметка</button>
+  <input type="text" id="поиск" placeholder="поиск по репликам">
+  <button id="кКопия">скопировать всё</button>
+  <button id="кИгра">▶ игра</button>
+  <button id="кДев">дев-панель</button>
+</div>
+
+<div class="обёртка" id="тело"></div>
+
+<script>
+/* ================= заглушки игры =================
+   Файлы игры при загрузке ничего не выполняют — только объявляют данные и
+   функции. Поэтому хватает пустышек: они нужны лишь на случай, если что-то
+   всё-таки дотянется до глобали. */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const S  = {hero:'f', name:'ИГРОК', done:{}, inv:{}, deck:[], chats:{}, stage:99};
+const save=()=>{}, go=()=>{}, toast=()=>{};
+const sfx={ui(){}};
+const PF={};
+let B=null, CUR='story';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+</script>
+
+<script src="js/02-data.js"></script>
+<script src="js/05-story.js"></script>
+<script src="js/09-chat.js"></script>
+<script src="js/12-training.js"></script>
+
+<script>
+/* ================= показ =================
+   sub() берём игровой (js/09-chat.js): подстановка рода и имени должна быть
+   ровно та же, что увидит игрок. Своя копия разошлась бы — а именно её
+   правильность страница и проверяет. */
+let пол='f', разметка=false, поиск='';
+
+const уй = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+/* Текст реплики: либо как увидит игрок, либо как записан в файле. */
+function текст(t){
+  S.hero=пол;
+  return разметка ? уй(t) : уй(sub(t));
+}
+/* Разметку разворачиваем ТОЛЬКО у обучения, и это не придирка к аккуратности,
+   а точность показа. В игре три текста живут по-разному:
+     - сюжетная сцена: vnShow экранирует «<», то есть теги там не работают;
+     - чат: chPush пишет через textContent — теги тоже не работают;
+     - обучение: trRender пишет через innerHTML, и <b> со <span class="kw">
+       там настоящие, их 36 штук в исходнике.
+   Поэтому реплику сцены и чата показываем БУКВАЛЬНО: если кто-то напишет
+   в чате <b>, игрок увидит «<b>», и страница обязана показать то же. */
+const РАЗРЕШЕНО=[['&lt;b&gt;','<b>'],['&lt;/b&gt;','</b>'],
+                 ['&lt;span class="kw"&gt;','<span class="kw">'],['&lt;/span&gt;','</span>']];
+const теги = t => РАЗРЕШЕНО.reduce((s,[из,в])=>s.split(из).join(в), t);
+
+const подходит = t => !поиск || sub(t).toLowerCase().includes(поиск);
+
+/* ---------- реплика ---------- */
+function реплика(вид, кто, t, эмо, разметкаЖива){
+  return '<div class="р '+вид+'">'+
+    (кто?'<span class="кто">'+уй(кто)+(эмо?'<span class="эмо">'+уй(эмо)+'</span>':'')+'</span>':'')+
+    (разметкаЖива?теги(текст(t)):текст(t))+'</div>';
+}
+
+/* ---------- сюжетные сцены ---------- */
+/* Поле s у реплики: g — герой вслух, t — его мысли, c — вторая сторона.
+   Кадр (a) показываем строкой над репликами: в игре он меняет картинку, и по
+   нему видно, где сцена переключает вид. */
+const КТО_СЦЕНА={g:'герой · вслух',t:'герой · мысли',c:'вторая сторона'};
+const ВИД_СЦЕНА={g:'них мы',t:'мысль',c:'клиент'};
+function сценаHTML(ключ, ст){
+  let s='', кадр=null, реплик=0;
+  for(const б of ст.beats){
+    const строки=(б.l||[]).filter(([,t])=>подходит(t));
+    if(!строки.length)continue;
+    if(б.a!==кадр){ кадр=б.a;
+      s+='<div class="кадр">кадр '+кадр+' · '+ст.art+кадр+'.webp</div>' }
+    for(const [кто,t] of строки){
+      s+=реплика(ВИД_СЦЕНА[кто]||'них', КТО_СЦЕНА[кто]||кто, t);
+      реплик++;
+    }
+  }
+  if(!реплик)return '';
+  return '<div class="блок"><h3>'+уй(ст.title)+
+    '<small>'+(ключ==='f'?'за девушку':'за парня')+' · '+реплик+' реплик · '+
+    уй(ст.foe)+'</small></h3><div class="лента">'+s+'</div></div>';
+}
+
+/* ---------- чаты ---------- */
+const ВИД_ЧАТ={t:'них',m:'мы',th:'мысль',sys:'служ'};
+function лентаHTML(беаты, кто){
+  let s='', n=0;
+  for(const [вид,t,эмо] of беаты){
+    if(!подходит(t))continue;
+    const подпись=вид==='t'?кто:вид==='m'?'мы':вид==='th'?'мысль':'мессенджер';
+    s+=реплика(ВИД_ЧАТ[вид]||'них', подпись, t, эмо);
+    n++;
+  }
+  return {s,n};
+}
+function чатHTML(si, ч){
+  const ст=STAGES[si];
+  const pre=лентаHTML(ч.pre||[], ч.who);
+  const post=лентаHTML(ч.post||[], ч.who);
+  if(!pre.n&&!post.n)return '';
+  let s='<div class="блок"><h3><span class="ном">'+(ст&&ст.tutorial?'★':si)+'</span>'+
+    уй(ч.who)+'<small>'+(pre.n+post.n)+' реплик'+
+    (ст&&ст.n!==ч.who?' · этап: '+уй(ст.n):'')+'</small></h3>';
+  if(pre.n) s+='<div class="часть">до боя</div><div class="лента">'+pre.s+'</div>';
+  if(post.n)s+='<div class="часть">после победы</div><div class="лента">'+post.s+'</div>';
+  return s+'</div>';
+}
+
+/* ---------- обучение ---------- */
+/* trSteps() строит массив шагов; функции внутри (at/until) не вызываются, так
+   что позвать его вне боя безопасно. Текст шага — HTML с <b>. */
+function обучениеHTML(){
+  let шаги=[];
+  try{ шаги=trSteps() }catch(e){ return '<p class="пусто">Шаги обучения не прочитались: '+уй(e.message)+'</p>' }
+  let s='', n=0;
+  шаги.forEach((ш,i)=>{
+    if(!ш||!ш.t||!подходит(ш.t))return;
+    s+='<div class="р них"><span class="кто">шаг '+(i+1)+
+       (ш.btn?'<span class="эмо">кнопка: '+уй(ш.btn)+'</span>':'')+'</span>'+
+       теги(текст(ш.t))+'</div>';
+    n++;
+  });
+  if(!n)return '';
+  return '<div class="блок"><h3>БОТ-КАРТЁЖНИК<small>'+n+' шагов · этап 0</small></h3>'+
+    '<div class="лента">'+s+'</div></div>';
+}
+
+/* ---------- всё вместе ---------- */
+function нарисовать(){
+  let s='', всего=0;
+  const счёт=t=>{ всего+=(t.match(/class="р /g)||[]).length; return t };
+
+  s+='<div class="разд">СЮЖЕТНЫЕ СЦЕНЫ</div>'+
+     '<div class="подразд">экран новеллы · играется один раз перед первым рейдом</div>';
+  let ч='';
+  for(const к of ['f','m']) if(STORIES[к]) ч+=счёт(сценаHTML(к,STORIES[к]));
+  s+=ч||'<p class="пусто">Ничего не нашлось.</p>';
+
+  s+='<div class="разд">БАМ-ЧАТ</div>'+
+     '<div class="подразд">переписка с соперником · до боя и после победы</div>';
+  ч='';
+  for(const si of Object.keys(CHATS).map(Number).sort((a,b)=>a-b))
+    ч+=счёт(чатHTML(si,CHATS[si]));
+  s+=ч||'<p class="пусто">Ничего не нашлось.</p>';
+
+  s+='<div class="разд">ОБУЧЕНИЕ</div>'+
+     '<div class="подразд">подсказки в тренировочном бою</div>';
+  s+=счёт(обучениеHTML())||'<p class="пусто">Ничего не нашлось.</p>';
+
+  s+='<div class="разд">НАПИСАНО, НО ЕЩЁ НЕ В КОДЕ</div>'+
+     '<div class="подразд">сценарий акта 1 · ждёт катсцен</div>'+
+     '<div class="не-в-коде">Разговоры этапов 6, 9 и 10 уже в игре — они выше. '+
+     'А эти сцены пока живут только в сценарии '+
+     '<a href="story/%D0%B0%D0%BA%D1%821.md">story/акт1.md</a>:'+
+     '<ul>'+
+     '<li><b>«Кофейня»</b> — рекламный щит БАМ-ПАКа, БАМ-БАМБЛ, двое за соседним столиком про чёрный рынок искр и про ШШ. Играется после победы на этапе 7.</li>'+
+     '<li><b>«Утро. Звонок»</b> — будильник, молчание в трубке, человек в костюме и радар с именем игрока. Перед этапом 8.</li>'+
+     '<li><b>«Финальный день турнира»</b> — тёмный экран, зеркало, ШШ настраивает камеру. Тут он ГОВОРИТ, поэтому шипение его. Перед этапом 10.</li>'+
+     '<li><b>После победы над ШШ</b> — чат смеётся над ним, трон и корона, сообщение о призе.</li>'+
+     '<li><b>«Тёмная комната»</b> — две фигуры, «продолжайте работать». Крючок в акт 2.</li>'+
+     '</ul></div>';
+
+  $('#тело').innerHTML=s;
+  $('#счёт').textContent='реплик на экране: '+всего+
+    ' · пол: '+(пол==='f'?'девушка':'парень')+(разметка?' · показана разметка':'');
+}
+
+/* ---------- обычный текст для вычитки ---------- */
+function простыня(){
+  const стр=[];
+  S.hero=пол;
+  const ч=t=>разметка?t:sub(t);
+  стр.push('=== СЮЖЕТНЫЕ СЦЕНЫ ===');
+  for(const к of ['f','m']){
+    const ст=STORIES[к]; if(!ст)continue;
+    стр.push('','--- '+ст.title+' ('+(к==='f'?'за девушку':'за парня')+') ---');
+    for(const б of ст.beats) for(const [кто,t] of (б.l||[]))
+      стр.push((КТО_СЦЕНА[кто]||кто)+': '+ч(t));
+  }
+  стр.push('','=== БАМ-ЧАТ ===');
+  for(const si of Object.keys(CHATS).map(Number).sort((a,b)=>a-b)){
+    const c=CHATS[si];
+    стр.push('','--- этап '+si+' · '+c.who+' ---');
+    for(const [имя,ключ] of [['ДО БОЯ','pre'],['ПОСЛЕ ПОБЕДЫ','post']]){
+      if(!c[ключ])continue;
+      стр.push('['+имя+']');
+      for(const [вид,t] of c[ключ])
+        стр.push((вид==='t'?c.who:вид==='m'?'мы':вид==='th'?'(мысль)':'(мессенджер)')+': '+ч(t));
+    }
+  }
+  стр.push('','=== ОБУЧЕНИЕ ===');
+  try{ trSteps().forEach((ш,i)=>{ if(ш&&ш.t)
+    стр.push((i+1)+': '+ч(ш.t).replace(/<\/?b>/g,'')) }) }catch(e){}
+  return стр.join('\n');
+}
+
+/* ---------- пульт ---------- */
+$('#кПол').onclick=()=>{
+  пол = пол==='f' ? 'm' : 'f';
+  $('#кПол').textContent = пол==='f' ? 'играем за девушку' : 'играем за парня';
+  нарисовать();
+};
+$('#кРазметка').onclick=()=>{
+  разметка=!разметка;
+  $('#кРазметка').classList.toggle('вкл',разметка);
+  нарисовать();
+};
+$('#поиск').oninput=()=>{ поиск=$('#поиск').value.trim().toLowerCase(); нарисовать() };
+$('#кКопия').onclick=()=>{
+  const t=простыня();
+  try{ navigator.clipboard.writeText(t); $('#кКопия').textContent='скопировано';
+    setTimeout(()=>$('#кКопия').textContent='скопировать всё',1500) }
+  catch(e){ prompt('Скопируй вручную:',t) }
+};
+$('#кИгра').onclick=()=>location.href='index.html?t='+Date.now();
+$('#кДев').onclick=()=>location.href='dev.html';
+
+нарисовать();
+</script>
