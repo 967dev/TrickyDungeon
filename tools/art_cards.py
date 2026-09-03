@@ -57,6 +57,7 @@ MAP = {
     'L05': 'KURONA.png',
     'L06': 'VESTA.png',
     's08': 'HEARTOFABYSS.png',
+    's09': 'STING.png',
     'X01': '1WAYTICKET.png',
 }
 
