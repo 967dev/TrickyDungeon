@@ -229,6 +229,20 @@
       document.querySelector('.mapDist[data-act="1"]').click(); await жди(120);
       ок(document.querySelectorAll('#mpList .mQuest').length === боиАкта(1).length,
         'табло миссий наполнено', document.querySelectorAll('#mpList .mQuest').length);
+      /* Бои открываются ПООЧЕРЁДНО. Раньше весь акт лежал списком с именами и
+         описаниями врагов, до которых игрок не дошёл: и спойлер, и обесценивание
+         — открывшееся имя перестаёт быть событием. Видно пройденное, доступное
+         и ровно один шаг вперёд, у которого имени ещё нет. */
+      S.stage = 1; S.done = {}; save();
+      document.querySelector('.mapDist[data-act="1"]').click(); await жди(150);
+      равно(document.querySelectorAll('#mpList .mQuest').length, 3,
+        'на старте в табло только тренировка, первый бой и один шаг вперёд');
+      const посл = [...document.querySelectorAll('#mpList .mQuest')].pop();
+      ок(посл.classList.contains('lock'), 'шаг вперёд закрыт');
+      равно(посл.querySelector('.mqName').textContent, '???',
+        'у закрытого боя имени не видно');
+      ок(!посл.querySelector('.mqGo'), 'у закрытого боя нет кнопки в бой');
+      S.stage = 10; save();
       ок($('#mapScene').classList.contains('open'), 'табло выехало');
       /* Клик мимо табло закрывает его. Дважды пришлось ловить руками: сперва
          обработчики не были навешены вовсе, потом закрытие не сбрасывало

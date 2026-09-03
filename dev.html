@@ -1,0 +1,331 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Дев-панель · БАМ-БАМ</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<!-- =========================================================================
+     ДЕВ-ПАНЕЛЬ
+
+     Отдельная страница, а не панель внутри игры. Три причины:
+       - в игре её не нужно прятать за жестом и не нужно бояться, что она
+         вылезет игроку;
+       - она правит СЕЙВ, а не состояние в памяти: игра его перечитывает при
+         загрузке, и достаточно нажать «открыть игру»;
+       - падать ей можно свободно — игра от этого не сломается.
+
+     Работает через тот же localStorage, что и игра (ключ bbduel), поэтому
+     открывать надо с ТОГО ЖЕ адреса: localhost:8842/dev.html для стенда,
+     967dev.github.io/TrickyDungeon/dev.html для живого. С другого адреса это
+     другое хранилище, и правки уйдут в пустоту.
+
+     Оговорка про Telegram: сейв там дублируется в CloudStorage, а панель туда
+     не пишет. На телефоне правка доживёт до первой синхронизации с облаком —
+     для отладки этого хватает, для «переноса прогресса» не годится.
+
+     Данные (карты, этапы, районы) берутся из НАСТОЯЩЕГО js/02-data.js: своей
+     копии здесь нет специально, копия разошлась бы с игрой.
+     ========================================================================= -->
+<link rel="stylesheet" href="css/01-base.css">
+
+<style>
+body{margin:0;background:#0a0a0f;color:#e9e9f0;font-family:'Segoe UI',Helvetica,Arial,sans-serif;
+  padding:0 0 40px}
+*{box-sizing:border-box}
+a{color:var(--cyn)}
+.шапка{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:10px 14px;background:#0d0d14;border-bottom:3px solid var(--yel)}
+.шапка h1{font-family:var(--disp);font-style:italic;font-size:18px;margin:0;color:var(--yel)}
+.шапка .где{font-family:var(--mono);font-size:10px;color:#6a6a80;flex:1;min-width:120px}
+.обёртка{max-width:900px;margin:0 auto;padding:14px}
+section{border:2px solid #2c2c38;background:#101017;margin-bottom:14px}
+section>h2{font-family:var(--disp);font-size:13px;margin:0;padding:10px 13px;
+  background:#16161f;border-bottom:2px solid #2c2c38;color:#fff;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+section>h2 small{font-family:var(--mono);font-size:9.5px;color:#6a6a80;font-weight:400;
+  letter-spacing:.1em;text-transform:uppercase}
+.тело{padding:12px 13px}
+button{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;background:#16161f;
+  color:#cfccdd;border:2px solid #2c2c38;padding:6px 10px;cursor:pointer;margin:0 6px 6px 0}
+button:hover{border-color:var(--yel);color:var(--yel)}
+button.важно{background:var(--yel);color:#0a0a0e;border-color:#000;
+  font-family:var(--disp);font-style:italic}
+button.важно:hover{color:#0a0a0e}
+button.опасно:hover{border-color:var(--red);color:var(--red)}
+input[type=text],input[type=number]{background:#0a0a0f;border:2px solid #2c2c38;color:#fff;
+  font-family:var(--mono);font-size:11px;padding:5px 7px;width:100%}
+label.поле{display:block;font-family:var(--mono);font-size:9.5px;color:#8a8a9e;
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+label.поле span{display:block;margin-bottom:4px}
+.сетка{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 14px}
+
+/* ---- этапы ---- */
+.акт{font-family:var(--disp);font-size:12px;color:var(--yel);margin:14px 0 7px;
+  border-bottom:1px solid #2c2c38;padding-bottom:5px}
+.акт:first-child{margin-top:0}
+.этап{display:flex;align-items:center;gap:10px;padding:6px 8px;margin-bottom:4px;
+  background:rgba(255,255,255,.03);border-left:3px solid #262633;
+  font-family:var(--mono);font-size:11px}
+.этап.зачищен{border-left-color:#3dff8a}
+.этап.открыт{border-left-color:var(--yel);background:rgba(255,213,46,.07)}
+.этап.заперт{opacity:.5}
+.этап .ном{font-family:var(--disp);font-size:12px;width:22px;flex:none;text-align:center;color:var(--yel)}
+.этап .имя{flex:1;min-width:0;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.этап .чис{color:#6a6a80;font-size:9.5px;flex:none}
+.этап .метка{font-size:9px;letter-spacing:.08em;flex:none;width:76px;text-align:right}
+
+/* ---- карты ---- */
+.карты{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+.карта{display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.03);
+  border-left:3px solid var(--tc);font-family:var(--mono);font-size:10.5px}
+.карта .цена{font-family:var(--disp);font-size:12px;color:var(--tc);width:16px;flex:none;text-align:center}
+.карта .н{flex:1;min-width:0;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.карта .шт{color:#8a8a9e;width:26px;text-align:right;flex:none}
+.карта button{margin:0;padding:2px 6px;font-size:10px}
+
+/* ---- ошибки ---- */
+.ошибка{font-family:var(--mono);font-size:10px;padding:8px 9px;margin-bottom:6px;
+  background:rgba(255,51,85,.07);border-left:3px solid var(--red);white-space:pre-wrap;
+  word-break:break-word;color:#d8d8e2}
+.ошибка b{color:var(--red)}
+.пусто{font-family:var(--mono);font-size:10.5px;color:#5a5a6e;font-style:italic}
+.весть{font-family:var(--mono);font-size:10px;color:#3dff8a;margin-left:auto}
+</style>
+
+<div class="шапка">
+  <h1>ДЕВ-ПАНЕЛЬ</h1>
+  <span class="где" id="где"></span>
+  <button class="важно" id="кИгра">▶ открыть игру</button>
+  <button id="кСтенд">карта: стенд</button>
+  <button id="кОбновить">перечитать сейв</button>
+</div>
+
+<div class="обёртка">
+
+<section>
+  <h2>ПРОГРЕСС <small>правки применяются сразу</small><span class="весть" id="вестьП"></span></h2>
+  <div class="тело">
+    <div class="сетка">
+      <label class="поле"><span>герой (m/f)</span><input type="text" id="пГерой" maxlength="1"></label>
+      <label class="поле"><span>имя</span><input type="text" id="пИмя" maxlength="14"></label>
+      <label class="поле"><span>искры</span><input type="number" id="пИскры"></label>
+      <label class="поле"><span>stage — докуда открыто</span><input type="number" id="пЭтап" min="0"></label>
+      <label class="поле"><span>mapAct — районов показано</span><input type="number" id="пМапАкт" min="1"></label>
+      <label class="поле"><span>theEnd — финал показан (0/1)</span><input type="number" id="пФинал" min="0" max="1"></label>
+    </div>
+    <button id="кСюжет">переключить сюжет (story)</button>
+    <button id="кЧаты">забыть все переписки</button>
+    <button id="кИскры">+10 000 искр</button>
+    <button class="опасно" id="кСброс">сбросить сейв целиком</button>
+  </div>
+</section>
+
+<section>
+  <h2>ЭТАПЫ <small id="этапыСчёт"></small><span class="весть" id="вестьЭ"></span></h2>
+  <div class="тело">
+    <button id="кВсёОткрыть">открыть все</button>
+    <button id="кВсёЗачистить">зачистить все</button>
+    <button id="кНачало">только тренировка и первый</button>
+    <p class="пусто">Клик по строке переключает «зачищен». stage подтягивается сам:
+      открытым считается всё до первого незачищенного включительно.</p>
+    <div id="этапы"></div>
+  </div>
+</section>
+
+<section>
+  <h2>КАРТЫ <small id="картыСчёт"></small><span class="весть" id="вестьК"></span></h2>
+  <div class="тело">
+    <button id="кКартыВсе">выдать все по 2</button>
+    <button id="кКартыБаза">только рекруты (как у новичка)</button>
+    <button class="опасно" id="кКартыНоль">очистить коллекцию</button>
+    <p class="пусто">Колода не пересобирается сама: если убрать карту, которая в
+      колоде, игра при загрузке соберёт авто-колоду заново.</p>
+    <div class="карты" id="карты"></div>
+  </div>
+</section>
+
+<section>
+  <h2>ЖУРНАЛ ПАДЕНИЙ <small id="ошСчёт"></small><span class="весть" id="вестьО"></span></h2>
+  <div class="тело">
+    <button id="кОшКоп">скопировать всё</button>
+    <button class="опасно" id="кОшЧист">очистить</button>
+    <p class="пусто">Пишет сама игра, кольцом на 12 последних. Живёт отдельно от
+      сейва — сброс прогресса историю не уносит.</p>
+    <div id="ошибки"></div>
+  </div>
+</section>
+
+</div>
+
+<script src="js/02-data.js"></script>
+
+<script>
+/* ================= сейв =================
+   Читаем и пишем то же, что игра: ключ bbduel, JSON целиком. Своей схемы у
+   панели нет специально — она правит игровой сейв, а не свой.
+   Мягко: неизвестные поля не трогаем, чтобы панель не отставала от игры при
+   каждом новом флаге. */
+const КЛЮЧ='bbduel', ОШКЛЮЧ='bbduel_err';
+const $=s=>document.querySelector(s);
+let С=null;
+
+function читать(){
+  try{ С=JSON.parse(localStorage.getItem(КЛЮЧ)||'null') }catch(e){ С=null }
+  if(!С||typeof С!=='object')С={};
+  if(!С.done||typeof С.done!=='object')С.done={};
+  if(!С.inv ||typeof С.inv !=='object')С.inv={};
+  if(!Array.isArray(С.deck))С.deck=[];
+}
+function писать(куда){
+  try{ localStorage.setItem(КЛЮЧ,JSON.stringify(С)) }catch(e){}
+  if(куда){ куда.textContent='сохранено'; setTimeout(()=>куда.textContent='',1400) }
+}
+
+/* stage — «докуда открыто». Держим его согласованным с done: игра запирает бой
+   по i>S.stage, и вручную выставленный done без stage даёт зачищенный бой,
+   в который нельзя войти. */
+function подтянутьЭтап(){
+  let n=0;
+  for(let i=0;i<STAGES.length;i++){ if(С.done[i])n=i+1; else break }
+  С.stage=Math.max(С.stage|0,n);
+}
+
+/* ================= прогресс ================= */
+const поля=[['пГерой','hero','т'],['пИмя','name','т'],['пИскры','sparks','ч'],
+            ['пЭтап','stage','ч'],['пМапАкт','mapAct','ч'],['пФинал','theEnd','ч']];
+function рисоватьПрогресс(){
+  for(const [id,ключ,вид] of поля)
+    $('#'+id).value = (С[ключ]===undefined||С[ключ]===null) ? (вид==='ч'?0:'') : С[ключ];
+}
+function связатьПоля(){
+  for(const [id,ключ,вид] of поля){
+    $('#'+id).oninput=()=>{
+      const v=$('#'+id).value;
+      С[ключ] = вид==='ч' ? (parseInt(v,10)||0) : v;
+      писать($('#вестьП')); рисоватьЭтапы();
+    };
+  }
+}
+
+/* ================= этапы ================= */
+function рисоватьЭтапы(){
+  подтянутьЭтап();
+  let s='';
+  let текАкт=null, n=0;
+  STAGES.forEach((st,i)=>{
+    if(st.акт!==текАкт){
+      текАкт=st.акт; n=0;
+      const а=АКТЫ.find(a=>a.акт===текАкт)||{};
+      s+='<div class="акт">АКТ '+текАкт+' · '+(а.титул||а.имя||'без имени')+
+         (текАкт>ФИНАЛ?' — за границей выпуска':'')+'</div>';
+    }
+    const зач=!!С.done[i], зап=i>(С.stage|0);
+    const метка=зач?'ЗАЧИЩЕН':(зап?'ЗАКРЫТ':'ОТКРЫТ');
+    s+='<div class="этап '+(зач?'зачищен':(зап?'заперт':'открыт'))+
+      '" data-i="'+i+'">'+
+      '<span class="ном">'+(st.tutorial?'★':(++n))+'</span>'+
+      '<span class="имя">'+st.n+'</span>'+
+      '<span class="чис">'+st.hp+' хп · '+st.reward+' ⚡ · '+(DIFF[i]||'?')+'</span>'+
+      '<span class="метка" style="color:'+(зач?'#3dff8a':зап?'#5a5a6e':'#ffd52e')+'">'+
+        метка+'</span></div>';
+  });
+  $('#этапы').innerHTML=s;
+  const всего=STAGES.filter(st=>!st.tutorial).length;
+  const сделано=STAGES.filter((st,i)=>!st.tutorial&&С.done[i]).length;
+  $('#этапыСчёт').textContent='зачищено '+сделано+' из '+всего+' · stage='+(С.stage|0);
+  document.querySelectorAll('#этапы .этап').forEach(el=>el.onclick=()=>{
+    const i=+el.dataset.i;
+    if(С.done[i])delete С.done[i]; else С.done[i]=1;
+    писать($('#вестьЭ')); рисоватьЭтапы(); рисоватьПрогресс();
+  });
+}
+
+/* ================= карты ================= */
+function рисоватьКарты(){
+  const пул=CARDS.filter(c=>!c.noColl);
+  $('#карты').innerHTML=пул.map(c=>{
+    const цв=c.ult?'#ff3355':TIER_HEX[c.t];
+    const шт=С.inv[c.id]|0;
+    return '<div class="карта" style="--tc:'+цв+'" data-id="'+c.id+'">'+
+      '<span class="цена">'+c.c+'</span>'+
+      '<span class="н">'+c.n+'</span>'+
+      '<span class="шт">'+шт+'×</span>'+
+      '<button data-d="-1">−</button><button data-d="1">+</button></div>';
+  }).join('');
+  const есть=пул.filter(c=>(С.inv[c.id]|0)>0).length;
+  $('#картыСчёт').textContent='собрано '+есть+' из '+пул.length+
+    ' · в колоде '+(С.deck?С.deck.length:0);
+  document.querySelectorAll('#карты button').forEach(b=>b.onclick=()=>{
+    const id=b.closest('.карта').dataset.id;
+    const n=Math.max(0,Math.min(20,(С.inv[id]|0)+ +b.dataset.d));
+    if(n)С.inv[id]=n; else delete С.inv[id];
+    писать($('#вестьК')); рисоватьКарты();
+  });
+}
+
+/* ================= журнал падений ================= */
+function читатьОшибки(){
+  try{ const a=JSON.parse(localStorage.getItem(ОШКЛЮЧ)||'[]'); return Array.isArray(a)?a:[] }
+  catch(e){ return [] }
+}
+function рисоватьОшибки(){
+  const сп=читатьОшибки();
+  $('#ошСчёт').textContent=сп.length?('записей: '+сп.length):'пусто';
+  $('#ошибки').innerHTML = сп.length
+    ? сп.slice().reverse().map(з=>'<div class="ошибка"><b>'+уй(з.m||'?')+'</b>\n'+
+        уй((з.t||'').replace('T',' ').slice(0,19))+' · экран: '+уй(з.экран||'?')+
+        (з.s?('\n\n'+уй(з.s)):'')+'</div>').join('')
+    : '<p class="пусто">Ни одного падения не записано.</p>';
+}
+const уй=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ================= кнопки ================= */
+function связатьКнопки(){
+  /* Метка времени в адресе, а не метка сборки: панель не должна знать её
+     номер, а свежий index.html тут нужен всегда. */
+  $('#кИгра').onclick=()=>location.href='index.html?t='+Date.now();
+  $('#кСтенд').onclick=()=>location.href='map-lab.html';
+  $('#кОбновить').onclick=()=>{ всё() };
+
+  $('#кСюжет').onclick=()=>{ С.story=С.story?0:1; писать($('#вестьП')); рисоватьПрогресс() };
+  $('#кЧаты').onclick=()=>{ С.chats={}; писать($('#вестьП')) };
+  $('#кИскры').onclick=()=>{ С.sparks=(С.sparks|0)+10000; писать($('#вестьП')); рисоватьПрогресс() };
+  $('#кСброс').onclick=()=>{
+    if(!confirm('Стереть сейв целиком? Журнал падений останется.'))return;
+    localStorage.removeItem(КЛЮЧ); localStorage.removeItem('bbduel_battle');
+    всё();
+  };
+
+  $('#кВсёОткрыть').onclick=()=>{ С.stage=STAGES.length; писать($('#вестьЭ'));
+    рисоватьЭтапы(); рисоватьПрогресс() };
+  $('#кВсёЗачистить').onclick=()=>{ С.done={};
+    STAGES.forEach((st,i)=>С.done[i]=1); С.stage=STAGES.length;
+    писать($('#вестьЭ')); рисоватьЭтапы(); рисоватьПрогресс() };
+  $('#кНачало').onclick=()=>{ С.done={}; С.stage=1; С.mapAct=1; С.theEnd=0;
+    писать($('#вестьЭ')); рисоватьЭтапы(); рисоватьПрогресс() };
+
+  $('#кКартыВсе').onclick=()=>{ С.inv={};
+    CARDS.filter(c=>!c.noColl).forEach(c=>С.inv[c.id]=2);
+    писать($('#вестьК')); рисоватьКарты() };
+  $('#кКартыБаза').onclick=()=>{ С.inv={};
+    CARDS.filter(c=>c.t===0&&!c.noColl).forEach(c=>С.inv[c.id]=2);
+    писать($('#вестьК')); рисоватьКарты() };
+  $('#кКартыНоль').onclick=()=>{ С.inv={}; писать($('#вестьК')); рисоватьКарты() };
+
+  $('#кОшКоп').onclick=()=>{
+    const t=читатьОшибки().map(з=>[з.t,з.экран,з.m,з.s].join('\n')).join('\n\n---\n\n');
+    try{ navigator.clipboard.writeText(t||'(пусто)');
+      $('#вестьО').textContent='скопировано';
+      setTimeout(()=>$('#вестьО').textContent='',1400) }
+    catch(e){ prompt('Скопируй вручную:',t) }
+  };
+  $('#кОшЧист').onclick=()=>{ localStorage.removeItem(ОШКЛЮЧ); рисоватьОшибки() };
+}
+
+function всё(){
+  читать();
+  $('#где').textContent='хранилище: '+location.origin+location.pathname.replace(/dev\.html$/,'')+
+    ' · сейв '+(localStorage.getItem(КЛЮЧ)?'есть':'пустой');
+  рисоватьПрогресс(); рисоватьЭтапы(); рисоватьКарты(); рисоватьОшибки();
+}
+связатьПоля(); связатьКнопки(); всё();
+</script>

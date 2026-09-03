@@ -28,10 +28,34 @@
    всё на верхнем уровне и показываем плашку с выходом в меню.
    Стили — инлайном: плашка обязана нарисоваться, даже если сломалось
    что-то до неё. */
+/* ЖУРНАЛ ПАДЕНИЙ. Пишется в хранилище кольцом на 12 записей и читается
+   dev.html. Причина простая: сообщение об ошибке живёт на плашке до первого
+   нажатия, а в webview Telegram его ни скопировать, ни сфотографировать
+   толком нельзя — «видел ошибку, но не успел» это ровно то, что случилось.
+   Теперь падение переживает перезагрузку, и его можно прочитать потом.
+   Ключ отдельный от сейва: сейв игрок может сбросить, а история падений тогда
+   уходит вместе с ним — а она нужна как раз в этот момент.
+   localStorage напрямую, а не через store: store объявлен ниже по файлу, и
+   падение ДО него не должно остаться незаписанным. */
+const ERRKEY='bbduel_err';
+function errLog(err){
+  try{
+    /* CUR лежит в 04-state.js. До его загрузки обращение к нему — временная
+       мёртвая зона, и даже typeof по ней бросает. Поэтому try, а не проверка. */
+    let экран='?'; try{ экран=CUR }catch(e){}
+    const з={t:new Date().toISOString(),экран,
+      m:((err&&(err.message||err))+'').slice(0,300),
+      s:((err&&err.stack)||'').slice(0,900)};
+    const был=JSON.parse(localStorage.getItem(ERRKEY)||'[]');
+    был.push(з);
+    localStorage.setItem(ERRKEY,JSON.stringify(был.slice(-12)));
+  }catch(e){}
+}
 const crash=(()=>{
   let shown=false;
   return function crash(err){
     try{console.error('[bbduel]',err)}catch(e){}
+    errLog(err);
     if(shown)return;shown=true;
     const box=document.createElement('div');
     box.setAttribute('style','position:fixed;left:8px;right:8px;'+
@@ -40,13 +64,22 @@ const crash=(()=>{
       'padding:12px 14px;color:#f2f2f6;font:600 12px/1.35 ui-monospace,Consolas,monospace');
     const msg=document.createElement('div');
     msg.textContent='Что-то сломалось: '+((err&&(err.message||err))+'').slice(0,140);
-    const btn=document.createElement('button');
-    btn.textContent='В МЕНЮ';
-    btn.setAttribute('style','margin-top:10px;background:#ffd52e;color:#0a0a0f;border:2px solid #000;'+
-      'padding:7px 14px;font:900 12px/1 Arial Black,Impact,sans-serif;cursor:pointer');
-    btn.onclick=()=>{box.remove();shown=false;
-      try{if(typeof go==='function')go('menu')}catch(e){location.reload()}};
-    box.appendChild(msg);box.appendChild(btn);
+    const кнопка=(t,ж)=>{const b=document.createElement('button');
+      b.textContent=t;
+      b.setAttribute('style','margin:10px 8px 0 0;background:#ffd52e;color:#0a0a0f;'+
+        'border:2px solid #000;padding:7px 14px;'+
+        'font:900 12px/1 Arial Black,Impact,sans-serif;cursor:pointer');
+      b.onclick=ж;return b};
+    const btn=кнопка('В МЕНЮ',()=>{box.remove();shown=false;
+      try{if(typeof go==='function')go('menu')}catch(e){location.reload()}});
+    /* Скопировать — прямо здесь. Пересказывать текст ошибки словами по памяти
+       бесполезно: в стеке весь смысл, а он не запоминается. */
+    const коп=кнопка('КОПИРОВАТЬ',()=>{
+      const t=((err&&(err.message||err))+'')+'\n'+((err&&err.stack)||'');
+      try{navigator.clipboard.writeText(t);коп.textContent='СКОПИРОВАНО'}
+      catch(e){коп.textContent='НЕ ВЫШЛО — см. dev.html'}
+    });
+    box.appendChild(msg);box.appendChild(коп);box.appendChild(btn);
     (document.body||document.documentElement).appendChild(box);
   };
 })();
