@@ -84,14 +84,30 @@ label.поле span{display:block;margin-bottom:4px}
 .этап .чис{color:#6a6a80;font-size:9.5px;flex:none}
 .этап .метка{font-size:9px;letter-spacing:.08em;flex:none;width:76px;text-align:right}
 
-/* ---- карты ---- */
-.карты{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
-.карта{display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.03);
+/* ---- карты ----
+   Список карт тут не только счётчик коллекции, но и СПРАВОЧНИК: цена, статы,
+   стихия, ключевые слова, эффект и подпись. Эти данные больше нигде не видно
+   разом — в игре карта показывается по одной, а в базе лежит одной строкой без
+   расшифровки эффекта. */
+.фильтр{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.фильтр input[type=text]{width:auto;flex:1;min-width:140px}
+.фильтр button.вкл{border-color:var(--yel);color:var(--yel)}
+.карты{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:7px}
+.карта{padding:8px 9px;background:rgba(255,255,255,.03);
   border-left:3px solid var(--tc);font-family:var(--mono);font-size:10.5px}
-.карта .цена{font-family:var(--disp);font-size:12px;color:var(--tc);width:16px;flex:none;text-align:center}
-.карта .н{flex:1;min-width:0;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.карта .шт{color:#8a8a9e;width:26px;text-align:right;flex:none}
+.карта .верх{display:flex;align-items:center;gap:8px}
+.карта .цена{font-family:var(--disp);font-size:13px;color:var(--tc);width:18px;flex:none;
+  text-align:center}
+.карта .н{flex:1;min-width:0;font-family:var(--disp);font-size:12px;color:#fff;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.карта .шт{color:var(--yel);width:26px;text-align:right;flex:none}
 .карта button{margin:0;padding:2px 6px;font-size:10px}
+.карта .строка{color:#8a8a9e;margin-top:5px;line-height:1.5}
+.карта .строка b{color:#cfccdd;font-weight:400}
+.карта .кл{color:var(--cyn)}
+.карта .эф{color:#9ecfa0}
+.карта .подпись{color:#5a5a6e;font-style:italic;margin-top:4px}
+.карта .ид{color:#3a3a4c}
 
 /* ---- ошибки ---- */
 .ошибка{font-family:var(--mono);font-size:10px;padding:8px 9px;margin-bottom:6px;
@@ -150,6 +166,10 @@ label.поле span{display:block;margin-bottom:4px}
     <button class="опасно" id="кКартыНоль">очистить коллекцию</button>
     <p class="пусто">Колода не пересобирается сама: если убрать карту, которая в
       колоде, игра при загрузке соберёт авто-колоду заново.</p>
+    <div class="фильтр" id="фильтр">
+      <input type="text" id="пПоиск" placeholder="поиск по имени, эффекту, стихии, id">
+      <button data-т="все" class="вкл">все</button>
+    </div>
     <div class="карты" id="карты"></div>
   </div>
 </section>
@@ -250,27 +270,90 @@ function рисоватьЭтапы(){
   });
 }
 
-/* ================= карты ================= */
+/* ================= карты =================
+   Эффект расшифровываем ЗДЕСЬ, коротко и по данным. Тянуть игровой effDesc()
+   нельзя: он живёт в 06-menu.js, тащит за собой plural из 09-chat.js и пишет
+   текст для игрока — с «боевым кличем» и «эхо-заклятием». Панели нужно обратное:
+   что в поле eff лежит на самом деле. */
+const ЭФФЕКТЫ={
+  dmg:'урон цели', healHero:'лечит героя', healAll:'лечит всех своих',
+  draw:'взять карт', buff:'усилить одного', buffAll:'усилить всех',
+  aoe:'урон всем врагам', weaken:'ослабить врагов',
+  drain:'урон герою + лечение', mana:'мана на ход'
+};
+function эффектом(c){
+  const e=c.eff; if(!e)return '';
+  const имя=ЭФФЕКТЫ[e.k]||e.k;
+  const ч=[];
+  if(e.v!==undefined)ч.push(e.v);
+  if(e.a)ч.push('+'+e.a+' атк');
+  if(e.h)ч.push('+'+e.h+' хп');
+  return имя+(ч.length?' ('+ч.join(', ')+')':'')+(e.tg?' · цель: '+e.tg:'');
+}
+const КЛЮЧИ={taunt:'ТАУНТ',rush:'РАШ'};
+
+let тир='все', поиск='';
 function рисоватьКарты(){
   const пул=CARDS.filter(c=>!c.noColl);
-  $('#карты').innerHTML=пул.map(c=>{
+  const п=поиск.trim().toLowerCase();
+  const видно=пул.filter(c=>{
+    if(тир!=='все'&&String(c.t)!==тир)return false;
+    if(!п)return true;
+    /* Искать надо и по тому, что ВИДНО: «таунт» на экране есть, а в данных
+       лежит taunt, и поиск по русскому слову не находил ничего. */
+    return (c.n+' '+c.id+' '+(c.el||'')+' '+(c.fl||'')+' '+эффектом(c)+' '+
+            (TIER_NAMES[c.t]||'')+' '+
+            (c.kw||[]).join(' ')+' '+
+            (c.kw||[]).map(k=>КЛЮЧИ[k]||k).join(' ')
+           ).toLowerCase().includes(п);
+  });
+  $('#карты').innerHTML=видно.map(c=>{
     const цв=c.ult?'#ff3355':TIER_HEX[c.t];
     const шт=С.inv[c.id]|0;
+    const статы=c.ty==='u'?(c.a+'/'+c.h):'заклятие';
+    const кл=(c.kw||[]).map(k=>КЛЮЧИ[k]||k).join(' · ');
+    const эф=эффектом(c);
     return '<div class="карта" style="--tc:'+цв+'" data-id="'+c.id+'">'+
-      '<span class="цена">'+c.c+'</span>'+
-      '<span class="н">'+c.n+'</span>'+
-      '<span class="шт">'+шт+'×</span>'+
-      '<button data-d="-1">−</button><button data-d="1">+</button></div>';
-  }).join('');
+      '<div class="верх">'+
+        '<span class="цена">'+c.c+'</span>'+
+        '<span class="н">'+уй(c.n)+'</span>'+
+        '<span class="шт">'+шт+'×</span>'+
+        '<button data-d="-1">−</button><button data-d="1">+</button>'+
+      '</div>'+
+      '<div class="строка"><b>'+статы+'</b> · '+(TIER_NAMES[c.t]||'?')+
+        (c.ult?' · СЕКРЕТ':'')+' · '+(c.el||'—')+
+        '<span class="ид"> · '+c.id+'</span></div>'+
+      (кл?'<div class="строка кл">'+кл+'</div>':'')+
+      (эф?'<div class="строка эф">'+уй(эф)+'</div>':'')+
+      (c.fl?'<div class="подпись">'+уй(c.fl)+'</div>':'')+
+    '</div>';
+  }).join('')||'<p class="пусто">Ничего не нашлось.</p>';
   const есть=пул.filter(c=>(С.inv[c.id]|0)>0).length;
   $('#картыСчёт').textContent='собрано '+есть+' из '+пул.length+
-    ' · в колоде '+(С.deck?С.deck.length:0);
-  document.querySelectorAll('#карты button').forEach(b=>b.onclick=()=>{
+    ' · в колоде '+(С.deck?С.deck.length:0)+
+    (видно.length!==пул.length?(' · показано '+видно.length):'');
+  document.querySelectorAll('#карты button[data-d]').forEach(b=>b.onclick=()=>{
     const id=b.closest('.карта').dataset.id;
     const n=Math.max(0,Math.min(20,(С.inv[id]|0)+ +b.dataset.d));
     if(n)С.inv[id]=n; else delete С.inv[id];
     писать($('#вестьК')); рисоватьКарты();
   });
+}
+/* Кнопки тиров строим из TIER_NAMES, а не пишем руками: тир добавят — кнопка
+   появится сама. */
+function собратьФильтр(){
+  const ф=$('#фильтр');
+  TIER_NAMES.forEach((имя,i)=>{
+    const b=document.createElement('button');
+    b.dataset.т=String(i); b.textContent=имя.toLowerCase();
+    ф.appendChild(b);
+  });
+  ф.querySelectorAll('button[data-т]').forEach(b=>b.onclick=()=>{
+    тир=b.dataset.т;
+    ф.querySelectorAll('button[data-т]').forEach(x=>x.classList.toggle('вкл',x===b));
+    рисоватьКарты();
+  });
+  $('#пПоиск').oninput=()=>{ поиск=$('#пПоиск').value; рисоватьКарты() };
 }
 
 /* ================= журнал падений ================= */
@@ -338,5 +421,5 @@ function всё(){
     ' · сейв '+(localStorage.getItem(КЛЮЧ)?'есть':'пустой');
   рисоватьПрогресс(); рисоватьЭтапы(); рисоватьКарты(); рисоватьОшибки();
 }
-связатьПоля(); связатьКнопки(); всё();
+связатьПоля(); связатьКнопки(); собратьФильтр(); всё();
 </script>
