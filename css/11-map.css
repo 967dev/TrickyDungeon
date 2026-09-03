@@ -274,8 +274,13 @@
   text-align:center}
 .mQuest.boss .mqN{color:var(--red)}
 .mqC{flex:1;min-width:0}
+/* Имя боя ПЕРЕНОСИТСЯ, в отличие от описания и служебной строки ниже. Те
+   обрезаются многоточием нарочно — они длинные и от их хвоста ничего не
+   зависит. А в нике хвост бывает всей шуткой: «Обычный игрок, ничего
+   необычного» на телефоне обрезался до «Обычный игрок, ничего необыч…», то
+   есть ровно до того места, где шутка и начинается. */
 .mqName{font-family:var(--disp);font-size:12.5px;color:#fff;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  overflow:hidden;white-space:normal;line-height:1.2}
 .mqDesc{font-size:10px;color:var(--dim);font-style:italic;margin-top:2px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* В одну строку с обрезкой. Без этого «16 хп · 60 ⚡ · ии: учебная» в строке со
