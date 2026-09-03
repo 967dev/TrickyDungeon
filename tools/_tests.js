@@ -157,8 +157,8 @@
       for (const id of ['scr-menu','scr-hero','scr-stages','scr-deck','scr-gacha','scr-settings',
         'scr-battle','scr-story','chWrap','toasts','fx'])
         ок(!!document.getElementById(id), 'есть узел #' + id);
-      равно(document.querySelectorAll('link[rel=stylesheet]').length, 11, 'подключено 11 файлов стилей');
-      ок(document.querySelectorAll('script[src^="js/"]').length === 14, 'подключено 14 файлов скрипта',
+      равно(document.querySelectorAll('link[rel=stylesheet]').length, 12, 'подключено 12 файлов стилей');
+      ок(document.querySelectorAll('script[src^="js/"]').length === 15, 'подключено 15 файлов скрипта',
         document.querySelectorAll('script[src^="js/"]').length);
 
       /* ============ 2. данные карт ============ */
@@ -215,9 +215,27 @@
       равно(document.querySelectorAll('#dDeck .dRow').length,
         new Set(S.deck).size, 'в боковой панели строка на каждую карту колоды');
       равно(S.deck.length, 20, 'в колоде 20 карт');
-      go('stages'); await жди(200);
-      ок(document.querySelectorAll('#stMap .stNode').length >= 10, 'карта рейдов отрисована',
-        document.querySelectorAll('#stMap .stNode').length);
+      /* Экран рейдов — карта города. Проверяем три вещи, которые ломаются
+         молча: районы отрисованы ВСЕ (в том числе те, что под туманом — иначе
+         открытие снова станет дорисовкой), слой тумана собран (пелены на месте)
+         и табло с боями наполняется по клику на район. */
+      go('stages'); await жди(250);
+      равно(document.querySelectorAll('#mapCity .mapDist').length, АКТЫ.length,
+        'все районы отрисованы');
+      ок(document.querySelectorAll('#mapFog image').length === 3, 'туман собран',
+        document.querySelectorAll('#mapFog image').length);
+      равно(document.querySelectorAll('.mapDist.fog[data-act="1"]').length, 0,
+        'район первого акта не в тумане');
+      document.querySelector('.mapDist[data-act="1"]').click(); await жди(120);
+      ок(document.querySelectorAll('#mpList .mQuest').length === боиАкта(1).length,
+        'табло миссий наполнено', document.querySelectorAll('#mpList .mQuest').length);
+      ок($('#mapScene').classList.contains('open'), 'табло выехало');
+      /* Клик мимо табло закрывает его. Дважды пришлось ловить руками: сперва
+         обработчики не были навешены вовсе, потом закрытие не сбрасывало
+         выбранный район и табло возвращалось само. */
+      $('#mapBack').click(); await жди(120);
+      ок(!$('#mapScene').classList.contains('open'), 'клик по карте закрывает табло');
+      ок(!МАП.выбран, 'закрытие сбрасывает выбранный район');
 
       /* ============ 5. колода ============ */
       группа('колода');

@@ -27,7 +27,8 @@
   <link rel="stylesheet" href="css/08-overlays.css">
   <link rel="stylesheet" href="css/09-chat.css">
   <link rel="stylesheet" href="css/10-settings.css">
-  <link rel="stylesheet" href="css/11-responsive.css">
+  <link rel="stylesheet" href="css/11-map.css">
+  <link rel="stylesheet" href="css/12-responsive.css">
 </head>
 <body>
 
@@ -145,15 +146,48 @@
   </div>
 </div>
 
-<!-- ===== ЭТАПЫ ===== -->
+<!-- ===== КАРТА ГОРОДА (рейды) =====
+     Акт — это район города, а не строка списка. Слои идут снизу вверх: город,
+     дороги, районы, трасса открытия, туман, задник, табло. Порядок задан
+     z-index в css/11-map.css, а не порядком тегов, — кроме тумана, который
+     обязан лежать ПОВЕРХ дорог, чтобы дорога в нём растворялась.
+     Всё наполнение рисует js/13-map.js. -->
 <div class="screen" id="scr-stages">
   <div class="topbar">
     <button class="btn tbBack" data-go="menu">◄ МЕНЮ</button>
-    <div><div class="tbTitle">РЕЙДЫ ПО ПРОВАЛАМ</div><div class="tbSub">pve · акты и бои</div></div>
+    <div><div class="tbTitle">КАРТА ГОРОДА</div><div class="tbSub" id="stSub">рейды по провалам</div></div>
     <div class="tbSpace"></div>
     <button class="btn iconbtn" data-info="raid" aria-label="Справка">?</button>
   </div>
-  <div class="stBody"><div class="stMap" id="stMap"></div></div>
+  <div class="stBody mapScene" id="mapScene">
+    <!-- Прокручивается ТОЛЬКО город (на телефоне карта выше экрана). Табло и
+         задник — сёстры прокрутки, а не её содержимое: внутри неё они уезжали
+         вместе с городом, и на прокрученной вниз карте табло вылезало выше
+         видимой области. -->
+    <div class="mapScroll" id="mapScroll">
+      <div class="mapCity" id="mapCity">
+        <div class="mapGrid a"></div>
+        <div class="mapGrid b"></div>
+        <div class="mapBlocks"></div>
+        <div class="mapVign"></div>
+        <svg class="mapRoads" id="mapRoads"></svg>
+        <svg class="mapTrace" id="mapTrace"></svg>
+        <svg class="mapFog" id="mapFog"></svg>
+        <svg class="mapFog" id="mapFog2"></svg>
+      </div>
+    </div>
+    <div class="mapBack" id="mapBack"></div>
+    <div class="mapPanel" id="mapPanel">
+      <div class="mpHead">
+        <div class="mpAct" id="mpAct">АКТ 1</div>
+        <div class="mpTitle" id="mpTitle">—</div>
+        <div class="mpCount" id="mpCount"></div>
+        <button class="mpClose" id="mpClose" aria-label="Закрыть">✕</button>
+        <div id="mpStoryBox"></div>
+      </div>
+      <div class="mpList" id="mpList"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== БОЙ ===== -->
@@ -256,7 +290,8 @@
 <script src="js/10-rules.js"></script>
 <script src="js/11-battle.js"></script>
 <script src="js/12-training.js"></script>
-<script src="js/13-ui.js"></script>
-<script src="js/14-boot.js"></script>
+<script src="js/13-map.js"></script>
+<script src="js/14-ui.js"></script>
+<script src="js/15-boot.js"></script>
 </body>
 </html>

@@ -1,0 +1,370 @@
+/* 11-map.css — карта города: районы, дороги, туман, выезжающее табло миссий
+
+   Часть общих стилей, разрезанных по темам. ПОРЯДОК ПОДКЛЮЧЕНИЯ В index.html
+   ЗНАЧИМ: правила одной силы разрешаются по нему. Слой объявлен один раз, в
+   css/01-base.css, и стоит между settings и responsive.
+
+   Правило для новых стилей: клади их РЯДОМ с тем, что они красят, в файл своей
+   темы. Всё, что относится к карте, живёт здесь.
+
+   Экран рейдов был плоским списком-гармошкой. Карта заменила его целиком: акт
+   стал районом города, а не строкой аккордеона. Стенд, на котором это
+   собиралось и отлаживалось, — map-lab.html. */
+
+@layer map {
+
+/* ================= сцена =================
+   Вся карта ЦЕЛИКОМ влезает в экран — ничего не таскается пальцем. Причина не
+   в лени: в Telegram свайп уже занят закрытием приложения (мы его глушим), а в
+   бою пальцем тащат карты. Третья таскаемая поверхность — это баги, которые
+   видно только на живом телефоне. */
+#scr-stages .stBody{flex:1;padding:0;overflow:hidden;position:relative}
+/* Прокрутка живёт ЗДЕСЬ, а не на сцене. Табло и задник — сёстры этого слоя:
+   лежа внутри прокрутки, они уезжали вместе с городом, и на прокрученной вниз
+   карте табло вылезало выше видимой области.
+   Запрос по контейнеру нужен для 100cqh ниже: высота сцены не выражается ни в
+   vh (сверху топбар с безопасной зоной), ни в процентах — а посчитать её надо,
+   потому что от неё берётся ШИРИНА карты. */
+.mapScroll{position:absolute;inset:0;overflow:hidden;scrollbar-width:thin;
+  display:flex;align-items:center;justify-content:center;
+  container-type:size}
+
+/* У карты ПОСТОЯННЫЕ пропорции, и она вписывается в сцену, а не растягивается.
+   Иначе размеры районов, заданные в процентах от ШИРИНЫ, на широком мониторе
+   разносит: карта становится вдвое шире, чем высока, район в 27% ширины
+   занимает почти половину высоты, и композиция рассыпается — районы налезают
+   друг на друга. При постоянном отношении сторон одни и те же проценты дают
+   одну и ту же картину на любом экране.
+   Ширину считаем ОТ ВЫСОТЫ, а не ставим 100% с ограничением по высоте: при
+   width:100% отношение сторон уже задано шириной, а max-height лишь обрезает —
+   карта так и остаётся растянутой. min() выбирает меньшее из «вся ширина» и
+   «сколько влезает по высоте», и пропорция держится всегда. */
+.mapCity{position:relative;--отн:1.55;background-color:#08080c;
+  aspect-ratio:var(--отн);height:auto;flex:none;
+  width:100%;                                  /* запас, если cqh не понят */
+  width:min(100%, calc(100cqh * var(--отн)))}
+
+/* ================= город под районами =================
+   Настоящая карта улиц, но НАРИСОВАННАЯ градиентами, а не картинкой. Три
+   причины: весит ноль, не разъезжается по стилю от партии к партии (наша
+   главная беда с артом) и её видно ровно настолько, насколько нужно — район
+   должен быть героем, а город фоном.
+   Слоя два и они повёрнуты по-разному: одна сетка, выровненная по экрану,
+   читается как таблица, а не как город. */
+.mapGrid{position:absolute;inset:-25%;z-index:0;pointer-events:none}
+.mapGrid.a{transform:rotate(-3.5deg);
+  background-image:
+    /* проспекты */
+    repeating-linear-gradient(90deg,rgba(155,195,255,.13) 0 2px,transparent 2px 172px),
+    repeating-linear-gradient(0deg, rgba(155,195,255,.12) 0 2px,transparent 2px 208px),
+    /* улицы */
+    repeating-linear-gradient(90deg,rgba(155,195,255,.055) 0 1px,transparent 1px 43px),
+    repeating-linear-gradient(0deg, rgba(155,195,255,.05) 0 1px,transparent 1px 52px)}
+.mapGrid.b{transform:rotate(24deg);
+  background-image:
+    /* пара косых магистралей — они и ломают ощущение сетки */
+    repeating-linear-gradient(90deg,rgba(155,195,255,.085) 0 2px,transparent 2px 430px),
+    repeating-linear-gradient(0deg, rgba(155,195,255,.06) 0 1px,transparent 1px 96px)}
+
+/* Кварталы и свечение центра: без них улицы выглядят чертежом, а не местом. */
+.mapBlocks{position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    radial-gradient(ellipse 30% 22% at 26% 30%,rgba(90,130,210,.10),transparent 70%),
+    radial-gradient(ellipse 26% 20% at 76% 62%,rgba(210,90,170,.07),transparent 70%),
+    radial-gradient(ellipse 40% 30% at 52% 88%,rgba(90,130,210,.06),transparent 70%)}
+/* Края города уходят в темноту — карта не должна обрываться рамкой экрана. */
+.mapVign{position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 75% 70% at 50% 48%,transparent 40%,rgba(8,8,12,.85) 100%)}
+
+/* Карта при открытии табло НЕ ДВИГАЕТСЯ. Раньше (в стенде) она отъезжала и
+   уменьшалась, и вместе с ней ехали слои — обрезанные края тумана выезжали на
+   вид. Табло просто вылезает справа поверх всего, слегка притеняя остальное. */
+.mapBack{position:absolute;inset:0;z-index:7;pointer-events:none;
+  background:rgba(6,6,10,.55);opacity:0;transition:opacity .45s ease}
+.mapScene.open .mapBack{opacity:1;pointer-events:auto}
+
+/* ================= район ================= */
+.mapDist{position:absolute;z-index:2;width:var(--ш);aspect-ratio:1.35/1;
+  transform:translate(-50%,-50%);cursor:pointer;
+  transition:filter .35s,opacity .35s}
+
+/* Рваный контур рисуется CSS, а не запекается в картинку: тогда он одинаков у
+   всех районов сам собой, а свечение активного достаётся бесплатно. Обводку
+   даёт слой ПОД картинкой с тем же clip-path и чуть больше по размеру —
+   обвести clip-path напрямую нельзя. */
+/* Переходы вида НАРОЧНО долгие и с ease-out: смена силуэта на открытый район
+   идёт одновременно со сходящим туманом, и основная её часть должна пройти в
+   первые полсекунды — пока муть ещё держит 82% и её не видно. Резкая смена под
+   редеющей пеленой читается как «акт дорисовали», а не как «акт открылся». */
+.mapDist .mdEdge{position:absolute;inset:-4px;clip-path:var(--блоб);background:#3a3a4c;
+  transition:background 1.4s ease-out,box-shadow 1.4s ease-out}
+.mapDist .mdName,.mapDist .mdSub,.mapDist .mdTag,.mapDist .mdLock{
+  transition:opacity 1.4s ease-out}
+.mapDist .mdArt img{transition:filter 1.6s ease-out}
+.mapDist .mdArt{position:absolute;inset:0;clip-path:var(--блоб);overflow:hidden;background:#000}
+/* Район без арта — пустая площадка: расчищено, а смотреть пока нечего. Так
+   видно, что туман отошёл, и видно, что за ним ничего не приготовлено. */
+.mapDist.empty .mdArt{background:
+  repeating-linear-gradient(-45deg,#101018 0 9px,#0b0b12 9px 20px)}
+.mapDist.empty .mdName{color:#5a5a6e}
+.mapDist .mdArt img{width:100%;height:100%;object-fit:cover;display:block}
+/* Низ кадра гасим — на нём лежат имя и номер акта. */
+.mapDist .mdArt::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(0,0,0,.15) 0,rgba(0,0,0,.1) 40%,rgba(0,0,0,.86) 100%)}
+
+.mapDist .mdTag{position:absolute;left:8%;top:7%;z-index:3;
+  font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:#9a9ab0}
+.mapDist .mdName{position:absolute;left:6%;right:6%;bottom:9%;z-index:3;text-align:center;
+  font-family:var(--disp);font-style:italic;font-size:clamp(11px,1.5vw,17px);color:#fff;
+  text-shadow:2px 2px 0 #000,0 0 12px rgba(0,0,0,.9)}
+.mapDist .mdSub{position:absolute;left:6%;right:6%;bottom:3%;z-index:3;text-align:center;
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:#8a8a9e}
+.mapDist .mdLock{position:absolute;left:50%;top:50%;z-index:3;
+  transform:translate(-50%,-50%);width:17%;opacity:0}
+.mapDist .mdLock svg{width:100%;fill:none;stroke:#8a8a9e;stroke-width:2}
+
+/* --- открыт --- */
+.mapDist.open .mdEdge{background:var(--yel);
+  box-shadow:0 0 0 1px #000,0 0 22px rgba(255,213,46,.35),0 0 60px rgba(255,213,46,.14)}
+.mapDist.open .mdName{color:var(--yel)}
+.mapDist.open:hover{filter:brightness(1.12)}
+
+/* --- пройден --- */
+.mapDist.done .mdEdge{background:#5c6b3a}
+.mapDist.done .mdArt img{filter:saturate(.5) brightness(.7)}
+
+/* --- следующий и в тумане: силуэт, имени нет ---
+   Один шаг вперёд ВСЕГДА виден. Без него игрок не знает, что дальше вообще
+   что-то есть, и карта читается как тупик.
+   Район под туманом ОТРИСОВАН — и отрисован сразу тем же силуэтом. Прятать его
+   через display:none нельзя: тогда открытие читается не как раскрытие, а как
+   дорисовка — из-под сходящей мути место возникает с нуля. Муть над ним
+   непрозрачная, скрывать нечем не нужно. */
+.mapDist.next,.mapDist.fog{cursor:default}
+.mapDist.next .mdEdge,.mapDist.fog .mdEdge{background:#23232e}
+.mapDist.next .mdArt img,.mapDist.fog .mdArt img{
+  filter:brightness(.42) contrast(.8) grayscale(.7)}
+/* Скрываем ПРОЗРАЧНОСТЬЮ, а не display: display не переходит, и подписи с
+   замком возникали и исчезали щелчком посреди сходящего тумана. */
+.mapDist.next .mdName,.mapDist.next .mdSub,.mapDist.next .mdTag,
+.mapDist.fog  .mdName,.mapDist.fog  .mdSub,.mapDist.fog  .mdTag{opacity:0}
+.mapDist.next .mdLock,.mapDist.fog .mdLock{opacity:.42}
+
+/* ================= дороги =================
+   Пунктир бежит от района к району — тот же приём, что у дуги прицела в бою.
+   Концы дороги считаются от КРАЯ к краю (см. концы() в js/13-map.js). */
+.mapRoads,.mapTrace{position:absolute;inset:0;z-index:1;pointer-events:none}
+/* Трасса открытия — в ОТДЕЛЬНОМ слое. Лежала внутри дорог, а те при
+   перерисовке перезаписываются целиком: трасса исчезала в один кадр ровно
+   тогда, когда открывался район. Это и дёргало. */
+.mapTrace{z-index:2}
+.mapRoads path{fill:none;stroke:var(--yel);stroke-width:4;stroke-linecap:round;
+  stroke-dasharray:4 11;opacity:.9;animation:mapRun 1.1s linear infinite}
+.mapRoads path.dead{stroke:#454559;opacity:.9;animation:none}
+@keyframes mapRun{to{stroke-dashoffset:-15}}
+.mapRoads circle{fill:var(--yel);stroke:#0a0a0f;stroke-width:2}
+.mapRoads circle.dead{fill:#454559}
+/* Трасса — сплошная линия, которая ПРОЧЕРЧИВАЕТСЯ от района к району. Бегущий
+   пунктир так не показать: узор и прочерчивание живут в одном свойстве
+   (stroke-dasharray), и вместе они не уживаются. Поэтому сперва тянется
+   трасса, а на её месте потом остаётся обычный пунктир. */
+.mapTrace path{fill:none;stroke:var(--yel);stroke-width:4;stroke-linecap:round;
+  opacity:.95}
+
+/* ================= туман =================
+   Туман лежит НА ВСЕЙ КАРТЕ одним слоем и открывает прогалы там, где игрок
+   был. У каждого района свой туман был бы хуже: по тёмным пятнам можно
+   посчитать, сколько районов впереди, и увидеть их форму, то есть
+   «неизвестно» превращается в «известно, но заперто». Теперь неизведанное —
+   сплошная муть: ни числа районов, ни их очертаний, ни даже улиц под ними.
+
+   Слой стоит ПОВЕРХ районов и дорог (z-index 3): дорога, уходящая в туман,
+   должна в нём и растворяться, а не обрываться на границе.
+
+   Слоёв два, и оба живут постоянно, с непрерывно ползущими клубами. Виден тот,
+   у кого метка .on; уходящий поднимается наверх меткой .gone. Ничего не
+   пересоздаётся — иначе анимация дыма прыгает в начало.
+
+   Слой ШИРЕ карты на треть с каждой стороны: он лежал ровно по карте, а карта
+   уже́ экрана — и по её краю была видна граница мути, за которой город просто
+   кончался. Столько же закладывает и viewBox в коде (БЛЕДЬ).
+   Размеры ЯВНО, а не через inset: svg — заменяемый элемент, и при left+right с
+   width:auto он берёт свою собственную ширину (стандартные 300px), а не
+   растягивается. */
+.mapFog{position:absolute;left:-35%;top:-35%;width:170%;height:170%;
+  z-index:3;pointer-events:none;opacity:0}
+.mapFog.on{opacity:1}
+.mapFog.gone{z-index:4}
+/* Рассеивание, а не выключение. Одной прозрачности мало: слой, ровно гаснущий
+   целиком, читается как выключенный свет. Пелена должна РАСХОДИТЬСЯ — поэтому
+   вместе с прозрачностью она чуть разъезжается от нового района (начало
+   отсчёта ставится в него из кода), и её собственные клубы всё это время
+   продолжают ползти.
+   Кривая нарочно неровная: две трети времени муть держится и только редеет, а
+   уходит в ноль на последней трети. Ровное затухание глаз читает как шкалу. */
+.mapFog.gone{animation:mapFogOut 3.1s cubic-bezier(.25,0,.45,1) forwards}
+@keyframes mapFogOut{
+  0%  {opacity:1;   transform:scale(1)}
+  30% {opacity:.82; transform:scale(1.035)}
+  62% {opacity:.44; transform:scale(1.075)}
+  85% {opacity:.14; transform:scale(1.105)}
+  100%{opacity:0;   transform:scale(1.13)}}
+
+/* Три пелены одной и той же текстуры, разного размера и скорости. Одна копия
+   выдала бы себя формой, три перекрывающиеся дают клубы без узнаваемого
+   рисунка. Текстура тёмно-серая на ЧЁРНОМ, и рисуется она в режиме screen:
+   чёрное тогда не кладётся вовсе, поэтому копии стыкуются без швов — по краям
+   у каждой чистый ноль.
+   Клубы ползут навстречу друг другу с разной скоростью: неподвижная муть
+   читается как недоделка, ползущая — как погода. Анимируем transform на
+   группах, без фильтров: фильтры на такой площади дорого стоят на телефоне. */
+.mapFog .mfVeil{mix-blend-mode:screen}
+.mapFog .mfC1{animation:mapPuff1 34s ease-in-out infinite alternate}
+.mapFog .mfC2{animation:mapPuff2 47s ease-in-out infinite alternate-reverse}
+.mapFog .mfC3{animation:mapPuff3 61s linear infinite}
+@keyframes mapPuff1{
+  0%  {transform:translate(-3%,-2%) scale(1)}
+  55% {transform:translate(3%,3%)   scale(1.09)}
+  100%{transform:translate(4%,-1%)  scale(1.04)}}
+@keyframes mapPuff2{
+  0%  {transform:translate(4%,2%)    scale(1.06)}
+  45% {transform:translate(-3%,-3%)  scale(1)}
+  100%{transform:translate(-2%,4%)   scale(1.1)}}
+/* Третья идёт в одну сторону без возврата: две пелены, ходящие туда-обратно,
+   вместе дают заметный ритм «вдох-выдох». Третья его ломает. */
+@keyframes mapPuff3{
+  0%  {transform:translate(-6%,2%)  scale(1.12)}
+  100%{transform:translate(6%,-2%)  scale(1.12)}}
+
+/* ================= табло миссий =================
+   Тот же список боёв, что был в гармошке: номер, имя, описание, значок чата,
+   кнопка. Здесь он ВЫЕЗЖАЕТ поверх карты, а не раздвигает её. */
+.mapPanel{position:absolute;right:0;top:0;bottom:0;width:min(430px,44vw);z-index:8;
+  background:#0d0d14;border-left:3px solid var(--yel);
+  box-shadow:-14px 0 40px rgba(0,0,0,.6);
+  transform:translateX(101%);transition:transform .5s cubic-bezier(.2,.9,.3,1);
+  display:flex;flex-direction:column}
+.mapScene.open .mapPanel{transform:translateX(0)}
+.mapPanel .mpHead{padding:14px 16px 10px;border-bottom:2px solid #2c2c38;position:relative}
+.mapPanel .mpAct{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:#8a8a9e}
+.mapPanel .mpTitle{font-family:var(--disp);font-style:italic;font-size:19px;margin:3px 0 0;
+  color:var(--yel);text-shadow:2px 2px 0 #000}
+.mapPanel .mpCount{font-family:var(--mono);font-size:10px;color:#8a8a9e;margin-top:4px}
+.mapPanel .mpClose{position:absolute;right:12px;top:12px;width:30px;height:30px;
+  background:#16161f;border:2px solid #2c2c38;color:#cfccdd;font-size:15px;cursor:pointer}
+.mapPanel .mpClose:hover{border-color:var(--red);color:var(--red)}
+.mapPanel .mpList{flex:1;overflow:auto;padding:8px}
+
+/* Кнопка сцены акта. Появляется только когда сцену уже видели: до этого она
+   играет сама перед первым боем акта, и предлагать её заранее — спойлер. */
+.mpStory{display:block;width:100%;text-align:left;margin-top:8px;cursor:pointer;
+  background:#141420;border:2px solid #2c2c38;padding:7px 10px}
+.mpStory:hover{border-color:var(--cyn)}
+/* Строчками, а не в строку: спаны по умолчанию inline, и название сцены с
+   подписью слипались в одну строку. */
+.mpStory .msT{display:block;font-family:var(--disp);font-size:11.5px;color:var(--cyn)}
+.mpStory .msS{display:block;font-family:var(--mono);font-size:9px;color:#6a6a80;
+  margin-top:3px;letter-spacing:.1em;text-transform:uppercase}
+
+.mQuest{display:flex;align-items:center;gap:10px;padding:9px 10px;margin-bottom:6px;
+  background:rgba(255,255,255,.04);border-left:3px solid #262633;
+  font-family:var(--mono);font-size:11px;cursor:pointer}
+.mQuest:hover:not(.lock){background:rgba(255,255,255,.08)}
+.mqN{font-family:var(--disp);font-size:13px;color:var(--yel);width:18px;flex:none;
+  text-align:center}
+.mQuest.boss .mqN{color:var(--red)}
+.mqC{flex:1;min-width:0}
+.mqName{font-family:var(--disp);font-size:12.5px;color:#fff;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mqDesc{font-size:10px;color:var(--dim);font-style:italic;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* В одну строку с обрезкой. Без этого «16 хп · 60 ⚡ · ии: учебная» в строке со
+   значком чата переносилось, и соседние строки списка выходили разной высоты —
+   список читался как сбитый. */
+.mqMeta{font-size:8.5px;color:#5a5a6e;margin-top:3px;letter-spacing:.08em;
+  text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Значок чата — своя кнопка со своим действием, поэтому у него рамка: внутри
+   строки «в бой» его легко принять за её часть. */
+.mqChat{flex:none;width:22px;height:22px;display:grid;place-items:center;
+  background:none;border:1px solid #3a3a4c;color:var(--cyn);font-size:11px;cursor:pointer}
+.mqChat:hover{border-color:var(--cyn)}
+/* Непрочитанное дрожит — как телефон в кармане. Дрожь короткая и с большой
+   паузой: непрерывная быстро превращается в раздражитель, который хочется
+   выключить, а не открыть. */
+.mqChat.nw{border-color:var(--cyn);color:var(--cyn);
+  animation:mqBuzz 2.6s ease-in-out infinite}
+@keyframes mqBuzz{
+  0%,84%,100%{transform:translate(0,0) rotate(0)}
+  86%{transform:translate(-2px,1px) rotate(-7deg)}
+  88%{transform:translate(2px,-1px) rotate(6deg)}
+  90%{transform:translate(-2px,0) rotate(-5deg)}
+  92%{transform:translate(2px,1px) rotate(4deg)}
+  94%{transform:translate(-1px,0) rotate(-2deg)}
+  96%{transform:translate(0,0) rotate(0)}}
+.mqChat.nw::after{content:'';position:absolute;top:-4px;right:-4px;width:7px;height:7px;
+  background:var(--red);border:1px solid #0a0a0e}
+.mqChat{position:relative}
+@media (prefers-reduced-motion:reduce){.mqChat.nw{animation:none}}
+.mqGo{flex:none;font-family:var(--disp);font-size:10px;background:var(--yel);
+  color:#0a0a0e;border:2px solid #000;padding:4px 8px;cursor:pointer}
+.mQuest.done{border-left-color:#3dff8a}
+.mQuest.done .mqName{color:#8fbf9f}
+.mQuest.done .mqGo{background:#2a2a36;color:#8a8a9e;border-color:#0a0a0f}
+.mQuest.lock{opacity:.45;border-left-color:#262633;cursor:not-allowed}
+.mQuest.lock .mqGo,.mQuest.lock .mqChat{display:none}
+.mQuest.now{border-left-color:var(--yel);background:rgba(255,213,46,.08)}
+
+/* ================= табло на десктопе =================
+   Размеры списка заданы под телефон — это правильный порядок, цель у игры
+   ~375px. Но те же 11px на мониторе читаются как мелкий шрифт в настройках, а
+   не как табло миссий: места там вдвое больше, и оно обязано его занять.
+   Блок меняется отдельно от телефонного — числа не пересчитываются друг из
+   друга и не тянут друг друга за собой. */
+@media (min-width:701px){
+  /* clamp, а не min: на узком десктопе (~900px) 44vw дают 392px, и крупный
+     шрифт в такую ширину не лезет — имена боёв обрезаются многоточием. */
+  .mapPanel{width:clamp(430px,44vw,560px)}
+  .mapPanel .mpHead{padding:20px 22px 15px}
+  .mapPanel .mpAct{font-size:12px}
+  .mapPanel .mpTitle{font-size:28px}
+  .mapPanel .mpCount{font-size:13px;margin-top:6px}
+  .mapPanel .mpClose{right:16px;top:16px;width:40px;height:40px;font-size:20px}
+  .mapPanel .mpList{padding:12px}
+  .mpStory{padding:10px 13px;margin-top:11px}
+  .mpStory .msT{font-size:14px}
+  .mpStory .msS{font-size:11px}
+  .mQuest{gap:14px;padding:13px 14px;margin-bottom:8px;font-size:14px}
+  .mqN{font-size:19px;width:26px}
+  .mqName{font-size:16px}
+  .mqDesc{font-size:12px}
+  .mqMeta{font-size:10px}
+  .mqChat{width:28px;height:28px;font-size:14px}
+  .mqGo{font-size:13px;padding:6px 13px}
+}
+
+/* ================= телефон =================
+   Мобильный формат — первый по важности: цель это Telegram на ~375px.
+   Вписать город в один экран нельзя без превращения районов в марки: их шесть
+   и они идут змейкой. Поэтому карта тут ВЫТЯНУТА и листается обычной
+   вертикальной прокруткой — один жест вместо двух, и он у пальца привычный.
+   Пропорции ПОСТОЯННЫЕ и здесь, только другие: с height:150vh отношение сторон
+   зависело бы от экрана (0.31 на 375x812, 0.42 на 446x682, под 0.9 на коротком
+   широком), а коробки районов заданы в процентах ШИРИНЫ — раскладка,
+   разнесённая на одном телефоне, налезала бы сама на себя на другом.
+   Табло здесь не «сбоку», а НАКРЫВАЕТ карту целиком: 44% от 375px это 165px,
+   в них список не живёт. */
+@media (max-width:700px){
+  .mapScroll{overflow-y:auto;overflow-x:hidden;display:block;
+    container-type:normal;-webkit-overflow-scrolling:touch}
+  /* Здесь карта во всю ширину, поэтому туману некуда и незачем выходить за её
+     края — а выходил он на треть, и эта треть добавлялась к прокрутке: за
+     последним районом тянулось 390 пустых пикселей мути. Обрезаем по коробке
+     карты. На широком экране обрезать нельзя: там карта уже́ экрана, и по её
+     краю становится видна граница тумана — с этого весь вылет и начинался. */
+  .mapCity{aspect-ratio:.36;height:auto;max-height:none;width:100%;overflow:hidden}
+  .mapPanel{width:100%;border-left:0;border-top:3px solid var(--yel)}
+  .mapDist .mdName{font-size:13px}
+  .mapDist .mdSub{font-size:9px}
+}
+
+}

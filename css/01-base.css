@@ -6,19 +6,9 @@
      - адаптив (resp) выигрывает всегда, даже у самого длинного селектора;
      - чтобы перебить чужое правило, больше не нужно наращивать селектор.
    Новый файл - дописать сюда, осознанно выбрав место. */
-@layer base, menu, gacha, cards, deck, battle, story, overlays, chat, settings, responsive;
+@layer base, menu, gacha, cards, deck, battle, story, overlays, chat, settings, map, responsive;
 
-/* ПОРЯДОК СЛОЁВ — единственное место, где он задан.
-   Раньше его задавал порядок <link>, то есть он был не записан нигде и
-   держался на том, что файлы случайно стоят правильно. Теперь: правило из
-   слоя правее ВСЕГДА выигрывает у правила из слоя левее, независимо от
-   специфичности. Отсюда два следствия, ради которых это и делается:
-     — адаптив (resp) выигрывает всегда, даже у самого длинного селектора;
-     — чтобы перебить чужое правило, больше не нужно наращивать селектор.
-   Новый файл — дописать сюда, осознанно выбрав место. */
 
-@layer base {
-@layer base, menu, gacha, cards, deck, battle, story, overlays, chat, settings, responsive;
 
 /* 01-base.css — переменные, сброс, типографика, кнопки, полосы — общее для всех экранов
 
@@ -119,5 +109,4 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:95;
   animation:cryFloat 6s ease-in-out infinite alternate;box-shadow:0 0 9px currentColor}
 @keyframes cryFloat{from{transform:translateY(0) rotate(45deg)}
   to{transform:translateY(-24px) rotate(225deg)}}
-}
 }

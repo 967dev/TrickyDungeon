@@ -148,32 +148,11 @@ function autoDeck(){
   return deck.slice(0,20);
 }
 
-/* ================= этапы ================= */
-/* Раскрыт ли первый акт. Живёт в модуле, а не в сейве: состояние списка —
-   вопрос текущего сеанса, и переживать перезагрузку ему незачем. Зато при
-   возврате из боя акт остаётся открытым, а не схлопывается каждый раз. */
-let act1Open=false;
-/* Сюжеты по актам. Одна запись — один акт: флаг в сейве, за кого играет сцена
-   и как её показать. Появится второй акт со своей сценой — добавляется строка,
-   и кнопка выедет из его заголовка сама, ничего больше править не нужно. */
-const ACT_STORY={
-  1:{flag:'story',sub:'сцена · пересмотреть',
-     run:()=>vnLoad(curStory().intro,900,()=>startStory(()=>go('stages')))}
-};
-function actStoryHTML(n){
-  const st=ACT_STORY[n];
-  /* Кнопка появляется только когда сцену уже видели: до этого она играет сама
-     перед первым боем акта, и предлагать её заранее — спойлер. Заголовок берём
-     у сюжета текущего героя: у каждого своя сцена и своё название. */
-  const sc=STORIES[S.hero];
-  if(!st||!sc||!S[st.flag])return '';
-  return `<button class="actStory" data-story="${n}">
-    <span class="asT">${sc.title}</span><span class="asS">${st.sub}</span>
-  </button>`;
-}
-/* num — что показать в кружке. Раньше это был сквозной индекс этапа, и внутри
-   акта бои нумеровались с двойки: тренировка занимает нулевой индекс. Теперь
-   номер передаётся явно, у акта своя нумерация с единицы. */
+/* ================= этапы =================
+   Отрисовка экрана рейдов уехала в js/13-map.js: список-гармошка стал картой
+   города. Здесь остался ЕДИНСТВЕННЫЙ вход в бой — он от подачи не зависит и
+   нужен всем, кто бой начинает. */
+
 /* ================= вход в бой =================
    ЕДИНСТВЕННАЯ дверь в бой из интерфейса. Раньше их было несколько — плитка
    рейда, «ДАЛЬШЕ» после победы, «ЕЩЁ РАЗ», — и цепочка «сцена → чат → бой»
@@ -205,66 +184,4 @@ function enterStage(i){
     return;
   }
   сЧатом();
-}
-function stNodeHTML(st,i,num){
-  const done=S.done[i],lock=i>S.stage;
-  const tile=`<div class="stNode ${done?'done':''} ${lock?'lock':''} ${st.boss?'boss':''}" data-i="${i}">
-    <span class="stNum">${num}</span>
-    <div class="stInfo"><div class="stName">${st.n}</div><div class="stDesc">${st.d}</div>
-      <div class="stMeta">${st.hp} хп · награда ${st.reward} ⚡ · ии: ${DIFF[i]}${st.boss?' · БОСС':''}</div></div>
-    <span class="stState ${done?'w':lock?'l':'n'}">${done?'ЗАЧИЩЕНО':lock?'ЗАКРЫТО':'В БОЙ'}</span>
-  </div>`;
-  /* Значок стоит рядом с плиткой, а не внутри: у него своё действие, и внутри
-     кнопки «в бой» его легко принять за её часть. Показываем и непрочитанный
-     разговор после победы — он же и есть продолжение истории. */
-  if(lock||!CHATS[i])return tile;
-  const part=(S.done[i]&&CHATS[i].post)?'post':'pre';
-  const нов=!chatSeen(i,part);
-  return `<div class="stRow">${tile}
-    <button class="stChat ${нов?'nw':''}" data-chat="${i}" data-part="${part}"
-      aria-label="Открыть БАМ-ЧАТ">✆</button></div>`;
-}
-function renderStages(){
-  /* Тренировка стоит отдельно от актов: это не бой сюжета, а обучение. */
-  const trainHTML=STAGES[0]&&STAGES[0].tutorial?stNodeHTML(STAGES[0],0,'★'):'';
-  const acts=STAGES.map((st,i)=>i).filter(i=>i>0);
-  const doneN=acts.filter(i=>S.done[i]).length;
-  const body=acts.map((i,n)=>stNodeHTML(STAGES[i],i,n+1)).join('');
-  $('#stMap').innerHTML=`
-    ${trainHTML}
-    <div class="actRow">
-      <button class="actHead ${act1Open?'open':''}" id="act1Head">
-        <span class="actN">I</span>
-        <div class="actC">
-          <div class="actT">ИЗ ГРЯЗИ В КАРТЫ!</div>
-          <div class="actS">${acts.length} боёв · ${doneN}/${acts.length} зачищено</div>
-        </div>
-        <span class="actArrow">▼</span>
-      </button>
-      ${actStoryHTML(1)}
-    </div>
-    <div class="actBody ${act1Open?'open':''}" id="act1Body">${body}</div>
-    <div class="actRow"><div class="actHead soon" aria-disabled="true">
-      <span class="actN">II</span>
-      <div class="actC">
-        <div class="actT">ВТОРОЙ АКТ · ???</div>
-        <div class="actS">ещё не открыт</div>
-      </div>
-      <span class="actBadge">SOON!</span>
-    </div></div>`;
-  $$('#stMap .actStory').forEach(b=>b.onclick=e=>{
-    e.stopPropagation();
-    const st=ACT_STORY[+b.dataset.story];
-    if(st){sfx.ui();st.run()}
-  });
-  $('#act1Head').onclick=()=>{
-    act1Open=!act1Open;sfx.ui();
-    $('#act1Head').classList.toggle('open',act1Open);
-    $('#act1Body').classList.toggle('open',act1Open);
-  };
-  $$('#stMap .stChat').forEach(b=>b.onclick=e=>{
-    e.stopPropagation();          /* иначе следом уйдём в бой */
-    sfx.ui(); openChat(+b.dataset.chat,b.dataset.part,null);
-  });
-  $$('#stMap .stNode').forEach(el=>el.onclick=()=>enterStage(+el.dataset.i));
 }
