@@ -49,6 +49,27 @@ MAP = {
     's05': 'happygvosd.png',
     's06': 'oskolok.png',
     's07': 'phonoteka.png',
+    # четвёртая партия, 3 сентября 2026 — тир ЛЕГЕНДА целиком, эхо и секрет
+    'L01': 'NELL.png',
+    'L02': 'ARRRKASHA.png',
+    'L03': 'SMOKING.png',
+    'L04': 'LUMEN.png',
+    'L05': 'KURONA.png',
+    'L06': 'VESTA.png',
+    's08': 'HEARTOFABYSS.png',
+    'X01': '1WAYTICKET.png',
+}
+
+# Обложки районов карты города. Отдельно от карт, и вот почему: район — коробка
+# 1.35:1, картинка в неё кладётся object-fit:cover, поэтому квадрат ей не нужен
+# и вписывание по сюжету только срезало бы кадр зря. Гашение каймы тоже лишнее:
+# край обложки съедает рваный clip-path района, а низ — градиент под подпись.
+# Значит от сборки тут нужно ровно одно — вес.
+# Имена файлов ЛАТИНИЦЕЙ, как и у всех прочих артов: кириллица в пути живёт
+# только до первого сервера, который её не так закодирует, а проверить это
+# можно лишь на живом хостинге.
+РАЙОНЫ = {
+    'act1': '1ACTMAP.png',
 }
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 RAW  = os.path.join(ROOT, 'art', '_raw')
@@ -101,6 +122,12 @@ def в_квадрат(im, имя):
 
 
 КАЙМА = 0.03   # доля стороны, на которой кадр гасится в ноль
+# Сколько пикселей у самого края держим ЖЁСТКИМ нулём, прежде чем начать рампу.
+# Без плато webp съедал ровно эту заботу: чистый ноль стоял в одном крайнем
+# ряду, а сжатие с качеством 82 подтягивало его к соседям — на c08 край выходил
+# 9/255, и это уже та самая «еле заметная рамка», из-за которой всё и делалось.
+# Плоское чёрное поле сжимается в чёрное.
+ПЛАТО_ДОЛЯ = 0.008
 
 
 def кайма_в_ноль(im):
@@ -120,10 +147,11 @@ def кайма_в_ноль(im):
     свойство скорее полезное: сюжет не упирается в рамку."""
     w, h = im.size
     b = max(2, int(round(min(w, h) * КАЙМА)))
+    ПЛАТО = max(1, int(round(min(w, h) * ПЛАТО_ДОЛЯ)))
     рампа = Image.new('L', (w, h), 255)
     px = рампа.load()
     for i in range(b):
-        v = int(round(255 * (i + 1) / (b + 1)))
+        v = 0 if i < ПЛАТО else int(round(255 * (i + 1 - ПЛАТО) / (b + 1 - ПЛАТО)))
         for x in range(w):
             if px[x, i] > v: px[x, i] = v
             if px[x, h - 1 - i] > v: px[x, h - 1 - i] = v
@@ -145,6 +173,25 @@ def build(cid, src):
         im.resize((size, size), Image.LANCZOS).save(f, 'WEBP', quality=q, method=6)
         print('  %-4s %4d px -> %6.0f КБ  %s' % (cid, size, os.path.getsize(f) / 1024, f[len(ROOT) + 1:]))
 
+def build_map(имя, src):
+    """Обложка района: только уменьшение и webp, без квадрата и каймы."""
+    p = os.path.join(RAW, src)
+    if not os.path.exists(p):
+        print('  нет оригинала района: %s' % src); return
+    im = Image.open(p).convert('RGB')
+    d = os.path.join(ROOT, 'art', 'map')
+    os.makedirs(d, exist_ok=True)
+    f = os.path.join(d, имя + '.webp')
+    # 768 по большей стороне: район на широком экране это 27% от ~1200 px, то
+    # есть ~320 px, и вдвое больше уже с запасом на плотный экран.
+    k = 768.0 / max(im.size)
+    if k < 1:
+        im = im.resize((int(round(im.width * k)), int(round(im.height * k))), Image.LANCZOS)
+    im.save(f, 'WEBP', quality=84, method=6)
+    print('  %-6s %4dx%-4d -> %6.0f КБ  art/map/%s.webp' % (
+        имя, im.width, im.height, os.path.getsize(f) / 1024, имя))
+
+
 def build_fog():
     src, out, size, q = ТУМАН
     p = os.path.join(RAW, src)
@@ -161,6 +208,9 @@ if __name__ == '__main__':
         build_fog()
     if only == ['fog']:
         sys.exit(0)
+    for имя, src in sorted(РАЙОНЫ.items()):
+        if not only or имя in only:
+            build_map(имя, src)
     for cid, src in sorted(MAP.items()):
         if not only or cid in only:
             build(cid, src)
