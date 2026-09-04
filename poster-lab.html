@@ -10,11 +10,17 @@
      щита в кадре «Кофейня». Отдельной страницей нарочно: сперва посмотреть,
      потом менять игру.
 
-     Всё берётся НАСТОЯЩЕЕ: фон меню и заголовок — из css/02-menu.css теми же
-     классами, что и на главном экране, поэтому шрифт, тени и свечение те же,
-     а не похожие. Персонажи — арты карт «Ая Курона» (L05) и «Веста» (L06),
-     вырезанные с чёрного фона по собственной яркости: арт рисовался на чёрном,
-     и мы сами гасили кайму в ноль, так что яркость и есть готовая альфа.
+     Всё берётся НАСТОЯЩЕЕ, своих копий тут нет ни одной:
+       — фон и заголовок      — css/02-menu.css, те же классы, что в меню;
+       — карты                — cardHTML() из js/07-cards.js, та же функция,
+                                что рисует руку в бою, со своей голографией,
+                                рамкой тира и артом.
+     Поэтому плакат не «похож на игру», а сделан из неё.
+
+     Первым заходом здесь стояли ВЫРЕЗАННЫЕ персонажи, и это не сработало:
+     вырезка шла по яркости (арт рисовался на чёрном), а у Весты тёмное платье —
+     она получалась полупрозрачной. Карты этой беды лишены: у них своя рамка и
+     свой фон, и на любой подложке они читаются целиком.
 
      Пропорции коробки — по замеру самого кадра: жёлтое поле лежит в
      x 50.3..83.3%, y 9.8..44.3% от картинки 900×900, то есть 297×311 пикселей.
@@ -22,6 +28,7 @@
      ========================================================================= -->
 <link rel="stylesheet" href="css/01-base.css">
 <link rel="stylesheet" href="css/02-menu.css">
+<link rel="stylesheet" href="css/04-cards.css">
 
 <style>
 body{margin:0;background:#15151c;color:#e9e9f0;font-family:'Segoe UI',Helvetica,Arial,sans-serif}
@@ -36,37 +43,37 @@ body{margin:0;background:#15151c;color:#e9e9f0;font-family:'Segoe UI',Helvetica,
   container-type:inline-size;
   box-shadow:0 0 0 2px #2c2c38, 0 18px 40px rgba(0,0,0,.6)}
 
-/* Персонажи. Прижаты к низу и слегка срезаны краем — так плакат читается
-   как плакат, а не как две наклейки посреди поля. */
-.перс{position:absolute;bottom:var(--низ);height:var(--рост);width:auto;
-  filter:drop-shadow(0 6px 18px rgba(0,0,0,.55))}
-.перс.л{left:var(--бок);transform:scaleX(var(--зеркЛ,1))}
-.перс.п{right:var(--бок);transform:scaleX(var(--зеркП,1))}
+/* Карты. Веером, с наклоном в разные стороны и лёгким нахлёстом — так это
+   читается как реклама пака, а не как две карточки в ряд. */
+.карта{position:absolute;bottom:var(--низ);width:var(--ширК);
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.6))}
+.карта.л{left:50%;transform:translateX(calc(-50% - var(--разлёт))) rotate(calc(var(--наклон) * -1))}
+.карта.п{left:50%;transform:translateX(calc(-50% + var(--разлёт))) rotate(var(--наклон));z-index:2}
 
 /* Заголовок — те же классы, что в меню, только размер считается от плаката. */
-/* Заголовок держим В ПРЕДЕЛАХ плаката: со звездой он шире, чем кажется, и на
-   13cqw звезда уезжала за левый край. */
 #шапкаЛого{position:absolute;left:50%;top:var(--верхЛого);transform:translateX(-50%) rotate(-2deg);
   z-index:5;display:flex;align-items:center;gap:2.5cqw;white-space:nowrap;max-width:94cqw}
-#шапкаЛого .mStar{width:12cqw;height:12cqw}
-#шапкаЛого .mTitle{font-size:13cqw;line-height:.95}
+#шапкаЛого .mStar{width:9.2cqw;height:9.2cqw}
+#шапкаЛого .mTitle{font-size:10cqw;line-height:.95}
 #шапкаЛого .mSub{font-size:2.6cqw;margin-top:.6cqw}
 
 /* Пульт. */
-#пульт{flex:1;min-width:280px;font-family:var(--mono);font-size:11px}
+#пульт{flex:1;min-width:300px;font-family:var(--mono);font-size:11px}
 #пульт h2{font-family:var(--disp);font-style:italic;color:var(--yel);font-size:15px;margin:0 0 10px}
 #пульт label{display:flex;align-items:center;gap:9px;margin-bottom:9px;color:#a8a8bc}
-#пульт label span{flex:none;width:132px}
+#пульт label span{flex:none;width:140px}
 #пульт input[type=range]{flex:1;accent-color:var(--yel)}
-#пульт .знач{flex:none;width:52px;color:var(--yel);text-align:right}
+#пульт .знач{flex:none;width:52px;color:var(--yel);text-align:right;font-style:normal}
 #пульт .разд{height:1px;background:#2c2c38;margin:14px 0}
 #пульт button{font-family:var(--mono);font-size:10px;letter-spacing:.06em;
-  background:#16161f;color:#cfccdd;border:2px solid #2c2c38;padding:6px 10px;cursor:pointer;margin-right:6px}
+  background:#16161f;color:#cfccdd;border:2px solid #2c2c38;padding:6px 10px;cursor:pointer;
+  margin:0 6px 6px 0}
 #пульт button:hover{border-color:var(--yel);color:var(--yel)}
 #пульт button.вкл{background:var(--yel);color:#0a0a0e;border-color:#000}
 #пульт p{color:#6a6a80;line-height:1.5}
-/* На жёлтом полосы должны быть тёмными, иначе их не видно, а заголовок —
-   чёрным: жёлтый по жёлтому не читается. */
+
+/* На жёлтом полосы должны быть тёмными, а заголовок чёрным: жёлтый по жёлтому
+   не читается вовсе. */
 .жп i{background:repeating-linear-gradient(-45deg,rgba(0,0,0,.10) 0 10px,transparent 10px 26px)!important}
 #плакат.жёлтый .mTitle{color:#141005;text-shadow:4px 4px 0 rgba(0,0,0,.30)}
 #плакат.жёлтый .mTitle em{color:#c4007a}
@@ -84,14 +91,15 @@ body{margin:0;background:#15151c;color:#e9e9f0;font-family:'Segoe UI',Helvetica,
     </div>
 
     <!-- Второй фон: фирменный жёлтый. Нужен потому, что в кадре щит СВЕТИТ —
-         жёлтые отражения на мокром асфальте нарисованы именно от него. Тёмный
-         плакат этот свет обнуляет, и улица перестаёт сходиться сама с собой. -->
+         жёлтые отражения на мокром асфальте нарисованы именно от него, и
+         тёмный плакат этот свет обнуляет. -->
     <div class="menuBg" id="фонЖёлтый" hidden style="background:
       radial-gradient(ellipse 70% 60% at 50% 45%, #ffe66b 0, #ffd52e 55%, #f5b800 100%)">
       <div class="mbStripes жп"><i></i><i></i></div>
     </div>
-    <img class="перс л" id="персЛ" src="art/_raw/poster_aya.png" alt="">
-    <img class="перс п" id="персП" src="art/_raw/poster_vesta.png" alt="">
+
+    <div class="карта л" id="картаЛ"></div>
+    <div class="карта п" id="картаП"></div>
 
     <div id="шапкаЛого">
       <span class="mStar"><svg viewBox="0 0 100 100"><path d="M50 5 L61 38 L95 38 L67 59 L78 92 L50 71 L22 92 L33 59 L5 38 L39 38 Z" fill="#ffd52e" stroke="#0a0a0e" stroke-width="5" paint-order="stroke"/></svg></span>
@@ -104,40 +112,58 @@ body{margin:0;background:#15151c;color:#e9e9f0;font-family:'Segoe UI',Helvetica,
 
   <div id="пульт">
     <h2>ПЛАКАТ НА ЩИТ</h2>
-    <label><span>рост персонажей</span><input type="range" id="рост" min="40" max="95" value="70"><i class="знач" id="ростЗ">70%</i></label>
-    <label><span>отступ от краёв</span><input type="range" id="бок" min="-12" max="20" value="-4"><i class="знач" id="бокЗ">-4%</i></label>
-    <label><span>низ</span><input type="range" id="низ" min="-20" max="10" value="-4"><i class="знач" id="низЗ">-4%</i></label>
+    <label><span>размер карт</span><input type="range" id="ширК" min="20" max="60" value="34"><i class="знач" id="ширКЗ">34%</i></label>
+    <label><span>разлёт</span><input type="range" id="разлёт" min="0" max="40" value="27"><i class="знач" id="разлётЗ">27%</i></label>
+    <label><span>наклон</span><input type="range" id="наклон" min="0" max="20" value="9"><i class="знач" id="наклонЗ">9°</i></label>
+    <label><span>низ</span><input type="range" id="низ" min="-25" max="14" value="2"><i class="знач" id="низЗ">2%</i></label>
     <div class="разд"></div>
-    <label><span>заголовок сверху</span><input type="range" id="верхЛого" min="2" max="40" value="7"><i class="знач" id="верхЛогоЗ">7%</i></label>
+    <label><span>заголовок сверху</span><input type="range" id="верхЛого" min="2" max="40" value="5"><i class="знач" id="верхЛогоЗ">5%</i></label>
     <label><span>размер заголовка</span><input type="range" id="разм" min="6" max="16" value="10"><i class="знач" id="размЗ">10</i></label>
     <div class="разд"></div>
-    <button id="зеркЛ">отзеркалить Аю</button>
-    <button id="зеркП">отзеркалить Весту</button>
-    <button id="подпись">показать подзаголовок</button>
     <button id="меняться">поменять местами</button>
+    <button id="подпись">подзаголовок</button>
+    <button id="фольга" class="вкл">голография</button>
     <button id="фон">фон: меню</button>
     <div class="разд"></div>
-    <p>Пропорции коробки — по замеру щита в кадре: 297×311 из 900×900.
-       Всё внутри считается от ширины плаката, поэтому на любом экране
-       композиция одна и та же.</p>
-    <p>Как понравится — скажи, и я сниму это картинкой и поставлю на щит вместо
+    <p>Карты рисует та же <code>cardHTML()</code>, что и руку в бою: своя рамка
+       тира, свой арт, своя голография. Не похожие на игровые — те же самые.</p>
+    <p>Пропорции коробки сняты со щита в кадре: 297×311 из 900×900. Внутри всё
+       считается от ширины плаката, поэтому на любом экране композиция одна.</p>
+    <p>Как понравится — скажи, сниму картинкой и поставлю на щит вместо
        нынешней надписи.</p>
   </div>
 </div>
 
 <script>
-const $=s=>document.querySelector(s);
+/* Единственная заглушка: состояние игры. Всё остальное — настоящие файлы.
+   foil включает голографию, её же гасит кнопка в пульте. */
+const S = {foil:true, anim:true, vfx:true, gfx:{}};
+</script>
+
+<script src="js/01-core.js"></script>
+<script src="js/02-data.js"></script>
+<script src="js/07-cards.js"></script>
+
+<script>
 const п=$('#плакат');
 const ставь=(имя,знач,ед='%')=>п.style.setProperty(имя,знач+ед);
 
+/* Ая Курона и Веста — те самые две карты. */
+let слева='L05', справа='L06';
+function нарисовать(){
+  $('#картаЛ').innerHTML=cardHTML(byId(слева),{open:1,noAnim:1});
+  $('#картаП').innerHTML=cardHTML(byId(справа),{open:1,noAnim:1});
+}
+
 function крутилка(id,имя,ед='%',поле){
   const вх=$('#'+id), зн=$('#'+id+'З');
-  const обнови=()=>{ зн.textContent=вх.value+(ед==='cqw'?'':ед);
+  const обнови=()=>{ зн.textContent=вх.value+ед;
     if(поле)поле(вх.value); else ставь(имя,вх.value,ед) };
   вх.oninput=обнови; обнови();
 }
-крутилка('рост','--рост');
-крутилка('бок','--бок');
+крутилка('ширК','--ширК');
+крутилка('разлёт','--разлёт');
+крутилка('наклон','--наклон','deg');
 крутилка('низ','--низ');
 крутилка('верхЛого','--верхЛого');
 крутилка('разм',null,'',v=>{
@@ -145,11 +171,19 @@ function крутилка(id,имя,ед='%',поле){
   $('#шапкаЛого .mStar').style.width=(v*0.92)+'cqw';
   $('#шапкаЛого .mStar').style.height=(v*0.92)+'cqw';
 });
+/* Наклон в градусах, а подпись должна быть со значком градуса — крутилка
+   печатает единицу как есть, поэтому тут её подменяем. */
+$('#наклонЗ').textContent=$('#наклон').value+'°';
+$('#наклон').addEventListener('input',()=>$('#наклонЗ').textContent=$('#наклон').value+'°');
 
-let зл=1, зп=1, поменяны=false;
-$('#зеркЛ').onclick=e=>{ зл=-зл; ставь('--зеркЛ',зл,''); e.target.classList.toggle('вкл',зл<0) };
-$('#зеркП').onclick=e=>{ зп=-зп; ставь('--зеркП',зп,''); e.target.classList.toggle('вкл',зп<0) };
-$('#подпись').onclick=e=>{ const s=$('#подзаг'); s.hidden=!s.hidden; e.target.classList.toggle('вкл',!s.hidden) };
+$('#меняться').onclick=e=>{
+  [слева,справа]=[справа,слева]; нарисовать();
+  e.target.classList.toggle('вкл',слева!=='L05');
+};
+$('#подпись').onclick=e=>{ const s=$('#подзаг'); s.hidden=!s.hidden;
+  e.target.classList.toggle('вкл',!s.hidden) };
+$('#фольга').onclick=e=>{ S.foil=!S.foil; нарисовать();
+  e.target.classList.toggle('вкл',S.foil) };
 $('#фон').onclick=e=>{
   const ж=$('#фонЖёлтый').hidden;
   $('#фонЖёлтый').hidden=!ж; $('#фонМеню').hidden=ж;
@@ -157,15 +191,6 @@ $('#фон').onclick=e=>{
   e.target.textContent='фон: '+(ж?'жёлтый':'меню');
   e.target.classList.toggle('вкл',ж);
 };
-$('#меняться').onclick=e=>{
-  поменяны=!поменяны;
-  const а='art/_raw/poster_aya.png', в='art/_raw/poster_vesta.png';
-  $('#персЛ').src=поменяны?в:а;
-  $('#персП').src=поменяны?а:в;
-  e.target.classList.toggle('вкл',поменяны);
-};
-/* Ая нарисована в профиль ВЛЕВО. Стоя слева, она смотрела бы из плаката
-   наружу — разворачиваем внутрь сразу, это не вкус, а композиция. */
-зл=-1; ставь('--зеркЛ',зл,''); $('#зеркЛ').classList.add('вкл');
-ставь('--зеркП',1,'');
+
+нарисовать();
 </script>
