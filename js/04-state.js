@@ -59,7 +59,7 @@ function migrate(s){
    load() по catch возвращал чистый DEF — то есть каждая перезагрузка
    страницы стирала сейв. */
 const INV_CAP=20;
-const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'',story:0,
+const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:1,done:{},hero:null,name:'',story:0,scenes:{},
   gacha:{pity:0,packs:0},snd:true,vfx:true,shk:true,foil:true,anim:true,arrows:true,
   /* Настройки графики. По умолчанию всё включено: игра должна показывать себя
      как задумана, а урезать пусть решает тот, кому тяжело. */
@@ -83,6 +83,9 @@ function defaultDeck(){return CARDS.filter(c=>c.t===0&&!c.noColl).flatMap(c=>[c.
 function fixS(s){
   for(const c of CARDS){if(Number.isFinite(s.inv[c.id]))s.inv[c.id]=clamp(s.inv[c.id]|0,0,INV_CAP)}
   if(!Array.isArray(s.deck)||s.deck.length!==20)s.deck=defaultDeck();
+  /* Сейвы до появления катсцен приходят без scenes. Дополняем пустым: «не
+     видел ни одной» — ровно то, что правда. */
+  if(!s.scenes||typeof s.scenes!=='object')s.scenes={};
   if(!Number.isFinite(s.stage))s.stage=0;
   /* Сейвы, сделанные до появления блока графики, приходят без gfx. Дополняем
      по ключам, а не подменяем объект целиком: иначе будущий новый флаг
