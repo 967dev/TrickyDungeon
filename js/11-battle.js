@@ -1717,7 +1717,7 @@ function finish(win,forfeit){
     gained=(B.st.tutorial&&S.done[B.si])?0:B.st.reward;
     if(!S.done[B.si]){S.done[B.si]=1;gained=Math.round(gained*1.5);
       if(B.si+1>S.stage)S.stage=B.si+1;
-      toast('Провал зачищен! Бонус первой зачистки ×1,5')}
+      toast('Рейд зачищен! Бонус первой зачистки ×1,5')}
     sfx.win();PF.notify('success');setMood('joy',3200);
     burst(innerWidth/2,innerHeight/2,['#ffd52e','#fff','#ff4fd8','#35f0ff'],70,1.8);
     bang('ПОБЕДА!!',50,30);

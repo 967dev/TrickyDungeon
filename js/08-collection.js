@@ -164,7 +164,7 @@ function autoDeck(){
    способ начать бой — он получит то же самое, ничего не дописывая. */
 function enterStage(i){
   if(!Number.isFinite(i)||!STAGES[i])return;
-  if(i>S.stage){toast('Зачисти предыдущий Провал!',1);return}
+  if(i>S.stage){toast('Сначала зачисти предыдущий бой!',1);return}
   if(S.deck.length!==20){toast('Собери колоду — ровно 20 карт!',1);go('deck');return}
   const вБой=()=>vnLoad(STAGES[i].n.toUpperCase(),900,()=>startBattle(i));
   /* Чат — только пока не прочитан. Прочитанный остаётся под значком телефона:

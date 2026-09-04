@@ -448,7 +448,7 @@ function renderHero(){
     sfx.sparks();PF.notify('success');
     renderMenu();                 /* чтобы портрет и плитки обновились под героя */
     go('stages');
-    toast(`${nm}, добро пожаловать в Провал`);
+    toast(`${nm}, добро пожаловать на турнир`);
   };
   heroReady();
 }
