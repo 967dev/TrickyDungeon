@@ -32,14 +32,19 @@ function snapBattle(){
   /* Посреди рассказа снимать нечего: состояние уже конечное, а на экране —
      ещё нет. Снимок сделается сразу после, отрисовкой в конце показа. */
   if(ИДЁТ||(B.ev&&B.ev.length))return;
+  /* Незакрытый залп стихии снимать нельзя: восстановленный бой откроется без
+     запроса цели, а ход будет заперт навсегда. */
+  if(B.pend)return;
   /* Тренировку не сохраняем: в снимке нет ни номера шага, ни позиции в
      сценарии врага, и восстановление вернуло бы игрока в сценарный бой без
      ведущего — тупик. Прерванная тренировка просто начинается заново. */
   if(B.train){dropBattleSnap();return}
   const side=P=>({hp:P.hp,max:P.max,mana:P.mana,mmax:P.mmax,fatigue:P.fatigue,
     deck:P.deck,hand:P.hand,
+    chain:P.chain||{el:null,n:0},ward:P.ward?1:0,manaPen:P.manaPen||0,
     board:P.board.map(u=>({id:u.card.id,uid:u.uid,atk:u.atk,hp:u.hp,maxhp:u.maxhp,
-      taunt:u.taunt?1:0,rush:u.rush?1:0,canAtk:u.canAtk?1:0,sick:u.sick?1:0,buffed:u.buffed?1:0}))});
+      taunt:u.taunt?1:0,rush:u.rush?1:0,canAtk:u.canAtk?1:0,sick:u.sick?1:0,buffed:u.buffed?1:0,
+      imm:u.imm?1:0}))});
   try{store.setLocal(BSNAP,JSON.stringify(
     {v:1,si:B.si,skill:B.skill,uid:UID,p:side(B.p),e:side(B.e)}))}catch(e){}
 }
@@ -55,14 +60,19 @@ function restoreBattle(){
   if(!st){dropBattleSnap();return false}
   const side=x=>({hp:x.hp|0,max:x.max|0,mana:x.mana|0,mmax:x.mmax|0,fatigue:x.fatigue|0,
     deck:(x.deck||[]).filter(byId),hand:(x.hand||[]).filter(byId),
+    /* Снимок старой версии полей цепочки не знает — восстановится с пустым
+       набором, что честно: чего не было записано, того и не было. */
+    chain:{el:(x.chain&&x.chain.el)||null,n:(x.chain&&x.chain.n)|0},
+    ward:x.ward?1:0,manaPen:x.manaPen|0,
     board:(x.board||[]).map(u=>{const card=byId(u.id);if(!card)return null;
       return{uid:u.uid,card,atk:u.atk|0,hp:u.hp|0,maxhp:u.maxhp|0,
-        taunt:!!u.taunt,rush:!!u.rush,canAtk:!!u.canAtk,sick:!!u.sick,buffed:u.buffed?1:0}})
+        taunt:!!u.taunt,rush:!!u.rush,canAtk:!!u.canAtk,sick:!!u.sick,buffed:u.buffed?1:0,
+        imm:u.imm?1:0}})
       .filter(Boolean)});
   const P=side(d.p),E=side(d.e);
   if(P.hp<=0||E.hp<=0){dropBattleSnap();return false}
   clearFeed();
-  B={si:d.si,st,phase:'p',over:false,skill:d.skill,p:P,e:E,sel:null,log:[],turnNo:0,ev:[]};
+  B={si:d.si,st,phase:'p',over:false,skill:d.skill,p:P,e:E,sel:null,log:[],turnNo:0,ev:[],pend:null};
   blog('sys','— бой восстановлен —','turn');
   /* Иначе следующий призванный юнит получит uid уже занятый на поле. */
   UID=Math.max(UID,(d.uid|0)+1);

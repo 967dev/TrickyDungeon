@@ -51,7 +51,7 @@ function mkUnit(card){
      держится значок РАШ на портрете (u.rush && u.sick) и тусклая рамка. */
   return{uid:UID++,card,atk:card.a||0,hp:card.h||0,maxhp:card.h||0,
     taunt:!!(card.kw&&card.kw.includes('taunt')),rush,
-    canAtk:rush,sick:true}}
+    canAtk:rush,sick:true,imm:0}}
 
 /* ================= цели =================
    Единственное место, где решается, законна ли цель. Раньше это решали три
@@ -100,11 +100,13 @@ function newBattle(si,колодаИгрока){
   const aiDeck=[];
   while(aiDeck.length<20){const c=pick(pool);if(aiDeck.filter(x=>x===c.id).length<2)aiDeck.push(c.id)}
   const B2={si,st,phase:'player',over:false,train:!!st.tutorial,eTurn:0,log:[],turnNo:0,ev:[],
+    pend:null,
     skill:clamp(.15+si*.09,0,1), /* 0.15 на первом рейде → 0.96 на финале */
     p:{hp:30,max:30,mana:0,mmax:0,
        deck:st.tutorial?[...TRAIN.deck].reverse():shuffle([...(колодаИгрока||[])]),
-       hand:[],board:[],fatigue:0},
-    e:{hp:st.hp,max:st.hp,mana:0,mmax:0,deck:st.tutorial?[]:shuffle(aiDeck),hand:[],board:[],fatigue:0},
+       hand:[],board:[],fatigue:0,chain:{el:null,n:0},ward:0,manaPen:0},
+    e:{hp:st.hp,max:st.hp,mana:0,mmax:0,deck:st.tutorial?[]:shuffle(aiDeck),hand:[],board:[],fatigue:0,
+       chain:{el:null,n:0},ward:0,manaPen:0},
     sel:null};
   if(B2.train){B2.p.hand=[...TRAIN.hand];return B2}
   for(let i=0;i<3;i++)rDraw(B2,'p');
@@ -155,6 +157,9 @@ function rDraw(st,who){
 
 function rHeroDmg(st,who,v){
   const P=st[who];
+  /* Заморозка боли (цепочка льда): весь урон в лицо мимо, включая усталость.
+     Щит не тратится на один удар — он держит весь ход противника. */
+  if(v>0&&P.ward){выдать(st,{t:'warded',who,v});return}
   P.hp=Math.max(0,P.hp-v);
   выдать(st,{t:'dmgHero',who,v});
   if(P.hp<=0)rOver(st,who==='e');
@@ -170,6 +175,9 @@ function rHeroHeal(st,who,v){
    оставлять на поле того, кого уже нет, ради красоты падения. Подача держит
    узел на экране сама — по событию 'die' (см. СМЕРТИ_ЖДУТ в 11-battle.js). */
 function rUnitDmg(st,side,u,v){
+  /* Пуленепробиваемый (цепочка стали). Покрывает и ответку тоже: такой юнит
+     бьёт без размена. Это сильно, и это надо померить. */
+  if(v>0&&u.imm){выдать(st,{t:'immune',side,u,v});return}
   u.hp-=v;
   выдать(st,{t:'dmgUnit',side,u,v});
   if(u.hp<=0){
@@ -238,10 +246,112 @@ function rEffect(st,who,c,tgt){
   }
 }
 
+/* ================= ЦЕПОЧКИ СТИХИЙ =================
+
+   Три карты ОДНОЙ стихии подряд — и стихия срабатывает. Карта не в цвет
+   обрывает набор, и в этом весь выбор: выложить сильную карту сейчас или
+   додержать цепочку. До этого поле `el` читалось трижды — цвет искр, эмблема
+   на карте без арта, звук выкладывания — и ни разу как правило: пять стихий
+   на 38 карт были краской.
+
+   Считается ВЫКЛАДЫВАНИЕ карты, а не удар юнита и не урон. Это момент, когда
+   решает игрок; это видно (карта уходит из руки); и это не зависит от того,
+   как легли размены. Атака как триггер поставила бы счётчик в зависимость от
+   боевой удачи.
+
+   Набор живёт ЧЕРЕЗ ходы. Сбрасывай его каждый ход — три карты за один ход
+   требуют шести маны, и механика включалась бы только к позднему бою.
+
+   Вольта и сталь требуют цели, а залп случается ПОСЛЕ того, как карта
+   отыграла. Значит игра обязана остановиться и спросить — для этого `st.pend`:
+   пока он стоит, ход не кончается и другую карту не выложить. У врага цель
+   берёт автомат (rChainAuto): ИИ спрашивать некого. Тем же автоматом играет
+   за игрока simulate() — 12 000 боёв без человека за рулём. Замер от этого
+   консервативен: автоцель играет не лучше человека, а хуже. */
+const ЦЕПЬ=3;
+
+function rChain(st,who,c){
+  if(!st||st.over||!c||!c.el)return;
+  const P=st[who],ch=P.chain||(P.chain={el:null,n:0});
+  if(ch.el===c.el)ch.n++;else{ch.el=c.el;ch.n=1}
+  const залп=ch.n>=ЦЕПЬ;
+  if(залп)ch.n=0;
+  выдать(st,{t:'chain',who,el:c.el,n:залп?ЦЕПЬ:ch.n,fire:залп?1:0});
+  if(залп)rChainFire(st,who,c.el);
+}
+
+/* Сам залп. Три стихии срабатывают сразу, две ждут цели. */
+function rChainFire(st,who,el){
+  const foe=who==='p'?'e':'p';
+  const P=st[who],E=st[foe];
+  switch(el){
+    case 'ice':                    /* Заморозка боли */
+      P.ward=1;
+      выдать(st,{t:'ward',who,froze:E.board.length});
+      /* Одного щита мало: замер дал +3/+4/+7 против +15/+16/+23 у огня. Причина
+         не в силе, а в том, что щит НЕ ТРОГАЕТ ДОСКУ — а поздние бои решает
+         доска. Значит стихия обязана дотянуться и до неё: у врага мёрзнут руки. */
+      for(const u of E.board)u.atk=Math.max(0,u.atk-1);
+      break;
+    case 'fire':                   /* Прожарка */
+      /* Двойка, а не единица: на 1 уроне залп упирался в юнитов тира ЛЕГЕНДА и
+         в поздних боях давал +5% против +22% у вольты. Замерено. */
+      выдать(st,{t:'roast',who,v:2});
+      for(const u of [...E.board])rUnitDmg(st,foe,u,2);
+      break;
+    case 'ether':                  /* Пустотный взрыв */
+      /* Тоже двойка: когда у врага десять маны, минус одна не мешает ничему. */
+      E.manaPen=(E.manaPen||0)+2;
+      выдать(st,{t:'void',who,v:2});
+      break;
+    case 'volta':                  /* Высокое напряжение */
+    case 'steel':                  /* Пуленепробиваемый */
+      /* Без своих юнитов эффекту некуда лечь. Запрашивать цель в этом случае
+         НЕЛЬЗЯ: st.pend без единой законной цели запрёт ход насмерть. */
+      if(!P.board.length){выдать(st,{t:'chainVoid',who,el});break}
+      st.pend={who,el};
+      выдать(st,{t:'chainPend',who,el});
+      if(who==='e')rChainAuto(st);
+      break;
+  }
+}
+
+/* Применить отложенный залп к выбранной цели. Законность решают правила,
+   слова для игрока подберёт подача. */
+function rChainTarget(st,u){
+  const p=st&&st.pend;
+  if(!p)return{ok:false,why:'нечего применять'};
+  const P=st[p.who];
+  if(!u||!P.board.includes(u))return{ok:false,why:'нужен свой юнит'};
+  st.pend=null;
+  if(p.el==='volta'){
+    u.atk+=1;u.hp+=1;u.maxhp+=1;u.buffed=1;
+    выдать(st,{t:'chainBuff',who:p.who,u,a:1,h:1});
+  }else{
+    u.imm=1;
+    выдать(st,{t:'chainImm',who:p.who,u});
+  }
+  return{ok:true};
+}
+
+/* Автоцель. Вольта усиливает того, кто бьёт; сталь прикрывает того, кого
+   дороже потерять. */
+function rChainAuto(st){
+  const p=st&&st.pend;
+  if(!p)return;
+  const board=st[p.who].board;
+  if(!board.length){st.pend=null;return}
+  const лучший=[...board].sort((a,b)=>
+    p.el==='volta'?b.atk-a.atk:(b.atk+b.hp)-(a.atk+a.hp))[0];
+  rChainTarget(st,лучший);
+}
+
 /* ================= розыгрыш карты =================
    Возвращает {ok:true} или {ok:false,why}. Почему отказ — решают правила,
    а какими словами это сказать игроку — подача: правила про тосты не знают. */
 function rPlayCard(st,who,i,tgt){
+  /* Незакрытый залп стихии держит ход: сначала цель, потом всё остальное. */
+  if(st.pend)return{ok:false,why:'сначала цель эффекта'};
   const P=st[who],id=P.hand[i],c=byId(id);
   if(!c)return{ok:false,why:'нет карты'};
   if(c.ty==='u'&&P.board.length>=5)return{ok:false,why:'поле полно'};
@@ -257,6 +367,7 @@ function rPlayCard(st,who,i,tgt){
     выдать(st,{t:'summon',who,u});
     if(c.eff)rEffect(st,who,c,tgt);
   }else rEffect(st,who,c,tgt);
+  rChain(st,who,c);
   return{ok:true};
 }
 
@@ -264,6 +375,7 @@ function rPlayCard(st,who,i,tgt){
    tgt — юнит или {hero:1}. Ответка бьёт даже если цель погибла: так было
    всегда, и на этом держится размен «оба падают». */
 function rAttack(st,side,u,tgt){
+  if(st.pend)return;
   const foe=side==='p'?'e':'p';
   const back=tgt.hero?0:(tgt.atk||0);
   выдать(st,{t:'atk',side,u,tgt,v:u.atk,back});
@@ -287,11 +399,18 @@ function rCanAttackTarget(st,side,tgt){
 function rStartTurn(st,who){
   if(!st||st.over)return false;
   const P=st[who];
-  P.mmax=Math.min(10,P.mmax+1);P.mana=P.mmax;
+  P.mmax=Math.min(10,P.mmax+1);
+  /* Пустотный взрыв (цепочка эфира): сторона недобирает ману ровно на том
+     ходу, к которому готовилась. Штраф разовый. */
+  P.mana=Math.max(0,P.mmax-(P.manaPen||0));
+  if(P.manaPen){выдать(st,{t:'manaLost',who,v:P.manaPen});P.manaPen=0}
+  /* Щит и иммунитет ставятся на своём ходу и обязаны пережить ход противника —
+     значит гаснут в начале СЛЕДУЮЩЕГО СВОЕГО хода, а не сразу. */
+  P.ward=0;
   if(who==='p')st.turnNo=(st.turnNo||0)+1;
   st.seq=(st.seq||0)+1;
   выдать(st,{t:'turn',who,no:st.turnNo||1});
-  for(const u of P.board){u.canAtk=true;u.sick=false}
+  for(const u of P.board){u.canAtk=true;u.sick=false;u.imm=0}
   rDraw(st,who);
   if(st.over)return false;
   st.phase=who;st.sel=null;
@@ -336,6 +455,7 @@ function rAiTurn(st){
       выдать(st,{t:'summon',who:'e',u});
       if(c.eff)rEffect(st,'e',c,tgt);
     }else rEffect(st,'e',c,tgt);
+    rChain(st,'e',c);
   }
   guard=0;
   while(!st.over&&guard++<14){
@@ -421,6 +541,7 @@ function simplePolicy(st){
     const tg=x.c.eff&&x.c.eff.tg;
     const tgt=tg==='ally'?P.board[0]:(tg==='any'?(E.board[0]||null):null);
     if(!rPlayCard(st,'p',x.i,tgt).ok)break;
+    if(st.pend)rChainAuto(st);
   }
   guard=0;
   while(!st.over&&guard++<14){
