@@ -65,6 +65,18 @@ setInterval(()=>{
     const stuck=Date.now()-wdSince;
     const btn=$('#bEnd');
     if(B.phase==='p'){
+      /* Незакрытый залп стихии — ЗАКОННАЯ причина держать кнопку выключенной:
+         игрок читает, что случилось, и выбирает цель, а это дольше трёх секунд.
+         Сторож тут не ловит затык, а проверяет, что спросить ЕСТЬ ЧЕМ: панель
+         снесло — вернуть, иначе ход действительно заперт навсегда. */
+      if(B.pend){
+        if(!document.querySelector('.chAsk')&&!(B.sel&&B.sel.type==='chain')){
+          try{console.warn('[bbduel] сторож: вернул запрос цели залпа')}catch(e){}
+          chainAsk(B.pend.el);
+        }
+        wdSince=Date.now();
+        return;
+      }
       if(btn&&btn.disabled&&stuck>WD_BTN_MS){
         btn.disabled=false;
         try{console.warn('[bbduel] сторож: разблокировал конец хода')}catch(e){}

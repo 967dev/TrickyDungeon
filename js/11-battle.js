@@ -266,6 +266,7 @@ function turnBanner(t){
 
 async function endTurn(){
   if(!B||B.phase!=='p'||B.over)return;
+  if(B.pend){toast('Сначала выбери цель для залпа стихии',1);tone(160,.08,{v:.06});return}
   if(ИДЁТ)return;   /* пока идёт показ, ход не закрываем: события ещё не сыграны */
   sfx.ui();B.phase='wait';B.seq=(B.seq||0)+1;$('#bEnd').disabled=true;
   B.sel=null;renderBattle();
@@ -664,6 +665,67 @@ async function сыграть(e){
     return;
   }
 
+  case 'chain':{
+    /* Тик набора рисует renderBattle — здесь только звук. Залп же обязан
+       остановить рассказ: событий у него дальше нет, а показать надо. */
+    renderBattle();
+    sfx.elem(e.el);
+    if(!e.fire)return;
+    const z=ЗАЛП[e.el]||{n:'',d:''};
+    blog(e.who,`✦ ЦЕПОЧКА ${(ЭЛ_ИМЯ[e.el]||'')} ×3 · ${z.n}`,'chain');
+    chainBanner(e.el,e.who);
+    tone(180,.16,{v:.1,sl:-60});
+    await пауза(520);
+    return;
+  }
+
+  case 'ward':
+    blog(e.who,'✦ щит поднят: урон в лицо не пройдёт, вражеским юнитам −1 атаки','chain');
+    renderBattle();
+    return;
+
+  case 'warded':
+    blog(e.who,`✦ щит удержал ${e.v}`,'chain');
+    sfx.elem('ice');
+    renderBattle();
+    return;
+
+  case 'roast':
+    blog(e.who,`✦ прожарка: ${e.v} урона всем вражеским юнитам`,'chain');
+    return;
+
+  case 'void':
+    blog(e.who,`✦ пустотный взрыв: врагу −${e.v} маны на следующем ходу`,'chain');
+    return;
+
+  case 'manaLost':
+    blog(e.who,`✦ пустота съела ${e.v} маны`,'chain');
+    renderBattle();
+    return;
+
+  case 'immune':
+    blog(e.side,`✦ ${e.u.card.n} не почувствовал ${e.v}`,'chain');
+    return;
+
+  case 'chainVoid':
+    blog(e.who,'✦ залп пропал: на поле некому его принять','chain');
+    return;
+
+  case 'chainPend':
+    /* У врага цель берёт автомат — спрашивать некого. */
+    if(e.who==='p')chainAsk(e.el);
+    return;
+
+  case 'chainBuff':
+    blog(e.who,`✦ ${e.u.card.n} +${e.a}/+${e.h}`,'chain');
+    renderBattle();
+    return;
+
+  case 'chainImm':
+    blog(e.who,`✦ ${e.u.card.n} прикрыт до конца хода врага`,'chain');
+    renderBattle();
+    return;
+
   case 'over':
     finish(e.win,e.forfeit);
     return;
@@ -691,6 +753,74 @@ function effText(e){
 }
 function effKind(e){return (e.k==='dmg'||e.k==='aoe'||e.k==='drain')?'atk':''}
 
+/* ================= ЦЕПОЧКИ СТИХИЙ: слова и картинки =================
+   Имена залпов авторские. Описание — то, что игрок должен успеть прочитать за
+   две секунды, поэтому одна строка и без условий. */
+const ЗАЛП={
+  ice  :{n:'ЗАМОРОЗКА БОЛИ',    d:'урон в лицо не проходит, вражеским юнитам −1 атаки'},
+  fire :{n:'ПРОЖАРКА',          d:'2 урона всем вражеским юнитам'},
+  ether:{n:'ПУСТОТНЫЙ ВЗРЫВ',   d:'врагу −2 маны на следующем ходу'},
+  volta:{n:'ВЫСОКОЕ НАПРЯЖЕНИЕ',d:'+1/+1 своему юниту на выбор'},
+  steel:{n:'ПУЛЕНЕПРОБИВАЕМЫЙ', d:'юнит не получает урона до конца хода врага'},
+};
+const ЭЛ_ИМЯ={ice:'ЛЁД',fire:'ОГОНЬ',ether:'ЭФИР',volta:'ВОЛЬТА',steel:'СТАЛЬ'};
+
+/* Громкая плашка залпа: эмблема, имя, что случилось. Без неё «вдруг у всех
+   вражеских юнитов на два здоровья меньше» читается как сбой, а не как
+   награда за собранную цепочку. */
+function chainBanner(el,who){
+  const z=ЗАЛП[el];if(!z)return;
+  const b=document.createElement('div');
+  b.className='chFire';b.dataset.el=el;
+  b.innerHTML=`<span class="chFireI">${svgWrap(EMB[el]||'')}</span>`+
+    `<span class="chFireT">${esc(z.n)}</span>`+
+    `<span class="chFireS">${who==='p'?'твоя цепочка':'цепочка врага'} · ${esc(z.d)}</span>`;
+  const w=$('#bWrap');if(!w)return;
+  w.appendChild(b);setTimeout(()=>b.remove(),2000);
+  const r=w.getBoundingClientRect();
+  if(r.width)burst(r.left+r.width/2,r.top+r.height*.4,EL_COLS[el]||EL_COLS.steel,22,1.3);
+}
+
+/* Залп, которому нужна цель. Панель живёт на body, а не внутри #bWrap: на
+   время рассказа обёртка боя заблокирована (lockUI), и кнопка внутри неё не
+   приняла бы нажатия — игрок остался бы с запертым ходом. */
+function chainAsk(el){
+  const z=ЗАЛП[el];if(!z)return;
+  document.querySelectorAll('.chAsk').forEach(n=>n.remove());
+  const box=document.createElement('div');
+  box.className='chAsk';box.dataset.el=el;
+  box.innerHTML=`<div class="chAskBox">
+    <div class="chAskI">${svgWrap(EMB[el]||'')}</div>
+    <div class="chAskK">ЦЕПОЧКА ЗАМКНУТА · ${esc(ЭЛ_ИМЯ[el]||'')} ×3</div>
+    <div class="chAskT">${esc(z.n)}</div>
+    <div class="chAskD">${esc(z.d)}</div>
+    <button class="btn pri" id="chAskGo">ВЫБРАТЬ ЦЕЛЬ</button>
+  </div>`;
+  document.body.appendChild(box);
+  box.querySelector('#chAskGo').onclick=()=>{
+    sfx.ui();box.remove();
+    if(B&&B.pend){B.sel={type:'chain'};renderBattle()}
+  };
+}
+
+/* Полоска набора. Рисует не конечный счётчик, а тот, до которого дошёл
+   рассказ: иначе враг, играющий три эфира подряд, засветил бы полный набор
+   ещё до того, как выложил первую карту. */
+function renderChain(sel,who){
+  const box=$(sel);if(!box)return;
+  const c=(ОТКАТ&&ОТКАТ.цепь[who])||B[who].chain||{el:null,n:0};
+  const щит=B[who].ward&&!(ОТКАТ&&ОТКАТ.щит.has(who));
+  if((!c.el||!c.n)&&!щит){box.hidden=true;box.innerHTML='';return}
+  box.hidden=false;
+  box.dataset.el=c.el||'steel';
+  const набор=(c.el&&c.n)
+    ?`<span class="elChI">${svgWrap(EMB[c.el]||'')}</span>`+
+     `<span class="elChN">${ЭЛ_ИМЯ[c.el]||''}</span>`+
+     `<span class="elChP">${[0,1,2].map(i=>`<i class="${i<c.n?'on':''}"></i>`).join('')}</span>`
+    :'';
+  box.innerHTML=набор+(щит?'<span class="elWard">ЩИТ</span>':'');
+}
+
 /* ================= отмотка =================
    Числа на экране — не конечное состояние, а состояние НА ТОТ МОМЕНТ, до
    которого дошёл рассказ. Считается один раз на отрисовку и лежит в ОТКАТ,
@@ -698,7 +828,10 @@ function effKind(e){return (e.k==='dmg'||e.k==='aoe'||e.k==='drain')?'atk':''}
 let ОТКАТ=null;
 function откат(){
   const о={hp:{p:0,e:0},рука:{p:0,e:0},мана:{p:0,e:0},колода:{p:0,e:0},
-    ед:new Map(),атк:new Map(),непоявились:new Set()};
+    ед:new Map(),атк:new Map(),непоявились:new Set(),
+    /* Набор берём из ПЕРВОГО несыгранного события стороны: оно несёт то
+       состояние, что было до него. Дальше по списку смотреть незачем. */
+    цепь:{p:null,e:null},щит:new Set(),имм:new Set()};
   if(!B||!B.ev)return о;
   const плюс=(m,u,v)=>m.set(u,(m.get(u)||0)+v);
   for(const e of B.ev){
@@ -709,6 +842,10 @@ function откат(){
       case 'burn':о.колода[e.who]++;break;
       case 'play':if(e.i>=0){о.рука[e.who]++;о.мана[e.who]+=e.c.c}break;
       case 'summon':о.непоявились.add(e.u.uid);break;
+      case 'chain':if(о.цепь[e.who]===null)о.цепь[e.who]={el:e.pel||null,n:e.pn|0};break;
+      case 'ward':о.щит.add(e.who);break;
+      case 'chainImm':о.имм.add(e.u.uid);break;
+      case 'chainBuff':плюс(о.ед,e.u,-(e.h||0));плюс(о.атк,e.u,-(e.a||0));break;
       case 'dmgUnit':плюс(о.ед,e.u,e.v);break;
       case 'eff':
         if(e.k==='mana')о.мана[e.who]-=e.v;
@@ -1252,6 +1389,20 @@ function onDragUp(e){
 function onUnitTap(uid){
   if(B.phase!=='p'||B.over)return;
   const u=B.p.board.find(x=>x.uid===uid);if(!u)return;
+  /* Незакрытый залп: юнит сейчас не воюет и не выбирается под удар. Иначе он
+     потратил бы удар вхолостую — правила бы его не пропустили, а canAtk уже
+     сняли бы. */
+  if(B.pend){
+    if(B.sel&&B.sel.type==='chain'){
+      const эл=B.pend.el;
+      const р=rChainTarget(B,u);
+      if(!р.ok){toast(р.why,1);tone(160,.08,{v:.06});return}
+      B.sel=null;sfx.elem(эл);
+      elBurst($(`#rowP .unit[data-uid="${uid}"]`),{el:эл},16,1.2);
+      проиграть();
+    }else toast('Сначала жми «ВЫБРАТЬ ЦЕЛЬ»',1);
+    return;
+  }
   if(B.sel&&B.sel.type==='hand'){
     const c=byId(B.p.hand[B.sel.i]);
     if(c&&canTarget(c,'p'))playCard(B.sel.i,u);
@@ -1264,6 +1415,7 @@ function onUnitTap(uid){
   B.sel={type:'unit',uid};renderBattle();
 }
 function onEnemyTap(uidOrHero){
+  if(B&&B.pend)return;      /* сначала цель залпа, потом всё остальное */
   if(!B.sel){return}
   if(B.sel.type==='unit'){
     const u=B.p.board.find(x=>x.uid===B.sel.uid);if(!u)return;
@@ -1335,7 +1487,9 @@ function renderBattle(){
   $('#eMana').innerHTML=manaRow(манаE,B.e.mmax);
   const canTargetE=B.sel&&(B.sel.type==='unit'||(B.sel.type==='hand'&&byId(B.p.hand[B.sel.i])?.eff?.tg==='any'));
   syncRow($('#rowE'),B.e.board,'e',!!canTargetE,canTargetE?'<div class="slot canDrop" data-slot="e-hero"></div>':'<div class="slot" data-slot="e-hero"></div>');
-  const canTargetP=B.sel&&B.sel.type==='hand'&&byId(B.p.hand[B.sel.i])?.eff?.tg==='ally';
+  renderChain('#pChain','p');renderChain('#eChain','e');
+  const canTargetP=B.sel&&(B.sel.type==='chain'
+    ||(B.sel.type==='hand'&&byId(B.p.hand[B.sel.i])?.eff?.tg==='ally'));
   syncRow($('#rowP'),B.p.board,'p',!!canTargetP,'<div class="slot"></div>');
   const n=B.p.hand.length;
   $('#bHand').innerHTML=B.p.hand.map((id,i)=>{
@@ -1369,6 +1523,14 @@ function renderBattle(){
   $$('#rowE .slot[data-slot="e-hero"],#bTop').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();onEnemyTap('hero')});
   });
+  /* Незакрытый залп держит ход: правила всё равно не пропустят ни карту, ни
+     удар, а выключенная кнопка объясняет это до того, как игрок ткнёт. */
+  const bEnd=$('#bEnd');
+  if(bEnd&&B.phase==='p'&&!B.over)bEnd.disabled=!!B.pend;
+  /* Самопочинка. Залп есть, а спросить нечем — панель могло снести чем угодно,
+     и тогда ход заперт навсегда. Дешевле вернуть её, чем ловить причину. */
+  if(B.pend&&!B.over&&!document.querySelector('.chAsk')&&!(B.sel&&B.sel.type==='chain'))
+    chainAsk(B.pend.el);
   updateHint();
   snapBattle();
   if(TR)trCheck();
@@ -1378,6 +1540,12 @@ function updateHint(){
   if(B.over){h.style.display='none';return}
   h.style.display='';
   if(B.phase!=='p'){h.textContent='— ход врага, наблюдай —';return}
+  if(B.pend){
+    h.textContent=(B.sel&&B.sel.type==='chain')
+      ? 'тапни СВОЕГО юнита — на него ляжет залп стихии'
+      : 'цепочка замкнулась — выбери, на кого ляжет залп';
+    return;
+  }
   const playCount=B.p.hand.filter(id=>byId(id).c<=B.p.mana).length;
   if(B.sel){
     if(B.sel.type==='hand'){
@@ -1462,6 +1630,7 @@ function updateUnit(el,u,side,targetable){
   el.classList.toggle('target',!!targetable);
   el.classList.toggle('tired',!!tired);
   el.classList.toggle('buffed',!!u.buffed);
+  el.classList.toggle('imm',!!(u.imm&&!(ОТКАТ&&ОТКАТ.имм.has(u.uid))));
   const a=el.querySelector('.uA'), h=el.querySelector('.uH');
   const атк=показAtk(u),здор=показHp(u);
   if(a&&a.textContent!=String(атк))a.textContent=атк;
@@ -1501,7 +1670,8 @@ function unitHTML(u,side,targetable){
   const hex=u.card.ult?'#ff3355':TIER_HEX[u.card.t];
   const sel=B.sel&&B.sel.type==='unit'&&B.sel.uid===u.uid;
   const tired=!u.canAtk&&side==='p';
-  return `<div class="unit ${sel?'sel':''} ${targetable?'target':''} ${tired?'tired':''} ${u.buffed?'buffed':''}"
+  const имм=u.imm&&!(ОТКАТ&&ОТКАТ.имм.has(u.uid));
+  return `<div class="unit ${sel?'sel':''} ${targetable?'target':''} ${tired?'tired':''} ${u.buffed?'buffed':''} ${имм?'imm':''}"
     data-uid="${u.uid}" style="--tc:${hex}">
     <span class="uName">${u.card.n}</span>
     <span class="uKw">${u.taunt?'<i>ТАУНТ</i>':''}${u.rush&&u.sick?'<i class="r">РАШ</i>':''}</span>

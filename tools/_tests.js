@@ -77,6 +77,18 @@
           playCard(i, null);
           if (typeof ИДЁТ !== 'undefined' && ИДЁТ) await ИДЁТ;
           await жди(120);
+          /* Залп стихии, которому нужна цель. Живой игрок читает панель и
+             тычет в своего юнита — бот делает ровно то же и через те же
+             обработчики: иначе он проверяет не ту игру, в которую играют.
+             Без этого шага ход запирается насмерть, и весь прогон встаёт. */
+          if (B && B.pend) {
+            const кнопка = document.querySelector('.chAsk #chAskGo');
+            if (кнопка) кнопка.click();
+            const цель = B.p.board[0];
+            if (цель) onUnitTap(цель.uid);
+            if (typeof ИДЁТ !== 'undefined' && ИДЁТ) await ИДЁТ;
+            await жди(120);
+          }
         }
         for (const u of [...B.p.board]) {
           if (B.over || B.phase !== 'p') break;

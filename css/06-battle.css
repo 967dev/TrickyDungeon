@@ -396,4 +396,74 @@
   border:3px solid var(--yel);font-family:var(--disp);font-size:14px;color:#fff;white-space:nowrap;
   transform:translate(-50%,-130%);box-shadow:6px 8px 0 rgba(0,0,0,.55)}
 .ghost small{display:block;font-family:var(--mono);font-size:9.5px;color:var(--yel);margin-top:4px;letter-spacing:.08em}
+
+/* ================= ЦЕПОЧКИ СТИХИЙ =================
+   Полоска набора у обеих панелей. Показывается ТОЛЬКО когда набор начат:
+   пустой счётчик игрок быстро учится не замечать, а вместе с ним перестаёт
+   замечать и полный. */
+.elCh{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:6px;--c:#c9d4dc}
+.elCh[hidden]{display:none}
+.elCh[data-el="fire"] {--c:#ff6a1f}
+.elCh[data-el="ice"]  {--c:#35f0ff}
+.elCh[data-el="volta"]{--c:#ffd52e}
+.elCh[data-el="ether"]{--c:#ff4fd8}
+.elCh[data-el="steel"]{--c:#c9d4dc}
+.elChI{width:13px;height:13px;color:var(--c);flex:none}
+.elChI svg{width:100%;height:100%;display:block}
+.elChN{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;color:var(--c)}
+.elChP{display:flex;gap:3px}
+.elChP i{width:7px;height:7px;background:#23232e;box-shadow:inset 0 0 0 1px #0a0a0f;display:block}
+.elChP i.on{background:var(--c);box-shadow:inset 0 0 0 1px #0a0a0f,0 0 7px var(--c)}
+.elWard{font-family:var(--mono);font-size:8px;letter-spacing:.08em;color:#0a0a0f;
+  background:#35f0ff;padding:2px 5px;box-shadow:2px 2px 0 rgba(0,0,0,.5)}
+/* Прикрытый юнит. Обводка, а не рамка: рамка сдвинула бы содержимое клетки. */
+.unit.imm{box-shadow:0 0 0 3px #dbe6ee,0 0 20px rgba(219,230,238,.55)}
+
+/* Плашка залпа. Держится дольше плашки хода: её видно редко, и прочитать надо
+   успеть — там не только имя, но и что именно случилось. */
+.chFire{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);z-index:41;
+  pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:4px;
+  text-align:center;--c:#ffd52e;animation:chFireA 2s cubic-bezier(.2,1.2,.3,1) forwards}
+.chFire[data-el="fire"] {--c:#ff6a1f}
+.chFire[data-el="ice"]  {--c:#35f0ff}
+.chFire[data-el="volta"]{--c:#ffd52e}
+.chFire[data-el="ether"]{--c:#ff4fd8}
+.chFire[data-el="steel"]{--c:#c9d4dc}
+.chFireI{width:38px;height:38px;color:var(--c);filter:drop-shadow(0 0 12px var(--c))}
+.chFireI svg{width:100%;height:100%;display:block}
+.chFireT{font-family:var(--disp);font-style:italic;font-size:clamp(20px,4.4vw,36px);color:#fff;
+  text-shadow:3px 3px 0 #000,0 0 18px var(--c)}
+.chFireS{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--c);
+  max-width:min(320px,78vw);text-shadow:1px 1px 0 #000}
+@keyframes chFireA{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
+  12%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}
+  20%{transform:translate(-50%,-50%) scale(1)}
+  82%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-64%) scale(.98)}}
+
+/* Запрос цели. Ход при этом НЕ кончается — это держат правила (B.pend), а
+   панель только объясняет, за что игроку сейчас дают выбор. */
+.chAsk{position:fixed;inset:0;z-index:76;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(6,6,10,.78);animation:scrIn .25s;--c:#ffd52e}
+.chAsk[data-el="fire"] {--c:#ff6a1f}
+.chAsk[data-el="ice"]  {--c:#35f0ff}
+.chAsk[data-el="volta"]{--c:#ffd52e}
+.chAsk[data-el="ether"]{--c:#ff4fd8}
+.chAsk[data-el="steel"]{--c:#c9d4dc}
+.chAskBox{background:#12121a;border:3px solid var(--c);box-shadow:8px 10px 0 rgba(0,0,0,.6);
+  padding:20px 22px;max-width:340px;text-align:center;
+  animation:chAskIn .35s cubic-bezier(.2,1.3,.3,1) both}
+@keyframes chAskIn{from{transform:translateY(16px) scale(.94);opacity:0}}
+.chAskI{width:52px;height:52px;margin:0 auto 10px;color:var(--c);
+  filter:drop-shadow(0 0 14px var(--c));animation:chAskPulse 1.4s ease-in-out infinite}
+.chAskI svg{width:100%;height:100%;display:block}
+@keyframes chAskPulse{50%{transform:scale(1.12)}}
+.chAskK{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--c);margin-bottom:6px}
+.chAskT{font-family:var(--disp);font-style:italic;color:#fff;
+  /* Считаем от ширины экрана: «ПУЛЕНЕПРОБИВАЕМЫЙ» — семнадцать букв, и на 320px
+     фиксированные 22px уезжают за край коробки. */
+  font-size:clamp(16px,5.2vw,22px);
+  text-shadow:2px 2px 0 #000;line-height:1.1}
+.chAskD{font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--dim);margin:8px 0 16px}
 }

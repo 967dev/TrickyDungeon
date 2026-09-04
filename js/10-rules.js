@@ -273,10 +273,13 @@ const ЦЕПЬ=3;
 function rChain(st,who,c){
   if(!st||st.over||!c||!c.el)return;
   const P=st[who],ch=P.chain||(P.chain={el:null,n:0});
+  /* Прежнее состояние уезжает в событие: подача рисует не конечный счётчик, а
+     тот, до которого дошёл рассказ, и отмотать его иначе не из чего. */
+  const пел=ch.el,пн=ch.n;
   if(ch.el===c.el)ch.n++;else{ch.el=c.el;ch.n=1}
   const залп=ch.n>=ЦЕПЬ;
   if(залп)ch.n=0;
-  выдать(st,{t:'chain',who,el:c.el,n:залп?ЦЕПЬ:ch.n,fire:залп?1:0});
+  выдать(st,{t:'chain',who,el:c.el,n:залп?ЦЕПЬ:ch.n,fire:залп?1:0,pel:пел,pn:пн});
   if(залп)rChainFire(st,who,c.el);
 }
 
