@@ -83,6 +83,13 @@ MAP = {
     'cafe2f': 'coffee1g.png',
     'cafe3f': 'coffee2g.png',
     'cafe4':  'coffee3g.png',
+    # Номер в имени — номер КАДРА В СЦЕНЕ, а не порядок присланного файла:
+    # у «Утра» первый кадр — чёрный экран, он собран отдельно, и присланный
+    # будильник это кадр ВТОРОЙ. Перепутать тут проще всего, а заметно будет
+    # только на экране.
+    'morning2f': 'morning_alarm.png',
+    'morning3f': 'morning_call.png',
+    'morning4f': 'morning_leave.png',
 }
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 RAW  = os.path.join(ROOT, 'art', '_raw')
