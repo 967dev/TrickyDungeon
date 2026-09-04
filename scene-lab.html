@@ -25,6 +25,8 @@
      Показывает старое — обнови жёстко.
      ========================================================================= -->
 <link rel="stylesheet" href="css/01-base.css">
+<link rel="stylesheet" href="css/02-menu.css">
+<link rel="stylesheet" href="css/04-cards.css">
 <link rel="stylesheet" href="css/07-story.css">
 
 <style>
@@ -95,7 +97,7 @@ body{margin:0;background:#0a0a0f;color:#e9e9f0;overflow:hidden;
     <div id="сцена">
       <div class="screen on" id="scr-story">
         <div class="vnWrap">
-          <div class="vnArt"><img id="vnImg" src="" alt="" draggable="false"><div class="vnStub" id="vnStub" hidden></div><div class="vnOver" id="vnOver" hidden></div></div>
+          <div class="vnArt"><img id="vnImg" src="" alt="" draggable="false"><div class="vnStub" id="vnStub" hidden></div><div class="vnOver" id="vnOver" hidden></div><div class="vnBoard" id="vnBoard" hidden></div></div>
           <div class="vnBox">
             <div class="vnLines" id="vnLines"></div>
             <div class="vnFoot">
@@ -115,23 +117,27 @@ body{margin:0;background:#0a0a0f;color:#e9e9f0;overflow:hidden;
 /* ================= заглушки игры =================
    Всё, что показ сцены берёт снаружи. Заглушки нарочно тупые: стенд проверяет
    сцены, а не игру, и любая логика здесь была бы второй реализацией. */
-const $  = s => document.querySelector(s);
-const $$ = s => [...document.querySelectorAll(s)];
-const S  = {hero:'f', name:'ИГРОК', story:1, scenes:{}, anim:true, vfx:true, shk:true};
+/* $, $$, PF, svgWrap, EMB и прочую мелочь даёт js/01-core.js — своих копий
+   тут нет и быть не должно. Заглушка осталась одна: состояние игры. */
+const S  = {hero:'f', name:'ИГРОК', story:1, scenes:{}, anim:true, vfx:true, shk:true, foil:true, gfx:{}};
 const save   = () => {};
 let CUR = 'story';
 const go     = id => { CUR = id };
 const sfx    = {ui(){}};
 const shake  = () => {};
 const toast  = () => {};
-const PF     = {back(){}, guardClose(){}, haptic(){}, notify(){}};
 const esc    = t => String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 /* Заставку между сценами стенд не показывает: она тут только мешает — щёлкать
    надо быстро. */
 const vnLoadStub = (_t,_ms,cb) => cb && cb();
 </script>
 
-<!-- Настоящие файлы: сцены и подстановка рода. Порядок как в index.html. -->
+<!-- Настоящие файлы. Порядок как в index.html.
+     01-core даёт $, EMB и svgWrap; 02-data — карты и этапы; 07-cards — сам
+     cardHTML(), которым собирается плакат на щите в «Кофейне». -->
+<script src="js/01-core.js"></script>
+<script src="js/02-data.js"></script>
+<script src="js/07-cards.js"></script>
 <script src="js/05-story.js"></script>
 <script src="js/09-chat.js"></script>
 

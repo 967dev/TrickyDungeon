@@ -15,7 +15,17 @@
 #scr-story{align-items:center;justify-content:center;padding:0;background:#07070b}
 .vnWrap{width:100%;max-width:900px;height:100%;display:flex;flex-direction:column;
   justify-content:center;gap:0;padding:12px;position:relative}
-.vnArt{position:relative;container-type:inline-size;width:100%;aspect-ratio:1/1;max-height:56vh;flex:none;
+/* Коробка кадра обязана оставаться КВАДРАТОМ, а не только иметь квадратные
+   пропорции «пока хватает высоты». Высоту ограничивает --vnH, и раньше при
+   низком окне ограничение срабатывало по высоте, а ширина оставалась 100% —
+   коробка становилась широкой, картинка внутри обрезалась по object-fit, и всё,
+   что позиционируется процентами ОТ КОРОБКИ, уезжало мимо картинки: имя на
+   радаре и плакат на щите вставали не туда. Поэтому ширину ограничиваем той же
+   величиной. */
+.vnArt{--vnH:56vh;
+  position:relative;container-type:inline-size;
+  width:min(100%,var(--vnH));aspect-ratio:1/1;max-height:var(--vnH);
+  margin-inline:auto;flex:none;
   border:3px solid #000;box-shadow:0 0 0 2px rgba(255,213,46,.25) inset,8px 9px 0 rgba(0,0,0,.5);
   background:#0a0a0f;overflow:hidden}
 .vnArt img{width:100%;height:100%;object-fit:cover;object-position:center 22%;display:block}
@@ -55,7 +65,7 @@
 .vnSkip:hover{color:var(--yel)}
 .vnProg{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:#44445a}
 @media (max-width:700px){
-  .vnArt{max-height:42vh}
+  .vnArt{--vnH:42vh}
   .vnBox{min-height:150px;padding:10px 11px 9px}
   .vnText{font-size:13px;line-height:1.55}
   .vnFace{width:40px;height:40px}
@@ -264,7 +274,7 @@
    кадр и стоит. Полоска с «далее ▸» остаётся: без неё непонятно, что дальше. */
 .vnWrap.тихо .vnLines{display:none}
 .vnWrap.тихо .vnBox{padding-top:6px;padding-bottom:6px}
-.vnWrap.тихо .vnArt{max-height:74vh}
+.vnWrap.тихо .vnArt{--vnH:74vh}
 /* Накладка поверх кадра. Надпись, которая зависит от игрока и потому не может
    быть врезана в картинку заранее: имя на радаре. Координаты задаёт сцена. */
 .vnOver{position:absolute;transform:translate(-50%,-50%) rotate(var(--rot,0deg));
@@ -285,4 +295,33 @@
   font-size:5.6cqw;letter-spacing:-.01em;white-space:nowrap}
 .vnOver.board .voS{font-family:var(--mono);font-weight:700;color:#2a2408;
   font-size:2.1cqw;letter-spacing:.02em;line-height:1.3;margin-top:.5em}
+
+/* ================= ПЛАКАТ НА ЩИТЕ =================
+   Ложится ровно на пустое жёлтое поле щита в кадре «Кофейня». Координаты
+   сосчитаны по жёлтым пикселям самого кадра, а не подобраны на глаз: поле
+   лежит в x 50.3..83.3%, y 9.8..44.3% от картинки. Поворот — по наклону щита.
+   Живьём, а не картинкой: карты рисует та же cardHTML(), фон и заголовок —
+   те же классы, что в меню. Поменяется вид карты — поменяется и плакат.
+   Размеры внутри считаются от ШИРИНЫ ПЛАКАТА (cqw): щит нарисован в кадре и
+   обязан ехать вместе с ним, а не жить своей жизнью на широком мониторе.
+   Числа подобраны в poster-lab.html. */
+.vnBoard{position:absolute;left:50.3%;top:9.8%;width:33%;height:34.5%;
+  transform:rotate(1.6deg);transform-origin:50% 50%;overflow:hidden;
+  container-type:inline-size;background:#0a0a0f;pointer-events:none}
+.vnBoard[hidden]{display:none}
+/* Карты веером. Разлёт считается от ширины САМОЙ карты — так задумано в
+   стенде, и числа оттуда переносятся без пересчёта. */
+.vnBoard .pbCard{position:absolute;bottom:-16%;width:45%;
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.6))}
+.vnBoard .pbCard.l{left:50%;transform:translateX(calc(-50% - 57%)) rotate(-11deg)}
+.vnBoard .pbCard.r{left:50%;transform:translateX(calc(-50% + 57%)) rotate(11deg);z-index:2}
+.vnBoard .pbLogo{position:absolute;left:50%;top:21%;transform:translateX(-50%) rotate(-2deg);
+  z-index:5;display:flex;align-items:center;gap:2.5cqw;white-space:nowrap;max-width:94cqw}
+.vnBoard .mStar{width:12cqw;height:12cqw;flex:none}
+.vnBoard .mStar svg{width:100%;height:100%;display:block;filter:drop-shadow(3px 4px 0 rgba(0,0,0,.5))}
+.vnBoard .mTitle{font-size:13cqw;line-height:.95}
+.vnBoard .mSub{font-size:3cqw;margin-top:.6cqw;letter-spacing:.06em}
+/* Карта внутри плаката не кликается и не наклоняется от мыши: это рисунок на
+   щите, а не карта в руке. */
+.vnBoard .cWrap{animation:none;cursor:default}
 }
