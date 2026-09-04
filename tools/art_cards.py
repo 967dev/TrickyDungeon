@@ -72,6 +72,18 @@ MAP = {
 РАЙОНЫ = {
     'act1': '1ACTMAP.png',
 }
+# Кадры катсцен. Имя файла = то, что ждёт игра: сцена, номер кадра и — у кадров
+# С ГЕРОЕМ — буква пола. Кадр без героя один на обоих (щит на улице, соседний
+# столик), кадр с героем свой у каждого: одежда и лицо берутся с эталона, и
+# подменить их на лету нельзя.
+# Квадрат и гашение каймы тут не нужны: кадр и так квадратный, а края уходят
+# под рамку сцены. От сборки нужен только вес.
+СЦЕНЫ = {
+    'cafe1':  'streetscene.png',
+    'cafe2f': 'coffee1g.png',
+    'cafe3f': 'coffee2g.png',
+    'cafe4':  'coffee3g.png',
+}
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 RAW  = os.path.join(ROOT, 'art', '_raw')
 OUT  = os.path.join(ROOT, 'art', 'cards')
@@ -193,6 +205,24 @@ def build_map(имя, src):
         имя, im.width, im.height, os.path.getsize(f) / 1024, имя))
 
 
+def build_story(имя, src):
+    """Кадр катсцены: уменьшение до 900 и webp. Ни квадрата, ни каймы."""
+    p = os.path.join(RAW, src)
+    if not os.path.exists(p):
+        print('  нет оригинала кадра: %s' % src); return
+    im = Image.open(p).convert('RGB')
+    d = os.path.join(ROOT, 'art', 'story')
+    os.makedirs(d, exist_ok=True)
+    f = os.path.join(d, имя + '.webp')
+    # 900 по стороне — как у кадров первой сцены: на экране кадр не шире 56vh.
+    k = 900.0 / max(im.size)
+    if k < 1:
+        im = im.resize((int(round(im.width * k)), int(round(im.height * k))), Image.LANCZOS)
+    im.save(f, 'WEBP', quality=84, method=6)
+    print('  %-7s %4dx%-4d -> %6.0f КБ  art/story/%s.webp' % (
+        имя, im.width, im.height, os.path.getsize(f) / 1024, имя))
+
+
 def build_fog():
     src, out, size, q = ТУМАН
     p = os.path.join(RAW, src)
@@ -209,6 +239,9 @@ if __name__ == '__main__':
         build_fog()
     if only == ['fog']:
         sys.exit(0)
+    for имя, src in sorted(СЦЕНЫ.items()):
+        if not only or имя in only:
+            build_story(имя, src)
     for имя, src in sorted(РАЙОНЫ.items()):
         if not only or имя in only:
             build_map(имя, src)
