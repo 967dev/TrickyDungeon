@@ -14,6 +14,9 @@
    те же глобали. */
 
 /* ================= рендер карточки ================= */
+/* Подпись к значку стихии — всплывающая, для мыши. Имена те же, что в журнале
+   боя и в справочнике. */
+const ЭЛ_ПОДПИСЬ={fire:'ОГОНЬ',ice:'ЛЁД',volta:'ВОЛЬТА',ether:'ЭФИР',steel:'СТАЛЬ'};
 function cardHTML(c,opts={}){
   const hex=c.ult?'#ff3355':TIER_HEX[c.t];
   const stars='★'.repeat(c.t+1);
@@ -43,7 +46,13 @@ function cardHTML(c,opts={}){
     <div class="cFace cFront${art?' art':''}" style="--tc:${hex}">
       ${art?`<div class="cfArtImg" style="background-image:url(art/cards/${c.id}.webp)"></div>`:''}
       ${holo}
-      <div class="cfHead"><span class="cfCost">${c.c}</span><span class="cfStars">${stars}</span></div>
+      ${/* Значок стихии. До появления цепочек стихия нигде на карте не была
+            написана: цвет искр, звук выкладывания и эмблема на карте БЕЗ арта —
+            вот и всё, а с артом не видно было и её. Теперь три карты одной
+            стихии подряд решают бой, и знать стихию надо ДО того, как карта
+            сыграна, а не после. */''}
+      <div class="cfHead"><span class="cfCost">${c.c}</span>
+        <span class="cfMeta"><span class="cfEl" data-el="${c.el}" title="${ЭЛ_ПОДПИСЬ[c.el]||''}">${svgWrap(EMB[c.el]||EMB.steel)}</span><span class="cfStars">${stars}</span></span></div>
       <div class="cfArt">${svgWrap(c.ty==='u'?(EMB[c.el]||EMB.steel):(EMB[spellIcon(c)]||EMB.boom))}</div>
       <div class="cfName">${c.n}</div>
       ${/* Коробка с эффектом появляется, только если есть что написать: у

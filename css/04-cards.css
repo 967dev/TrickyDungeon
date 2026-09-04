@@ -169,6 +169,25 @@ body.gNoGlow .cWrap{--glow:.20;--edge:.10}
 /* Звёзды разгораются вместе с тиром: именно по ним игрок читает редкость, и
    без этого лестница держалась бы на одном переливе. Свечение вписано прямо
    сюда — отдельным правилом выше по файлу его перебивало бы это же. */
+/* Значок стихии рядом со звёздами. Цвета — первые из EL_COLS (js/03-fx.js),
+   те же, что у искр при выкладывании и у счётчика цепочки в бою: игрок должен
+   связать значок на карте, цвет искр и полоску набора в одно, а не заучивать
+   три разных кода. */
+.cfMeta{display:flex;align-items:center;gap:5px;flex:none}
+/* Значок ЗАЛИТ цветом стихии, а эмблема на нём тёмная — как у стоимости, где
+   чёрная цифра на жёлтом. Первым заходом было наоборот, тёмный значок со
+   светящейся эмблемой, и на тёмной карте он читался как случайная искра.
+   Круг, а не квадрат: у вольты цвет тот же жёлтый, что у стоимости, и два
+   одинаковых квадрата в одной строке слились бы в один значок. */
+.cfEl{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:var(--el,#c9d4dc);color:#0a0a0e;border:2px solid #000;
+  box-shadow:2px 2px 0 rgba(0,0,0,.5)}
+.cfEl svg{width:70%;height:70%;display:block}
+.cfEl[data-el="fire"] {--el:#ff6a1f}
+.cfEl[data-el="ice"]  {--el:#35f0ff}
+.cfEl[data-el="volta"]{--el:#ffd52e}
+.cfEl[data-el="ether"]{--el:#ff4fd8}
+.cfEl[data-el="steel"]{--el:#c9d4dc}
 .cfStars{font-size:9px;letter-spacing:1px;color:var(--tc);align-self:center;
   text-shadow:0 0 calc(3px + var(--glow) * 7px) currentColor}
 .cfArt{position:relative;flex:1;display:grid;place-items:center;min-height:0;z-index:1}

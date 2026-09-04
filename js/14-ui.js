@@ -26,8 +26,12 @@ function catalogHTML(){
           draw:`+${e.v} карта`,buff:`+${e.a}/${e.h} союзнику`,buffAll:`+${e.a}/+${e.h} всем`,
           aoe:`${e.v} урона всем врагам`,weaken:`−${e.v} атаки врагам`,drain:`${e.v} урона + лечение ${e.v}`};
         eff=` — ${c.ty==='u'?'клич: ':''}${m[e.k]||''}`}
+      /* Стихия в списке — не украшение: по ней собирают колоду под цепочки,
+         а листать 37 карт и вспоминать, кто какого цвета, невозможно. */
+      const эл=(typeof ЭЛ_ИМЯ!=='undefined'&&ЭЛ_ИМЯ[c.el])||'';
       return `<div class="catRow" style="--cat:${hex}">
         <b>${c.n}</b> <span class="cc">${c.c}⚡${c.ty==='u'?' · '+c.a+'/'+c.h:''}</span>
+        ${эл?`<span class="catEl e-${c.el}">${эл}</span>`:''}
         ${kw?'<span style="color:var(--yel)">['+kw+']</span>':''}${eff}
       </div>`}).join('');
   }).join('');

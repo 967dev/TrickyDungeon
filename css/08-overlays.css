@@ -48,4 +48,14 @@
 .insFl{font-size:11.5px;font-style:italic;color:#8d8da0;border-left:3px solid #2c2c38;padding-left:10px;margin-bottom:14px}
 .insBtns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .noMana{font-family:var(--mono);font-size:10.5px;color:var(--red);letter-spacing:.1em}
+
+/* Стихия в списке карт справочника. Цвета те же, что у значка на карте и у
+   искр при выкладывании. */
+.catEl{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;padding:1px 5px;
+  border:1px solid currentColor;border-radius:2px;vertical-align:1px}
+.catEl.e-fire {color:#ff6a1f}
+.catEl.e-ice  {color:#35f0ff}
+.catEl.e-volta{color:#ffd52e}
+.catEl.e-ether{color:#ff4fd8}
+.catEl.e-steel{color:#c9d4dc}
 }
