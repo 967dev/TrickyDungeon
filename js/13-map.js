@@ -427,15 +427,40 @@ const ACT_STORY={
   1:{flag:'story',sub:'сцена · пересмотреть',
      run:()=>vnLoad(curStory().intro,900,()=>startStory(()=>go('stages')))}
 };
+/* Катсцены акта, в порядке показа. Считаем по той же таблице, что и игра
+   (SCENE_AT), а не списком руками: списки разъезжаются, и в табло появилась бы
+   кнопка на сцену, которой в этом акте нет. */
+function сценыАкта(n){
+  const из=[];
+  STAGES.forEach((st,i)=>{
+    if(st.акт!==n)return;
+    for(const когда of ['before','after'])
+      for(const id of ((SCENE_AT[когда]||{})[i]||[]))
+        if(!из.includes(id))из.push(id);
+  });
+  return из;
+}
 function мСюжетHTML(n){
+  let s='';
   const st=ACT_STORY[n];
   /* Кнопка появляется только когда сцену уже видели: до этого она играет сама
      перед первым боем акта, и предлагать её заранее — спойлер. Заголовок берём
      у сюжета текущего героя: у каждого своя сцена и своё название. */
   const sc=STORIES[S.hero];
-  if(!st||!sc||!S[st.flag])return '';
-  return '<button class="mpStory" data-story="'+n+'">'+
-    '<span class="msT">'+sc.title+'</span><span class="msS">'+st.sub+'</span></button>';
+  if(st&&sc&&S[st.flag])
+    s+='<button class="mpStory" data-story="'+n+'">'+
+       '<span class="msT">'+sc.title+'</span><span class="msS">'+st.sub+'</span></button>';
+  /* Катсцены акта — тем же правилом: только просмотренные. Непросмотренная в
+     списке выдаёт себя названием, а название сцены — это уже половина того,
+     что в ней произойдёт. */
+  for(const id of сценыАкта(n)){
+    const с=SCENES[id];
+    if(!с||!(S.scenes&&S.scenes[id]))continue;
+    s+='<button class="mpStory" data-scene="'+id+'">'+
+       '<span class="msT">'+esc(с.title)+'</span>'+
+       '<span class="msS">катсцена · пересмотреть</span></button>';
+  }
+  return s;
 }
 /* Строка боя. Номер передаётся явно: тренировка занимает нулевой индекс, и при
    сквозной нумерации бои акта начинались с двойки.
@@ -502,6 +527,11 @@ function мОткрытьПанель(а){
   $$('#mpStoryBox .mpStory').forEach(b=>b.onclick=()=>{
     sfx.ui();
     if(b.id==='mpEnd'){ мЗакрытьПанель(); go('end'); return }
+    if(b.dataset.scene){
+      const id=b.dataset.scene, с=SCENES[id];
+      if(с)vnLoad(с.intro,900,()=>startScene(id,()=>go('stages')));
+      return;
+    }
     const st=ACT_STORY[+b.dataset.story];
     if(st)st.run();
   });

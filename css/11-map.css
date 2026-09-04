@@ -265,6 +265,10 @@
 
 /* Кнопка сцены акта. Появляется только когда сцену уже видели: до этого она
    играет сама перед первым боем акта, и предлагать её заранее — спойлер. */
+/* Список сцен ограничен по высоте и прокручивается: у акта их до шести, а
+   шапка панели не должна съедать список боёв ради кнопок, которыми пользуются
+   раз в жизни. */
+#mpStoryBox{max-height:30vh;overflow-y:auto}
 .mpStory{display:block;width:100%;text-align:left;margin-top:8px;cursor:pointer;
   background:#141420;border:2px solid #2c2c38;padding:7px 10px}
 .mpStory:hover{border-color:var(--cyn)}
