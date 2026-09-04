@@ -102,7 +102,12 @@ function newBattle(si,колодаИгрока){
   const B2={si,st,phase:'player',over:false,train:!!st.tutorial,eTurn:0,log:[],turnNo:0,ev:[],
     pend:null,
     skill:clamp(.15+si*.09,0,1), /* 0.15 на первом рейде → 0.96 на финале */
-    p:{hp:30,max:30,mana:0,mmax:0,
+    /* Здоровье героя растёт с этапом: 30 в тренировке, 40 в финале. Это был
+       ЕДИНСТВЕННЫЙ параметр игры, который не развивался вообще — у врага 14 на
+       первом рейде и 42 в финале, а у героя всегда тридцать, и собранная колода
+       оставалась единственной осью прогресса. Замерено: обрыв на поздних этапах
+       смягчается честнее, чем растягиванием пула, и не переносит стену вперёд. */
+    p:{hp:30+si,max:30+si,mana:0,mmax:0,
        deck:st.tutorial?[...TRAIN.deck].reverse():shuffle([...(колодаИгрока||[])]),
        hand:[],board:[],fatigue:0,chain:{el:null,n:0},ward:0,manaPen:0},
     e:{hp:st.hp,max:st.hp,mana:0,mmax:0,deck:st.tutorial?[]:shuffle(aiDeck),hand:[],board:[],fatigue:0,
