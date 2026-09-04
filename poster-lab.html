@@ -105,24 +105,24 @@ body{margin:0;background:#15151c;color:#e9e9f0;font-family:'Segoe UI',Helvetica,
       <span class="mStar"><svg viewBox="0 0 100 100"><path d="M50 5 L61 38 L95 38 L67 59 L78 92 L50 71 L22 92 L33 59 L5 38 L39 38 Z" fill="#ffd52e" stroke="#0a0a0e" stroke-width="5" paint-order="stroke"/></svg></span>
       <div>
         <div class="mTitle">БАМ-БАМ<em>!!</em></div>
-        <div class="mSub" id="подзаг" hidden>собери колоду — забери свой титул</div>
+        <div class="mSub" id="подзаг">собери колоду — забери свой титул</div>
       </div>
     </div>
   </div>
 
   <div id="пульт">
     <h2>ПЛАКАТ НА ЩИТ</h2>
-    <label><span>размер карт</span><input type="range" id="ширК" min="20" max="60" value="34"><i class="знач" id="ширКЗ">34%</i></label>
-    <label><span>разлёт</span><input type="range" id="разлёт" min="0" max="40" value="27"><i class="знач" id="разлётЗ">27%</i></label>
-    <label><span>наклон</span><input type="range" id="наклон" min="0" max="20" value="9"><i class="знач" id="наклонЗ">9°</i></label>
-    <label><span>низ</span><input type="range" id="низ" min="-25" max="14" value="2"><i class="знач" id="низЗ">2%</i></label>
+    <label><span>размер карт</span><input type="range" id="ширК" min="20" max="70" value="45"><i class="знач" id="ширКЗ">45%</i></label>
+    <label><span>разлёт</span><input type="range" id="разлёт" min="0" max="80" value="60"><i class="знач" id="разлётЗ">60%</i></label>
+    <label><span>наклон</span><input type="range" id="наклон" min="0" max="24" value="16"><i class="знач" id="наклонЗ">16°</i></label>
+    <label><span>низ</span><input type="range" id="низ" min="-30" max="14" value="-16"><i class="знач" id="низЗ">-16%</i></label>
     <div class="разд"></div>
-    <label><span>заголовок сверху</span><input type="range" id="верхЛого" min="2" max="40" value="5"><i class="знач" id="верхЛогоЗ">5%</i></label>
-    <label><span>размер заголовка</span><input type="range" id="разм" min="6" max="16" value="10"><i class="знач" id="размЗ">10</i></label>
+    <label><span>заголовок сверху</span><input type="range" id="верхЛого" min="2" max="40" value="19"><i class="знач" id="верхЛогоЗ">19%</i></label>
+    <label><span>размер заголовка</span><input type="range" id="разм" min="6" max="18" value="13"><i class="знач" id="размЗ">13</i></label>
     <div class="разд"></div>
     <button id="меняться">поменять местами</button>
-    <button id="подпись">подзаголовок</button>
-    <button id="фольга" class="вкл">голография</button>
+    <button id="подпись" class="вкл">подзаголовок</button>
+    <button id="фольга">голография</button>
     <button id="фон">фон: меню</button>
     <div class="разд"></div>
     <p>Карты рисует та же <code>cardHTML()</code>, что и руку в бою: своя рамка
@@ -137,7 +137,9 @@ body{margin:0;background:#15151c;color:#e9e9f0;font-family:'Segoe UI',Helvetica,
 <script>
 /* Единственная заглушка: состояние игры. Всё остальное — настоящие файлы.
    foil включает голографию, её же гасит кнопка в пульте. */
-const S = {foil:true, anim:true, vfx:true, gfx:{}};
+/* Голография выключена: на плакате она спорит с артом карты, а плакат
+   смотрят издали и статично — переливаться там нечему. */
+const S = {foil:false, anim:true, vfx:true, gfx:{}};
 </script>
 
 <script src="js/01-core.js"></script>
