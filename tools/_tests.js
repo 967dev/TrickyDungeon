@@ -35,7 +35,8 @@
   const тихо = fn => { try { return fn() } catch (e) { return '❌ ' + e.message } };
 
   const чисто = () => {
-    document.querySelectorAll('.iWrap,.toast,.flyCard,.atkArc,.ghost').forEach(n => n.remove());
+    document.querySelectorAll('.iWrap,.toast,.flyCard,.atkArc,.ghost,.mullWrap,.chAsk').forEach(n => n.remove());
+    if (typeof B !== 'undefined' && B) B.mull = 0;
     if (typeof lockUI === 'function') lockUI(0);
   };
 
@@ -68,6 +69,12 @@
     const вернуть = () => { ТЕМП = темпБыл; S.anim = анимБыла; БЫСТРО = false };
     dropBattleSnap();
     startBattle(этап);
+    /* Перед боем встаёт экран замены стартовой руки. Живой игрок его закрывает,
+       бот делает то же — иначе прогон встанет на первом же бою. Руку не меняем:
+       баланс замены мерится симулятором, а тут проверяется бой. */
+    await жди(60);
+    const мул = document.querySelector('.mullWrap #mullGo');
+    if (мул) мул.click();
     const старт = performance.now();
     while (B && !B.over) {
       if (performance.now() - старт > предел) {
@@ -409,6 +416,8 @@
          доберёт карту. Ждём его, и только потом раскладываем. */
       const бой = async () => {
         dropBattleSnap(); startBattle(4);
+        /* Экран замены стартовой руки закрываем сразу: тут проверяется не он. */
+        document.querySelector('.mullWrap #mullGo')?.click();
         await жди(900);
         B.p.board = []; B.e.board = []; B.over = false; B.phase = 'p';
         B.p.hand = []; B.p.deck = []; lockUI(0);
@@ -834,6 +843,8 @@
          соседнего и живые клетки съезжали в сторону. Видно было в размене. */
       {
         dropBattleSnap(); startBattle(4);
+        /* Экран замены стартовой руки закрываем сразу: тут проверяется не он. */
+        document.querySelector('.mullWrap #mullGo')?.click();
         B.p.hand = []; B.e.hand = [];
         const св = [], вр = [];
         for (let i = 0; i < 4; i++) { const u = mkUnit(byId('r02')); B.p.board.push(u); св.push(u) }
