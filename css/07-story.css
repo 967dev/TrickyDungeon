@@ -257,4 +257,20 @@
 .vnLine.nar{display:block}
 .vnText.nar{font-family:var(--mono);font-size:12px;line-height:1.6;color:#a8a8bc;
   text-align:center;font-style:italic;padding:2px 6px}
+
+/* Тихий кадр — без единой реплики: телефон на кровати, отражение в зеркале,
+   трон. Окно с текстом ПРЯЧЕМ, а не рисуем пустым: пустая рамка читается как
+   «текст не подгрузился». Освободившуюся высоту отдаём картинке — ради неё
+   кадр и стоит. Полоска с «далее ▸» остаётся: без неё непонятно, что дальше. */
+.vnWrap.тихо .vnLines{display:none}
+.vnWrap.тихо .vnBox{padding-top:6px;padding-bottom:6px}
+.vnWrap.тихо .vnArt{max-height:74vh}
+/* Накладка поверх кадра. Надпись, которая зависит от игрока и потому не может
+   быть врезана в картинку заранее: имя на радаре. Координаты задаёт сцена. */
+.vnOver{position:absolute;transform:translate(-50%,-50%);pointer-events:none;
+  font-family:var(--mono);font-size:clamp(11px,1.9vw,16px);letter-spacing:.14em;
+  color:#ff5b6b;text-shadow:0 0 10px rgba(255,91,107,.8),1px 1px 0 #000;
+  animation:vnOverBlink 1.6s steps(1,end) infinite}
+.vnOver[hidden]{display:none}
+@keyframes vnOverBlink{50%{opacity:.25}}
 }

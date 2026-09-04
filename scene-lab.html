@@ -95,7 +95,7 @@ body{margin:0;background:#0a0a0f;color:#e9e9f0;overflow:hidden;
     <div id="сцена">
       <div class="screen on" id="scr-story">
         <div class="vnWrap">
-          <div class="vnArt"><img id="vnImg" src="" alt="" draggable="false"><div class="vnStub" id="vnStub" hidden></div></div>
+          <div class="vnArt"><img id="vnImg" src="" alt="" draggable="false"><div class="vnStub" id="vnStub" hidden></div><div class="vnOver" id="vnOver" hidden></div></div>
           <div class="vnBox">
             <div class="vnLines" id="vnLines"></div>
             <div class="vnFoot">
@@ -179,6 +179,16 @@ function рисоватьЛенту(){
       кадр = б.a;
       const кап = (сц.caps && сц.caps[кадр]) ? ' · ' + esc(сц.caps[кадр]) : '';
       s += `<div class="кадрш">кадр ${кадр} · ${esc(сц.art)}${кадр}.webp${кап}</div>`;
+    }
+    /* Тихий кадр строкой всё равно показываем: без неё в списке дыра, и не
+       видно, что кадр вообще есть. Кликается так же — на него можно прыгнуть. */
+    if(!б.l || !б.l.length){
+      const накл = б.over ? ' · накладка ' + esc(б.over.t) : '';
+      s += `<div class="реп" data-i="${i}"><span class="н">${i + 1}</span>`+
+        `<span class="кто ремарка">тихий кадр</span>`+
+        `<span class="т" style="color:#6a6a7e">— без реплики${esc(накл)} —</span></div>`;
+      n++;
+      return;
     }
     for(const [кто, t, имя] of (б.l || [])){
       const [подпись, класс] = КТО[кто] || [кто, ''];
