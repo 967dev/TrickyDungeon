@@ -1,0 +1,244 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Стенд: катсцены</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<!-- =========================================================================
+     СТЕНД КАТСЦЕН
+
+     Подключает НАСТОЯЩИЕ файлы сцен — css/07-story.css и js/05-story.js — и
+     показывает их тем же кодом, что и игра. Своей копии показа тут нет
+     специально: копия и игра разошлись бы, и стенд начал бы врать ровно там,
+     где он нужнее всего. По той же причине здесь настоящий `sub` из
+     js/09-chat.js, а не своя подстановка рода.
+
+     Зачем нужен. В игре сцена играется один раз и в своём месте очереди:
+     чтобы посмотреть «Тёмную комнату», надо пройти десять боёв, а чтобы
+     посмотреть её ЗАНОВО — стереть отметку в сейве. Для вычитки это негодно.
+     Здесь любая сцена открывается в один клик, с любой реплики, за оба пола.
+
+     Слева — то, что увидит игрок. Справа — исходная запись реплики, как она
+     лежит в коде: с разметкой {женское|мужское} и {NAME}. Править текст
+     удобнее, когда оба видны разом.
+
+     Метки сборки ?v=N тут НЕТ, в отличие от index.html (см. dev.html о том же).
+     Показывает старое — обнови жёстко.
+     ========================================================================= -->
+<link rel="stylesheet" href="css/01-base.css">
+<link rel="stylesheet" href="css/07-story.css">
+
+<style>
+/* Свои правила идут БЕЗ @layer, поэтому перебивают слои игры — стенду это
+   разрешено. */
+body{margin:0;background:#0a0a0f;color:#e9e9f0;overflow:hidden;
+  font-family:'Segoe UI',Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}
+#стенд{position:fixed;inset:0;display:flex;flex-direction:column}
+/* Экран сюжета живёт в колонке, а не поверх всего: рядом должен помещаться
+   список реплик. */
+#сцена{position:relative;flex:1;min-height:0;overflow:hidden}
+#сцена .screen{position:absolute;inset:0}
+
+#шапка{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;
+  background:#0d0d14;border-bottom:2px solid #2c2c38;font-family:var(--mono);font-size:11px}
+#шапка b{font-family:var(--disp);font-style:italic;color:var(--yel);font-size:12px}
+#шапка .разд{width:1px;height:20px;background:#2c2c38}
+#шапка button{font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  background:#16161f;color:#cfccdd;border:2px solid #2c2c38;padding:5px 9px;cursor:pointer}
+#шапка button:hover{border-color:var(--yel);color:var(--yel)}
+#шапка button.вкл{background:var(--yel);color:#0a0a0e;border-color:#000}
+#шапка button.вкл:hover{color:#0a0a0e}
+#шапка input[type=text]{font-family:var(--mono);font-size:11px;width:120px;
+  background:#16161f;color:#e9e9f0;border:2px solid #2c2c38;padding:4px 7px}
+
+#низ{display:flex;min-height:0;flex:1}
+#лента{width:min(46%,520px);flex:none;overflow:auto;background:#0d0d14;
+  border-left:2px solid #2c2c38;padding:8px}
+.реп{display:flex;gap:8px;padding:7px 9px;margin-bottom:5px;cursor:pointer;
+  border:2px solid #1c1c26;background:#12121a;line-height:1.45}
+.реп:hover{border-color:#3a3a4a}
+.реп.тек{border-color:var(--yel);background:#171712}
+.реп .н{font-family:var(--mono);font-size:9px;color:#55556a;flex:none;min-width:22px;padding-top:2px}
+.реп .кто{font-family:var(--mono);font-size:9px;letter-spacing:.08em;flex:none;
+  min-width:78px;color:#8a8a9e;padding-top:2px}
+.реп .кто.мысль{color:var(--cyn)}
+.реп .кто.чужой{color:var(--mag)}
+.реп .кто.ремарка{color:#6a6a7e}
+.реп .т{font-family:var(--mono);font-size:11.5px;color:#dcdce6;white-space:pre-wrap;word-break:break-word}
+.реп .т i{color:var(--yel);font-style:normal}
+.кадрш{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:#55556a;
+  border-top:1px dashed #2c2c38;margin:10px 0 6px;padding-top:6px}
+#пусто{padding:20px;color:#8a8a9e;font-family:var(--mono);font-size:12px}
+@media (max-width:820px){
+  #низ{flex-direction:column}
+  #лента{width:auto;border-left:none;border-top:2px solid #2c2c38;max-height:44vh}
+}
+</style>
+
+<div id="стенд">
+  <div id="шапка">
+    <b>КАТСЦЕНЫ</b>
+    <span id="кнопки"></span>
+    <span class="разд"></span>
+    <button id="кПол">за девушку</button>
+    <input type="text" id="кИмя" value="ИГРОК" maxlength="14" title="подставляется вместо {NAME}">
+    <span class="разд"></span>
+    <button id="кНазад">◀ реплика</button>
+    <button id="кВперёд">реплика ▶</button>
+    <span class="разд"></span>
+    <span id="статус" style="color:#8a8a9e"></span>
+  </div>
+
+  <div id="низ">
+    <!-- Разметка — та же, что в index.html. Расходиться ей нельзя: и стили, и
+         поиск узлов в js/05-story.js общие. -->
+    <div id="сцена">
+      <div class="screen on" id="scr-story">
+        <div class="vnWrap">
+          <div class="vnArt"><img id="vnImg" src="" alt="" draggable="false"><div class="vnStub" id="vnStub" hidden></div></div>
+          <div class="vnBox">
+            <div class="vnLines" id="vnLines"></div>
+            <div class="vnFoot">
+              <button class="vnSkip" id="vnSkip">пропустить сцену</button>
+              <span class="vnProg" id="vnProg"></span>
+              <span class="vnNext">далее ▸</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="лента"><div id="пусто">Выбери сцену наверху.</div></div>
+  </div>
+</div>
+
+<script>
+/* ================= заглушки игры =================
+   Всё, что показ сцены берёт снаружи. Заглушки нарочно тупые: стенд проверяет
+   сцены, а не игру, и любая логика здесь была бы второй реализацией. */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const S  = {hero:'f', name:'ИГРОК', story:1, scenes:{}, anim:true, vfx:true, shk:true};
+const save   = () => {};
+let CUR = 'story';
+const go     = id => { CUR = id };
+const sfx    = {ui(){}};
+const shake  = () => {};
+const toast  = () => {};
+const PF     = {back(){}, guardClose(){}, haptic(){}, notify(){}};
+const esc    = t => String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Заставку между сценами стенд не показывает: она тут только мешает — щёлкать
+   надо быстро. */
+const vnLoadStub = (_t,_ms,cb) => cb && cb();
+</script>
+
+<!-- Настоящие файлы: сцены и подстановка рода. Порядок как в index.html. -->
+<script src="js/05-story.js"></script>
+<script src="js/09-chat.js"></script>
+
+<script>
+/* vnLoad объявлен в 05-story.js; стенду нужна мгновенная версия. Переопределяем
+   ПОСЛЕ загрузки — объявление функции перезаписывается присваиванием. */
+vnLoad = vnLoadStub;
+
+/* Все сцены разом: два вступления (у каждого героя своё) и катсцены акта.
+   Вступление привязано к герою, поэтому у него в ключе пол. */
+const СПИСОК = [
+  {id:'f',      имя:'ВСТУПЛЕНИЕ · Ж', пол:'f', сц:()=>STORIES.f},
+  {id:'m',      имя:'ВСТУПЛЕНИЕ · М', пол:'m', сц:()=>STORIES.m},
+  ...Object.keys(SCENES).map(id => ({id, имя:SCENES[id].title, сц:()=>SCENES[id]})),
+];
+let текущая = null;
+
+const КТО = {g:['герой',''], t:['мысли','мысль'], c:['чужой','чужой'], n:['ремарка','ремарка']};
+
+function рисоватьКнопки(){
+  $('#кнопки').innerHTML = СПИСОК.map(з =>
+    `<button data-s="${з.id}" class="${текущая&&текущая.id===з.id?'вкл':''}">${esc(з.имя)}</button>`).join(' ');
+  $$('#кнопки button').forEach(b => b.onclick = () => открыть(b.dataset.s));
+}
+
+/* Показать сцену с начала. Вступление заодно переключает пол: за девушку
+   играется её сцена, и показывать её мужским лицом было бы враньём. */
+function открыть(id){
+  текущая = СПИСОК.find(з => з.id === id);
+  if(!текущая)return;
+  if(текущая.пол){S.hero = текущая.пол; обновитьПол()}
+  if(текущая.пол) startStory(()=>{});
+  else startScene(текущая.id, ()=>{});
+  рисоватьКнопки(); рисоватьЛенту(); обновить();
+}
+
+/* Список реплик — исходная запись, как она лежит в коде: с {женское|мужское} и
+   {NAME}. Слева видно, что игрок прочитает, справа — что надо править. */
+function рисоватьЛенту(){
+  const сц = текущая && текущая.сц();
+  if(!сц){$('#лента').innerHTML = '<div id="пусто">Выбери сцену наверху.</div>';return}
+  let s = '', кадр = null, n = 0;
+  сц.beats.forEach((б, i) => {
+    if(б.a !== кадр){
+      кадр = б.a;
+      const кап = (сц.caps && сц.caps[кадр]) ? ' · ' + esc(сц.caps[кадр]) : '';
+      s += `<div class="кадрш">кадр ${кадр} · ${esc(сц.art)}${кадр}.webp${кап}</div>`;
+    }
+    for(const [кто, t, имя] of (б.l || [])){
+      const [подпись, класс] = КТО[кто] || [кто, ''];
+      /* Разметку подсвечиваем, а не прячем: именно её и правят. */
+      const текст = esc(t).replace(/\{[^}]*\}/g, m => '<i>' + m + '</i>');
+      s += `<div class="реп" data-i="${i}"><span class="н">${i + 1}</span>`+
+        `<span class="кто ${класс}">${esc(имя || подпись)}</span>`+
+        `<span class="т">${текст}</span></div>`;
+      n++;
+    }
+  });
+  $('#лента').innerHTML = s || '<div id="пусто">В сцене нет реплик.</div>';
+  $$('#лента .реп').forEach(el => el.onclick = () => прыжок(+el.dataset.i));
+  $('#статус').textContent = n + ' реплик · ' + сц.beats.length + ' шагов';
+}
+
+/* Прыжок на любую реплику. vnArt сбрасываем, иначе кадр не перерисуется: показ
+   меняет картинку только при СМЕНЕ номера, а мы могли прыгнуть внутрь того же. */
+function прыжок(i){
+  if(!текущая)return;
+  vnI = i; vnArt = 0; vnShow(); обновить();
+}
+function обновить(){
+  $$('#лента .реп').forEach(el => el.classList.toggle('тек', +el.dataset.i === vnI));
+  const тек = $('#лента .реп.тек');
+  if(тек) тек.scrollIntoView({block:'nearest'});
+}
+function обновитьПол(){
+  $('#кПол').textContent = S.hero === 'f' ? 'за девушку' : 'за парня';
+  $('#кПол').classList.toggle('вкл', S.hero === 'm');
+}
+
+$('#кПол').onclick = () => {
+  S.hero = S.hero === 'f' ? 'm' : 'f';
+  обновитьПол();
+  /* Вступление у каждого героя своё — перезапускаем его целиком. Катсцена
+     общая, ей хватит перерисовки текущей реплики. */
+  if(текущая && текущая.пол) открыть(S.hero);
+  else if(текущая){ vnShow(); рисоватьЛенту(); обновить() }
+};
+$('#кИмя').oninput = e => { S.name = e.target.value || 'ИГРОК'; if(текущая) vnShow() };
+$('#кНазад').onclick  = () => прыжок(Math.max(0, vnI - 1));
+$('#кВперёд').onclick = () => { const n = текущая ? текущая.сц().beats.length : 0;
+  прыжок(Math.min(n - 1, vnI + 1)) };
+/* Стрелки — то же самое: щёлкать сцену подряд удобнее с клавиатуры. */
+addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT')return;
+  if(e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); $('#кВперёд').click() }
+  if(e.key === 'ArrowLeft')  { e.preventDefault(); $('#кНазад').click() }
+});
+/* Тап по самому экрану сцены — как в игре, вперёд. Но vnNext в конце зовёт
+   vnDone, а стенду закрываться некуда: держим на последней реплике. */
+$('#scr-story').addEventListener('click', e => {
+  if(e.target.closest('#vnSkip'))return;
+  $('#кВперёд').click();
+});
+$('#vnSkip').onclick = e => { e.stopPropagation(); прыжок(0) };
+$('#vnSkip').textContent = 'в начало сцены';
+
+обновитьПол();
+рисоватьКнопки();
+открыть('cafe');
+</script>
