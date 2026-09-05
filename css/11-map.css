@@ -284,6 +284,21 @@
 .mpStory .msS{display:block;font-family:var(--mono);font-size:9px;color:#6a6a80;
   margin-top:3px;letter-spacing:.1em;text-transform:uppercase}
 
+/* Подсказка про колоду и ларёк. Жёлтая, а не голубая, как сюжетные кнопки
+   рядом: голубое здесь значит «почитать», жёлтое — «пойти и сделать», и
+   путать эти две вещи нельзя, они стоят в сантиметре друг от друга. */
+.mpStory.mpNudge{border-color:#3a3520;background:#1a1710}
+.mpStory.mpNudge:hover{border-color:var(--yel)}
+#mpNudge:empty{display:none}
+#mpNudge{flex:none;padding:0 16px 10px;border-bottom:2px solid #2c2c38}
+.mpStory.mpNudge{position:relative;padding-right:30px;margin-top:10px}
+.mpStory.mpNudge .msT{color:var(--yel)}
+/* Крестик. Зона нажатия крупнее самого знака: на телефоне десять пикселей —
+   это промах, а промах здесь уводит в ларёк вместо того, чтобы спрятать. */
+.mpNudge .mnX{position:absolute;right:0;top:0;bottom:0;width:30px;
+  display:grid;place-items:center;color:#6a6a80;font-size:12px;cursor:pointer}
+.mpNudge .mnX:hover{color:var(--yel)}
+
 .mQuest{display:flex;align-items:center;gap:10px;padding:9px 10px;margin-bottom:6px;
   background:rgba(255,255,255,.04);border-left:3px solid #262633;
   font-family:var(--mono);font-size:11px;cursor:pointer}

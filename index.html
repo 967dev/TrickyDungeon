@@ -29,18 +29,18 @@
 
      Стили разрезаны по темам. ПОРЯДОК ССЫЛОК ЗНАЧИМ: правила одной силы
      разрешаются по нему. Адаптив идёт последним, чтобы выигрывать всегда. -->
-<link rel="stylesheet" href="css/01-base.css?v=26">
-  <link rel="stylesheet" href="css/02-menu.css?v=26">
-  <link rel="stylesheet" href="css/03-gacha.css?v=26">
-  <link rel="stylesheet" href="css/04-cards.css?v=26">
-  <link rel="stylesheet" href="css/05-deck.css?v=26">
-  <link rel="stylesheet" href="css/06-battle.css?v=26">
-  <link rel="stylesheet" href="css/07-story.css?v=26">
-  <link rel="stylesheet" href="css/08-overlays.css?v=26">
-  <link rel="stylesheet" href="css/09-chat.css?v=26">
-  <link rel="stylesheet" href="css/10-settings.css?v=26">
-  <link rel="stylesheet" href="css/11-map.css?v=26">
-  <link rel="stylesheet" href="css/12-responsive.css?v=26">
+<link rel="stylesheet" href="css/01-base.css?v=32">
+  <link rel="stylesheet" href="css/02-menu.css?v=32">
+  <link rel="stylesheet" href="css/03-gacha.css?v=32">
+  <link rel="stylesheet" href="css/04-cards.css?v=32">
+  <link rel="stylesheet" href="css/05-deck.css?v=32">
+  <link rel="stylesheet" href="css/06-battle.css?v=32">
+  <link rel="stylesheet" href="css/07-story.css?v=32">
+  <link rel="stylesheet" href="css/08-overlays.css?v=32">
+  <link rel="stylesheet" href="css/09-chat.css?v=32">
+  <link rel="stylesheet" href="css/10-settings.css?v=32">
+  <link rel="stylesheet" href="css/11-map.css?v=32">
+  <link rel="stylesheet" href="css/12-responsive.css?v=32">
 </head>
 <body>
 
@@ -215,6 +215,14 @@
         <button class="mpClose" id="mpClose" aria-label="Закрыть">✕</button>
         <div id="mpStoryBox"></div>
       </div>
+      <!-- Подсказка стоит МЕЖДУ шапкой и списком, отдельной строкой панели, а
+           не внутри шапки. Причина в том, что кнопки повтора катсцен живут в
+           своей прокрутке (#mpStoryBox, max-height:30vh): к пятой сцене список
+           перестаёт помещаться и сминается. Подсказка внутри него уезжала бы
+           под сгиб вместе со сценами — то есть исчезала бы ровно у того, кто
+           дальше всех прошёл. Отдельной строкой она видна всегда и ничего не
+           закрывает: сцены выше, бои ниже. -->
+      <div id="mpNudge"></div>
       <div class="mpList" id="mpList"></div>
     </div>
   </div>
@@ -310,20 +318,20 @@
 <!-- Скрипт разрезан по темам. ПОРЯДОК ЗНАЧИМ: обычные скрипты выполняются
      подряд и вместе дают ровно тот порядок, что был в одном файле.
      Запуск идёт последним. -->
-<script src="js/01-core.js?v=26"></script>
-<script src="js/02-data.js?v=26"></script>
-<script src="js/03-fx.js?v=26"></script>
-<script src="js/04-state.js?v=26"></script>
-<script src="js/05-story.js?v=26"></script>
-<script src="js/06-menu.js?v=26"></script>
-<script src="js/07-cards.js?v=26"></script>
-<script src="js/08-collection.js?v=26"></script>
-<script src="js/09-chat.js?v=26"></script>
-<script src="js/10-rules.js?v=26"></script>
-<script src="js/11-battle.js?v=26"></script>
-<script src="js/12-training.js?v=26"></script>
-<script src="js/13-map.js?v=26"></script>
-<script src="js/14-ui.js?v=26"></script>
-<script src="js/15-boot.js?v=26"></script>
+<script src="js/01-core.js?v=32"></script>
+<script src="js/02-data.js?v=32"></script>
+<script src="js/03-fx.js?v=32"></script>
+<script src="js/04-state.js?v=32"></script>
+<script src="js/05-story.js?v=32"></script>
+<script src="js/06-menu.js?v=32"></script>
+<script src="js/07-cards.js?v=32"></script>
+<script src="js/08-collection.js?v=32"></script>
+<script src="js/09-chat.js?v=32"></script>
+<script src="js/10-rules.js?v=32"></script>
+<script src="js/11-battle.js?v=32"></script>
+<script src="js/12-training.js?v=32"></script>
+<script src="js/13-map.js?v=32"></script>
+<script src="js/14-ui.js?v=32"></script>
+<script src="js/15-boot.js?v=32"></script>
 </body>
 </html>
