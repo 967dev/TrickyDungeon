@@ -622,7 +622,28 @@ async function сыграть(e){
 
   case 'summon':{
     renderBattle();
-    const el=$(`#row${e.who==='p'?'P':'E'} .unit[data-uid="${e.u.uid}"]`);
+    const row=$(`#row${e.who==='p'?'P':'E'}`);
+    let el=row?row.querySelector(`.unit[data-uid="${e.u.uid}"]`):null;
+    /* Узла может не быть, и это не «мало ли что» — это обычный случай: юнит
+       вышел и погиб в ТОТ ЖЕ ход. Правила убирают павшего с доски сразу, а
+       рассказ до падения ещё не дошёл — рисовать renderBattle было не из чего,
+       и показ здесь молча выходил. В журнале карта есть, на экране не
+       появлялось НИЧЕГО: ни вылета из руки, ни приземления, ни падения.
+       Чаще всего это РАШ — он для того и выходит, чтобы ударить сразу, и
+       ответка его же и убивает. Ровно это игрок и увидел на пятом ходу.
+
+       Поэтому клетку строим сами. Дальше всё обычно: полёт сюда, а убирает
+       узел событие 'die', которое идёт следом. */
+    if(!el&&row){
+      const t=document.createElement('div');
+      t.innerHTML=unitHTML(e.u,e.who,false);
+      el=t.firstElementChild;
+      if(el){
+        const слот=row.querySelector('.slot');
+        row.insertBefore(el,слот||null);
+        if(слот)слот.remove();
+      }
+    }
     if(!el)return;
     const r=unitRect(el);
     const полёт=flyToBoard(e.u.card,ОТКУДА,r,el,{reveal:e.who==='e'});

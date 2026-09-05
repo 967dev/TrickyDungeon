@@ -189,6 +189,42 @@
     try {
       /* ============ 1. целостность загрузки ============ */
       группа('загрузка');
+
+      /* ---- ОДНО ИМЯ — ОДИН ФАЙЛ ----
+         Файлы делят одну глобаль: это обычные теги, не модули. Значит две
+         функции с одним именем в разных файлах не конфликтуют шумно — та, что
+         грузится позже, молча съедает первую, и зовущий получает чужое тело.
+
+         Так уже случилось: в правилах появилась `сыграть(st,ход)` для перебора
+         ИИ, а в подаче `сыграть(событие)` жила с самого разделения. Подача
+         грузится позже — перебор звал проигрыватель событий, тот делал
+         `switch(e.t)` по описанию хода (никакого `t` там нет), возвращал
+         обещание, а обещание ИСТИННО. Проверка `if(!сыграть(...))` проходила,
+         и ИИ считал ход применённым, не применив ничего.
+
+         Хуже всего, что в node этого не видно: bench.js грузит правила без
+         подачи, и стенд честно показывал работающий перебор, пока в самой игре
+         враг не делал ничего.
+
+         Поэтому проверка читает ФАЙЛЫ, а не глобали: по глобалям видно только
+         победителя, проигравшего там уже нет. */
+      {
+        const файлы = [...document.querySelectorAll('script[src]')]
+          .map(s => s.getAttribute('src')).filter(s => /^js\//.test(s));
+        ок(файлы.length >= 10, 'файлы скрипта нашлись', 'найдено: ' + файлы.length);
+        const где = {};
+        const тексты = await Promise.all(файлы.map(f => fetch(f).then(r => r.text()).catch(() => '')));
+        файлы.forEach((f, i) => {
+          /* Только объявления верхнего уровня: с начала строки, без отступа. */
+          const re = /^(?:async\s+)?function\s+([A-Za-zА-Яа-яЁё_$][\w$А-Яа-яЁё]*)\s*\(/gm;
+          let m;
+          while ((m = re.exec(тексты[i]))) (где[m[1]] || (где[m[1]] = [])).push(f.split('/').pop().split('?')[0]);
+        });
+        const двойные = Object.keys(где).filter(k => new Set(где[k]).size > 1);
+        равно(двойные.length, 0, 'одно имя функции — один файл',
+          двойные.map(k => k + ': ' + [...new Set(где[k])].join(' + ')).join('; '));
+      }
+
       /* Объявленные через function попадают на window, объявленные через
          const — нет. Проверяем то и другое одинаково, через сам идентификатор. */
       for (const имя of ['go','save','load','startBattle','renderBattle','endTurn','playCard',
@@ -197,6 +233,8 @@
         'newBattle','rDraw','rHeroDmg','rHeroHeal','rUnitDmg','rEffect','rPlayCard','rAttack',
         'rStartTurn','rAiTurn','rTrainEnemyTurn','aiSpellTarget','simulate','simplePolicy',
         'canTarget','needTargetCard','проиграть','сыграть','откат','effText',
+        /* перебор ИИ */
+        'клонБоя','ходыВрага','применитьХод','оценкаВрага','aiDeckFor',
         'openUnitCard','cardHTML','effDesc','kwLine','autoDeck','defaultDeck','mkUnit','byId',
         'redeemPromo','renderSettings','renderDeck','renderGacha','renderStages','renderMenu',
         'atkLine','flyCard','burst','elCols','elBurst','syncEnemyHand','placeEnemyHand',
