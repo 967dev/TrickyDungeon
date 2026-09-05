@@ -53,7 +53,7 @@ function snapBattle(){
     deck:P.deck,hand:P.hand,
     chain:P.chain||{el:null,n:0},ward:P.ward?1:0,manaPen:P.manaPen||0,
     board:P.board.map(u=>({id:u.card.id,uid:u.uid,atk:u.atk,hp:u.hp,maxhp:u.maxhp,
-      taunt:u.taunt?1:0,rush:u.rush?1:0,canAtk:u.canAtk?1:0,sick:u.sick?1:0,buffed:u.buffed?1:0,
+      taunt:u.taunt?1:0,rush:u.rush?1:0,canAtk:u.canAtk?1:0,sick:u.sick?1:0,buffed:u.buffed?1:0,chilled:u.chilled?1:0,
       imm:u.imm?1:0}))});
   try{store.setLocal(BSNAP,JSON.stringify(
     {v:1,si:B.si,skill:B.skill,uid:UID,p:side(B.p),e:side(B.e)}))}catch(e){}
@@ -76,7 +76,7 @@ function restoreBattle(){
     ward:x.ward?1:0,manaPen:x.manaPen|0,
     board:(x.board||[]).map(u=>{const card=byId(u.id);if(!card)return null;
       return{uid:u.uid,card,atk:u.atk|0,hp:u.hp|0,maxhp:u.maxhp|0,
-        taunt:!!u.taunt,rush:!!u.rush,canAtk:!!u.canAtk,sick:!!u.sick,buffed:u.buffed?1:0,
+        taunt:!!u.taunt,rush:!!u.rush,canAtk:!!u.canAtk,sick:!!u.sick,buffed:u.buffed?1:0,chilled:u.chilled?1:0,
         imm:u.imm?1:0}})
       .filter(Boolean)});
   const P=side(d.p),E=side(d.e);
@@ -777,7 +777,8 @@ async function сыграть(e){
   }
 
   case 'ward':
-    blog(e.who,'✦ щит поднят: урон в лицо не пройдёт, вражеским юнитам −1 атаки','chain');
+    blog(e.who,'✦ щит поднят: урон в лицо не пройдёт'
+      +(e.мёрзнут&&e.мёрзнут.length?`, ${e.мёрзнут.length===1?'одному юниту':e.мёрзнут.length+' юнитам'} −1 атаки`:''),'chain');
     renderBattle();
     return;
 
@@ -831,20 +832,24 @@ async function сыграть(e){
 
 /* Строка журнала по событию эффекта. Слова живут здесь, а не в правилах:
    правила отдают «что и на сколько», а как это назвать — вопрос подачи. */
+/* Стрелка ↳ у всего, что делает САМА КАРТА. Без неё «Огнемётчик → ГЕРОЙ
+   ВРАГА · 1» — это ровно тот же вид, каким печатается удар, и игрок читает
+   боевой клич как атаку: только что вышел юнит 2/4, а бьёт единицей. Строка
+   ниже — про то же событие, что и «⚡ Огнемётчик 2/4», и стрелка это связывает. */
 function effText(e){
   const c=e.c,своя=e.who==='p';
   const цель=e.tgt?e.tgt.card.n:(своя?'ГЕРОЙ ВРАГА':'ТВОЙ ГЕРОЙ');
   switch(e.k){
     case 'mana':return `+${e.v} маны`;
-    case 'dmg':return `${c.n} → ${цель} · ${e.v}`;
+    case 'dmg':return `↳ ${c.n} → ${цель} · ${e.v}`;
     case 'healHero':return `♥ +${e.v} ${своя?'герою':'своему герою'}`;
     case 'healAll':return `♥ +${e.v} герою и всем своим`;
     case 'draw':return `+${e.v} ${plural(e.v,'карта','карты','карт')} в руку`;
     case 'buff':return `▲ ${e.tgt?e.tgt.card.n:''} +${e.a}/+${e.h}`;
     case 'buffAll':return `▲ всем своим +${e.a}/+${e.h}`;
-    case 'aoe':return `${c.n} → по всем ${своя?'врагам':'твоим'} · ${e.v}`;
+    case 'aoe':return `↳ ${c.n} → по всем ${своя?'врагам':'твоим'} · ${e.v}`;
     case 'weaken':return `▼ ${своя?'врагам':'твоим'} −${e.v} атаки`;
-    case 'drain':return `${c.n} → ${цель} · ${e.v}, себе ♥ +${e.v}`;
+    case 'drain':return `↳ ${c.n} → ${цель} · ${e.v}, себе ♥ +${e.v}`;
   }
   return e.k;
 }
@@ -928,7 +933,7 @@ function откат(){
     ед:new Map(),атк:new Map(),непоявились:new Set(),
     /* Набор берём из ПЕРВОГО несыгранного события стороны: оно несёт то
        состояние, что было до него. Дальше по списку смотреть незачем. */
-    цепь:{p:null,e:null},щит:new Set(),имм:new Set()};
+    цепь:{p:null,e:null},щит:new Set(),имм:new Set(),мёрзнутПотом:new Set()};
   if(!B||!B.ev)return о;
   const плюс=(m,u,v)=>m.set(u,(m.get(u)||0)+v);
   for(const e of B.ev){
@@ -940,7 +945,11 @@ function откат(){
       case 'play':if(e.i>=0){о.рука[e.who]++;о.мана[e.who]+=e.c.c}break;
       case 'summon':о.непоявились.add(e.u.uid);break;
       case 'chain':if(о.цепь[e.who]===null)о.цепь[e.who]={el:e.pel||null,n:e.pn|0};break;
-      case 'ward':о.щит.add(e.who);break;
+      /* Заморозку отматываем поимённо: минус атаки постоянный, и без этого
+         числа на картах падали раньше, чем рассказ доходил до залпа. */
+      case 'ward':о.щит.add(e.who);
+        if(e.мёрзнут)for(const u of e.мёрзнут){плюс(о.атк,u,1);о.мёрзнутПотом.add(u.uid)}
+        break;
       case 'chainImm':о.имм.add(e.u.uid);break;
       case 'chainBuff':плюс(о.ед,e.u,-(e.h||0));плюс(о.атк,e.u,-(e.a||0));break;
       case 'dmgUnit':плюс(о.ед,e.u,e.v);break;
@@ -959,6 +968,10 @@ function показAtk(u){return Math.max(0,u.atk+((ОТКАТ&&ОТКАТ.ат�
 /* Видно ли клетку прямо сейчас: только что призванную скрываем, пока рассказ
    до неё не дошёл. */
 function ужеНаПоле(u){return !(ОТКАТ&&ОТКАТ.непоявились.has(u.uid))}
+/* Синяя цифра атаки — след заморозки, и появиться она обязана ВМЕСТЕ с числом,
+   а не раньше него. Иначе юнит стоит подсвеченным ещё до того, как залп
+   объявлен, и метка объясняет то, чего на экране пока не случилось. */
+function ужеМёрзнет(u){return !!u.chilled&&!(ОТКАТ&&ОТКАТ.мёрзнутПотом.has(u.uid))}
 
 /* Полёт копии карты по цепочке остановок — один механизм на всё: розыгрыш
    игроком, вскрытие карты врагом, бросок заклятия в цель.
@@ -1727,6 +1740,7 @@ function updateUnit(el,u,side,targetable){
   el.classList.toggle('target',!!targetable);
   el.classList.toggle('tired',!!tired);
   el.classList.toggle('buffed',!!u.buffed);
+  el.classList.toggle('chilled',ужеМёрзнет(u));
   el.classList.toggle('imm',!!(u.imm&&!(ОТКАТ&&ОТКАТ.имм.has(u.uid))));
   const a=el.querySelector('.uA'), h=el.querySelector('.uH');
   const атк=показAtk(u),здор=показHp(u);
@@ -1768,7 +1782,7 @@ function unitHTML(u,side,targetable){
   const sel=B.sel&&B.sel.type==='unit'&&B.sel.uid===u.uid;
   const tired=!u.canAtk&&side==='p';
   const имм=u.imm&&!(ОТКАТ&&ОТКАТ.имм.has(u.uid));
-  return `<div class="unit ${sel?'sel':''} ${targetable?'target':''} ${tired?'tired':''} ${u.buffed?'buffed':''} ${имм?'imm':''}"
+  return `<div class="unit ${sel?'sel':''} ${targetable?'target':''} ${tired?'tired':''} ${u.buffed?'buffed':''} ${ужеМёрзнет(u)?'chilled':''} ${имм?'imm':''}"
     data-uid="${u.uid}" style="--tc:${hex}">
     <span class="uName">${u.card.n}</span>
     <span class="uKw">${u.taunt?'<i>ТАУНТ</i>':''}${u.rush&&u.sick?'<i class="r">РАШ</i>':''}</span>

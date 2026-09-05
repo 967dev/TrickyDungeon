@@ -330,6 +330,11 @@
   transform:rotate(-9deg);opacity:.72;border-top:2px solid #000;border-bottom:2px solid #000;
   background:repeating-linear-gradient(-45deg,var(--yel) 0 8px,#0a0a0e 8px 16px)}
 .unit.buffed .uA{color:var(--grn)}
+/* Приморозило. Минус атаки от заморозки боли ПОСТОЯННЫЙ, и без метки юнит
+   просто стоял с числом меньше напечатанного на карте — а у единички это
+   вовсе ноль, то есть юнит, который никогда не ударит, и ни одного намёка
+   почему. Цвет тот же, что у самой стихии. */
+.unit.chilled .uA{color:var(--cyn)}
 .dmgPop{position:fixed;z-index:85;pointer-events:none;font-family:var(--disp);font-style:italic;font-size:26px;
   color:#fff;text-shadow:2px 2px 0 #000,0 0 12px var(--red);animation:dmgA .8s cubic-bezier(.2,1,.3,1) forwards}
 .dmgPop.heal{text-shadow:2px 2px 0 #000,0 0 12px var(--grn)}
