@@ -12,7 +12,16 @@
 @layer gacha {
 /* ====== гача ====== */
 #scr-gacha .gBody{flex:1;overflow-y:auto;padding:22px;scrollbar-width:thin}
-.gZone{display:flex;flex-direction:column;align-items:center;gap:18px;padding:16px 0 6px;min-height:340px;position:relative}
+/* clip здесь, а не на .gBody, и это не вкусовщина: лучи за паком шириной 640px
+   вылезают из экрана на 133 пикселя, и `overflow-y:auto` делает ларёк
+   прокручиваемым ВБОК на эти 133. Поставить .gBody `overflow-x:clip` нельзя —
+   clip рядом с auto по правилам вычисляется обратно в hidden, то есть ничего
+   не меняет (проверено: вылет как был 133, так и остался). Значит обрезать
+   надо слоем ниже, там, где вертикальной прокрутки нет. Видно этого не будет:
+   лучи и так на семи процентах прозрачности, а обрезаются они на 22 пикселя
+   раньше, чем обрезал их сам ларёк. */
+.gZone{display:flex;flex-direction:column;align-items:center;gap:18px;padding:16px 0 6px;min-height:340px;position:relative;
+  overflow:clip}
 .pkRays{position:absolute;left:50%;top:46%;width:640px;height:640px;transform:translate(-50%,-50%);pointer-events:none;
   background:repeating-conic-gradient(from 0deg,rgba(255,213,46,.07) 0 2deg,transparent 2deg 10deg);
   -webkit-mask:radial-gradient(circle,#000 12%,transparent 62%);mask:radial-gradient(circle,#000 12%,transparent 62%);

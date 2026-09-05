@@ -169,7 +169,11 @@
   background:rgba(10,10,15,.88);border:2px solid rgba(255,213,46,.4);padding:6px 15px;white-space:nowrap;max-width:94vw;
   overflow:hidden;text-overflow:ellipsis}
 .bField{flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:12px 16px;min-height:0;
-  position:relative;overflow:hidden;
+  /* clip, а не hidden: карты врага подоткнуты под верхний край, полосы шире
+     поля — вылет 90×93. hidden обрезает, но делает поле ПРОКРУЧИВАЕМЫМ, и
+     любой промах браузера «доведи до видимости» сдвигает всё поле под
+     пальцем. Строкой выше оставлен hidden — движок постарше clip не знает. */
+  position:relative;overflow:hidden;overflow:clip;
   background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
   background-size:34px 34px;animation:gridDrift 16s linear infinite}
 @keyframes gridDrift{to{background-position:34px 34px}}
