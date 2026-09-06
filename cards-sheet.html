@@ -82,10 +82,37 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   n.innerHTML=h;
 })();
 </script>
+<!-- Карта рисуется НАСТОЯЩЕЙ cardHTML() из js/07-cards.js и настоящими
+     стилями css/04-cards.css. Своей копии тут нет намеренно: копия и игра
+     разошлись бы, и стенд начал бы врать ровно там, где нужен больше всего —
+     при вычитке карт перед выпуском. Тот же приём, что в poster-lab. -->
+<link rel="stylesheet" href="css/01-base.css">
+<link rel="stylesheet" href="css/04-cards.css">
+<style>
+/* Карта слева от текста; на узком экране — сверху. Ширина в пикселях, а не в
+   процентах: карта свёрстана в пикселях, и в резиновой коробке её значки
+   поплыли бы — ровно та беда, что была с плакатом на щите. */
+.c{display:grid;grid-template-columns:170px 1fr;gap:12px 16px;align-items:start}
+.c>.вид{grid-row:1 / span 20;width:170px}
+.c>.вид .cWrap{cursor:default}
+@media(max-width:720px){.c{grid-template-columns:1fr}.c>.вид{grid-row:auto;width:200px}}
+</style>
+<script>
+/* Заглушка состояния: cardHTML читает из него голографию и настройки графики.
+   Голография ВЫКЛЮЧЕНА: на странице под сорок карт разом, а сорок вечно
+   анимированных слоёв со смешением кладут телефон — это измерено на экране
+   колоды в самой игре. */
+const S={foil:false,anim:false,vfx:false,gfx:{}};
+</script>
+<script src="js/01-core.js"></script>
+<script src="js/02-data.js"></script>
+<script src="js/07-cards.js"></script>
+
 <h1>БАМ-БАМ: КАСКАД — все карты</h1>
 <div class="sub">38 карт · без арта: 1 · тексты посчитаны кодом игры · tools/cards_sheet.py</div>
 <h2>РЕКРУТ <span>★ · 11 карт · без арта: 1</span></h2>
 <div class="grid"><article class="c t0" style="--el:#c9d4dc">
+  <div class="вид" data-id="r01"></div>
   <header><span class="cost">1</span>
     <h3>Гончая Террас</h3>
     <span class="id">r01</span></header>
@@ -97,6 +124,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#c9d4dc">
+  <div class="вид" data-id="r02"></div>
   <header><span class="cost">2</span>
     <h3>Патрульный ГРАНИ</h3>
     <span class="id">r02</span></header>
@@ -108,6 +136,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#35f0ff">
+  <div class="вид" data-id="r03"></div>
   <header><span class="cost">2</span>
     <h3>Санитар Дома</h3>
     <span class="id">r03</span></header>
@@ -119,6 +148,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#ff6a1f">
+  <div class="вид" data-id="r04"></div>
   <header><span class="cost">3</span>
     <h3>Курсант Аркадия</h3>
     <span class="id">r04</span></header>
@@ -130,6 +160,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#ff6a1f">
+  <div class="вид" data-id="r05"></div>
   <header><span class="cost">3</span>
     <h3>Огнемётчик</h3>
     <span class="id">r05</span></header>
@@ -141,6 +172,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#ffd52e">
+  <div class="вид" data-id="r06"></div>
   <header><span class="cost">2</span>
     <h3>Стрелок Сирен</h3>
     <span class="id">r06</span></header>
@@ -152,6 +184,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#35f0ff">
+  <div class="вид" data-id="r07"></div>
   <header><span class="cost">4</span>
     <h3>Дежурный</h3>
     <span class="id">r07</span></header>
@@ -163,6 +196,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#ff4fd8">
+  <div class="вид" data-id="r08"></div>
   <header><span class="cost">3</span>
     <h3>Связист</h3>
     <span class="id">r08</span></header>
@@ -174,6 +208,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#ffd52e">
+  <div class="вид" data-id="s01"></div>
   <header><span class="cost">1</span>
     <h3>Искра</h3>
     <span class="id">s01</span></header>
@@ -185,6 +220,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#ff4fd8">
+  <div class="вид" data-id="s02"></div>
   <header><span class="cost">2</span>
     <h3>Подзарядка</h3>
     <span class="id">s02</span></header>
@@ -196,6 +232,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t0" style="--el:#ffd52e">
+  <div class="вид" data-id="zC0"></div>
   <header><span class="cost">0</span>
     <h3>Перезарядка</h3>
     <span class="id">zC0</span></header>
@@ -208,6 +245,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
 </article></div>
 <h2>ГОРОД <span>★★ · 9 карт · без арта: 0</span></h2>
 <div class="grid"><article class="c t1" style="--el:#c9d4dc">
+  <div class="вид" data-id="c01"></div>
   <header><span class="cost">4</span>
     <h3>Дизель</h3>
     <span class="id">c01</span></header>
@@ -219,6 +257,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t1" style="--el:#ff6a1f">
+  <div class="вид" data-id="c02"></div>
   <header><span class="cost">3</span>
     <h3>Румба</h3>
     <span class="id">c02</span></header>
@@ -230,6 +269,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t1" style="--el:#35f0ff">
+  <div class="вид" data-id="c03"></div>
   <header><span class="cost">3</span>
     <h3>Сэр Каштан</h3>
     <span class="id">c03</span></header>
@@ -241,6 +281,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t1" style="--el:#ff6a1f">
+  <div class="вид" data-id="c05"></div>
   <header><span class="cost">4</span>
     <h3>Гоша «Клещ»</h3>
     <span class="id">c05</span></header>
@@ -252,6 +293,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t1" style="--el:#ffd52e">
+  <div class="вид" data-id="c08"></div>
   <header><span class="cost">3</span>
     <h3>Ноа «Прибой»</h3>
     <span class="id">c08</span></header>
@@ -263,6 +305,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t1" style="--el:#35f0ff">
+  <div class="вид" data-id="c09"></div>
   <header><span class="cost">3</span>
     <h3>Меднес «Пилюля»</h3>
     <span class="id">c09</span></header>
@@ -274,6 +317,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t1" style="--el:#ff4fd8">
+  <div class="вид" data-id="c11"></div>
   <header><span class="cost">2</span>
     <h3>Профессор Моль</h3>
     <span class="id">c11</span></header>
@@ -285,6 +329,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t1" style="--el:#c9d4dc">
+  <div class="вид" data-id="s03"></div>
   <header><span class="cost">3</span>
     <h3>Ночной Чайник</h3>
     <span class="id">s03</span></header>
@@ -296,6 +341,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t1" style="--el:#ff4fd8">
+  <div class="вид" data-id="s04"></div>
   <header><span class="cost">2</span>
     <h3>Пустая Клетка</h3>
     <span class="id">s04</span></header>
@@ -308,6 +354,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
 </article></div>
 <h2>ФРАКЦИЯ <span>★★★ · 9 карт · без арта: 0</span></h2>
 <div class="grid"><article class="c t2" style="--el:#ffd52e">
+  <div class="вид" data-id="c04"></div>
   <header><span class="cost">2</span>
     <h3>Демен Ция</h3>
     <span class="id">c04</span></header>
@@ -319,6 +366,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t2" style="--el:#ff4fd8">
+  <div class="вид" data-id="c06"></div>
   <header><span class="cost">3</span>
     <h3>Хошилиса</h3>
     <span class="id">c06</span></header>
@@ -330,6 +378,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t2" style="--el:#35f0ff">
+  <div class="вид" data-id="c07"></div>
   <header><span class="cost">2</span>
     <h3>Рэн</h3>
     <span class="id">c07</span></header>
@@ -341,6 +390,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t2" style="--el:#ffd52e">
+  <div class="вид" data-id="c10"></div>
   <header><span class="cost">4</span>
     <h3>Бит и Байт</h3>
     <span class="id">c10</span></header>
@@ -352,6 +402,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t2" style="--el:#c9d4dc">
+  <div class="вид" data-id="c12"></div>
   <header><span class="cost">4</span>
     <h3>Барон Бублик</h3>
     <span class="id">c12</span></header>
@@ -363,6 +414,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t2" style="--el:#ff6a1f">
+  <div class="вид" data-id="c13"></div>
   <header><span class="cost">5</span>
     <h3>Тихон</h3>
     <span class="id">c13</span></header>
@@ -374,6 +426,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t2" style="--el:#ff6a1f">
+  <div class="вид" data-id="s05"></div>
   <header><span class="cost">2</span>
     <h3>Гвоздь-Счастливчик</h3>
     <span class="id">s05</span></header>
@@ -385,6 +438,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t2" style="--el:#35f0ff">
+  <div class="вид" data-id="s06"></div>
   <header><span class="cost">2</span>
     <h3>Осколок Часового</h3>
     <span class="id">s06</span></header>
@@ -396,6 +450,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t2" style="--el:#ff4fd8">
+  <div class="вид" data-id="s07"></div>
   <header><span class="cost">3</span>
     <h3>Фонотека Бездны</h3>
     <span class="id">s07</span></header>
@@ -408,6 +463,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
 </article></div>
 <h2>ЛЕГЕНДА <span>★★★★ · 8 карт · без арта: 0</span></h2>
 <div class="grid"><article class="c t3" style="--el:#ff4fd8">
+  <div class="вид" data-id="L01"></div>
   <header><span class="cost">5</span>
     <h3>Нелл «Стоп-кадр»</h3>
     <span class="id">L01</span></header>
@@ -419,6 +475,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#ffd52e">
+  <div class="вид" data-id="L02"></div>
   <header><span class="cost">6</span>
     <h3>АрррКАША</h3>
     <span class="id">L02</span></header>
@@ -430,6 +487,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#ff4fd8">
+  <div class="вид" data-id="L03"></div>
   <header><span class="cost">5</span>
     <h3>Смокинг Смокинг</h3>
     <span class="id">L03</span></header>
@@ -441,6 +499,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#35f0ff">
+  <div class="вид" data-id="L04"></div>
   <header><span class="cost">6</span>
     <h3>Люмень</h3>
     <span class="id">L04</span></header>
@@ -452,6 +511,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#ff6a1f">
+  <div class="вид" data-id="L05"></div>
   <header><span class="cost">7</span>
     <h3>Ая Курона</h3>
     <span class="id">L05</span></header>
@@ -463,6 +523,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#c9d4dc">
+  <div class="вид" data-id="L06"></div>
   <header><span class="cost">5</span>
     <h3>Веста</h3>
     <span class="id">L06</span></header>
@@ -474,6 +535,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#ff4fd8">
+  <div class="вид" data-id="s08"></div>
   <header><span class="cost">5</span>
     <h3>Сердце Бездны</h3>
     <span class="id">s08</span></header>
@@ -485,6 +547,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#35f0ff">
+  <div class="вид" data-id="s09"></div>
   <header><span class="cost">4</span>
     <h3>Шип Тишины</h3>
     <span class="id">s09</span></header>
@@ -497,6 +560,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
 </article></div>
 <h2>СЕКРЕТ <span>★★★★★ · 1 карт · без арта: 0</span></h2>
 <div class="grid"><article class="c t4" style="--el:#ff4fd8">
+  <div class="вид" data-id="X01"></div>
   <header><span class="cost">9</span>
     <h3>Билет в Один Конец</h3>
     <span class="id">X01</span></header>
@@ -507,3 +571,14 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <p class="fl">«Счастливый ли это билет? Разве что для его владельца…»</p>
   <div class="tags"><b class="tag sec">СЕКРЕТ</b><b class="tag ok">арт есть</b></div>
 </article></div>
+
+<script>
+/* Рисуем после разметки: к этому моменту все места под карты уже в дереве. */
+document.querySelectorAll('.вид[data-id]').forEach(function(м){
+  var c=byId(м.dataset.id);
+  /* Без fl: голос карты страница печатает СВОЕЙ строкой в тексте справа.
+     С флагом он выходил дважды — на карте и рядом с ней. Ровно то же уже
+     ловилось в разборе боя. */
+  if(c)м.innerHTML=cardHTML(c,{open:1,noAnim:1});
+});
+</script>

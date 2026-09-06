@@ -119,6 +119,7 @@ process.stdout.write(JSON.stringify(вывод));
         метки.append('<b class="tag %s">%s</b>' % (
             'ok' if c['арт'] else 'no', 'арт есть' if c['арт'] else 'АРТА НЕТ'))
         return '''<article class="c t%d" style="--el:%s">
+  <div class="вид" data-id="%s"></div>
   <header><span class="cost">%d</span>
     <h3>%s</h3>
     <span class="id">%s</span></header>
@@ -128,7 +129,7 @@ process.stdout.write(JSON.stringify(вывод));
   <p class="desc">%s</p>
   <p class="fl">«%s»</p>
   <div class="tags">%s</div>
-</article>''' % (c['t'], c['цвет'], c['c'], c['n'], c['id'],
+</article>''' % (c['t'], c['цвет'], c['id'], c['c'], c['n'], c['id'],
                  ЭЛ.get(c['el'], c['el']), c['тир'], '★' * (c['t'] + 1), кв,
                  статы, c['ключевые'], c['описание'], c['фл'], ''.join(метки))
 
@@ -229,11 +230,49 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   n.innerHTML=h;
 })();
 </script>
+<!-- Карта рисуется НАСТОЯЩЕЙ cardHTML() из js/07-cards.js и настоящими
+     стилями css/04-cards.css. Своей копии тут нет намеренно: копия и игра
+     разошлись бы, и стенд начал бы врать ровно там, где нужен больше всего —
+     при вычитке карт перед выпуском. Тот же приём, что в poster-lab. -->
+<link rel="stylesheet" href="css/01-base.css">
+<link rel="stylesheet" href="css/04-cards.css">
+<style>
+/* Карта слева от текста; на узком экране — сверху. Ширина в пикселях, а не в
+   процентах: карта свёрстана в пикселях, и в резиновой коробке её значки
+   поплыли бы — ровно та беда, что была с плакатом на щите. */
+.c{display:grid;grid-template-columns:170px 1fr;gap:12px 16px;align-items:start}
+.c>.вид{grid-row:1 / span 20;width:170px}
+.c>.вид .cWrap{cursor:default}
+@media(max-width:720px){.c{grid-template-columns:1fr}.c>.вид{grid-row:auto;width:200px}}
+</style>
+<script>
+/* Заглушка состояния: cardHTML читает из него голографию и настройки графики.
+   Голография ВЫКЛЮЧЕНА: на странице под сорок карт разом, а сорок вечно
+   анимированных слоёв со смешением кладут телефон — это измерено на экране
+   колоды в самой игре. */
+const S={foil:false,anim:false,vfx:false,gfx:{}};
+</script>
+<script src="js/01-core.js"></script>
+<script src="js/02-data.js"></script>
+<script src="js/07-cards.js"></script>
+
 <h1>БАМ-БАМ: КАСКАД — все карты</h1>
 <div class="sub">%d карт · без арта: %d · тексты посчитаны кодом игры · tools/cards_sheet.py</div>
 %s
 ''' % (всего, без, '\n'.join(группы))
 
+    страница += '''
+<script>
+/* Рисуем после разметки: к этому моменту все места под карты уже в дереве. */
+document.querySelectorAll('.вид[data-id]').forEach(function(м){
+  var c=byId(м.dataset.id);
+  /* Без fl: голос карты страница печатает СВОЕЙ строкой в тексте справа.
+     С флагом он выходил дважды — на карте и рядом с ней. Ровно то же уже
+     ловилось в разборе боя. */
+  if(c)м.innerHTML=cardHTML(c,{open:1,noAnim:1});
+});
+</script>
+'''
     io.open(ВЫХОД, 'w', encoding='utf-8', newline='\n').write(страница)
     print('готово: %s' % ВЫХОД)
     print('карт %d, без арта %d' % (всего, без))
