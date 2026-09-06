@@ -44,6 +44,29 @@
 .cFlip{position:relative;width:100%;aspect-ratio:5/7;transform-style:preserve-3d;transition:transform .75s cubic-bezier(.2,1.25,.3,1)}
 .cWrap.open .cFlip{transform:rotateY(180deg)}
 .cFace{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:12px;overflow:hidden}
+/* На iPhone изнанка ПРОСВЕЧИВАЕТ сквозь лицо: на открытой карте поверх арта
+   видно звезду и зеркальное «БАМ-БАМ!!». Запрет `backface-visibility` там
+   соблюдается не для всех потомков — просвечивают ровно .bStar и .bT, то есть
+   единственные элементы изнанки со СВОИМ z-index. Позиционированный потомок с
+   z-index заводит свой контекст наложения, и в вебките он выпадает из-под
+   правила родителя.
+
+   Поэтому не полагаемся на `backface-visibility` вовсе, а гасим ненужную грань
+   насовсем. Переключение отложено на 0.34s — это чуть больше половины
+   переворота (0.75s), грань в этот миг стоит ребром, и подмены не видно.
+   Переход именно `visibility`, а не `display` или `opacity`: display сорвал бы
+   переворот, opacity создаёт слой и вернула бы ту же беду.
+
+   На карте, которая нарисована сразу открытой (колода, коллекция), переход не
+   запускается вовсе — значения применяются мгновенно, и это как раз то, что
+   нужно: там переворота нет. */
+.cBack,.cFront{transition:visibility 0s linear .34s}
+.cFront{visibility:hidden}
+.cWrap.open .cBack{visibility:hidden}
+.cWrap.open .cFront{visibility:visible}
+/* Второй слой защиты: тот же запрет прямо на потомках изнанки. Дёшево и на
+   случай, если где-то ещё появится грань со своим наложением. */
+.cBack>*,.cBack::before{backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .cBack{background:#0d0d14;border:2px solid #2c2c38;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 .cBack::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,213,46,.05) 0 10px,transparent 10px 26px)}
 .cBack .bTape{position:absolute;left:-20%;right:-20%;top:50%;height:24px;margin-top:-12px;transform:rotate(-9deg);
