@@ -1278,6 +1278,8 @@ function openUnitCard(uid){
     <div class="iHead"><h2>${esc(c.n)}</h2>
       <button class="xbtn" aria-label="Закрыть"><svg width="13" height="13" viewBox="0 0 14 14"><path d="M1 1 L13 13 M13 1 L1 13" stroke="currentColor" stroke-width="2.4"/></svg></button></div>
     <div class="insView">
+      ${/* Без fl: разбор печатает голос карты СВОЕЙ строкой ниже (.insFl).
+            С флагом он выходил дважды — на карте и под ней. */''}
       <div class="insCard">${cardHTML(c,{open:1,noAnim:1})}</div>
       <div class="insInfo">
         <div class="insMeta">${свой?'ТВОЙ ЮНИТ':'ЮНИТ ВРАГА'} · ${u.atk}/${u.hp}${
@@ -1316,6 +1318,8 @@ function openInspector(i){
     <div class="iHead"><h2>${c.n}</h2>
       <button class="xbtn" aria-label="Закрыть"><svg width="13" height="13" viewBox="0 0 14 14"><path d="M1 1 L13 13 M13 1 L1 13" stroke="currentColor" stroke-width="2.4"/></svg></button></div>
     <div class="insView">
+      ${/* Без fl: разбор печатает голос карты СВОЕЙ строкой ниже (.insFl).
+            С флагом он выходил дважды — на карте и под ней. */''}
       <div class="insCard">${cardHTML(c,{open:1,noAnim:1})}</div>
       <div class="insInfo">
         <div class="insMeta">${c.ty==='u'?`ЮНИТ · ${c.a}/${c.h} · ${c.c} МАНЫ`:`ЭХО · ${c.c} МАНЫ`} · ${TIER_NAMES[c.t]} ${'★'.repeat(c.t+1)}</div>

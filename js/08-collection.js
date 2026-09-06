@@ -27,7 +27,10 @@ function openCardView(id){
   cvId=id;
   cvEl=document.createElement('div');
   cvEl.className='cvBd';
-  cvEl.innerHTML=`<div class="cvCard">${cardHTML(c,{open:1,noAnim:1})}</div>
+  /* fl:1 — здесь голос карты нужен: своей строки под картой в коллекции нет,
+     и без флага он не показался бы вовсе. В разборе боя наоборот: там своя
+     строка есть, и флаг дал бы текст дважды. */
+  cvEl.innerHTML=`<div class="cvCard">${cardHTML(c,{open:1,noAnim:1,fl:1})}</div>
     <div class="cvBtns">
       <button class="btn pri" id="cvDeck"></button>
       <button class="btn" id="cvClose">ЗАКРЫТЬ</button>
