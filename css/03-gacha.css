@@ -98,7 +98,13 @@
   width:46%;height:44%;font-size:0;background:none;border:0;color:transparent;
   pointer-events:auto;cursor:grab;touch-action:none}
 .gHint{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
-.gPity{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.08em}
+/* Строка гаранта стоит НАД пачкой, а не под ней. Под пачкой её накрывала
+   отрываемая полоска: у .pack своя перспектива, полоска идёт на 3D-повороте и
+   при отрыве вылетает за коробку — в покое перекрытия нет, а стоит потянуть
+   крышку, и «сколько до гаранта» уезжает под неё. Сверху накрыть нечем, и
+   заодно видно до того, как решаешь тянуть. */
+.gPity{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.08em;
+  position:relative;z-index:2}
 .gPity b{color:var(--red)}
 .gHand{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,184px));gap:20px;justify-content:center;padding:8px 0;perspective:1200px;width:100%}
 /* Ролик вскрытия. Размер и положение считаются в JS так, чтобы пачка ВНУТРИ

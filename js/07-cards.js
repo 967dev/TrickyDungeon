@@ -134,13 +134,13 @@ function renderGacha(){
   $('#gBody').innerHTML=`
   <div class="gZone" id="gZone">
     <div class="pkRays"></div>
+    <div class="gPity">гарант: <b>${S.gacha.pity}/${PITY_HARD}</b>${S.gacha.pity>=PITY_START?' · шанс растёт!':''}</div>
     <button class="pack" id="pack" ${broke?'disabled':''}
             aria-label="Вскрыть БАМ-ПАК за ${PACK} искр">
       <span class="pMouth"></span>
       <span class="pTear" id="pTear"><span class="pTab" id="pTab">ТЯНИ</span></span>
     </button>
     ${broke?'<div class="gHint">мало искр — зачисти рейд!</div>':'<div class="gHint">дёрни крышку или просто кликни</div>'}
-    <div class="gPity">гарант: <b>${S.gacha.pity}/${PITY_HARD}</b>${S.gacha.pity>=PITY_START?' · шанс растёт!':''}</div>
   </div>`;
   /* Зубцы по нижнему краю полосы больше не рисуем clip-path'ом: он режет и
      попадание указателя, а зона захвата ярлыка заходит под нижнюю кромку —
