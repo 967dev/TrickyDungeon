@@ -31,6 +31,10 @@
 .inf .kw{display:inline-block;font-family:var(--disp);font-size:9.5px;background:var(--yel);color:#0a0a0e;
   padding:1px 6px;margin:0 4px 0 0;border:1px solid #000;vertical-align:1px}
 .inf .mono{font-family:var(--mono);font-size:11px;color:#fff;line-height:1.8}
+/* Строка «ещё N не открыто». Приглушена и без рамки-акцента: это не карта, а
+   сообщение о том, что тир не пуст. */
+.catRow.catLock{background:none;border-left-style:dashed;color:#6a6a80;font-style:italic}
+.catRow.catLock b{color:#8f8fa4}
 .catRow{padding:7px 10px;border-left:3px solid var(--cat,#262633);background:rgba(255,255,255,.03);margin-bottom:5px;
   font-size:11.5px;line-height:1.5;color:#c4c1cf}
 .catRow b{color:#fff;font-family:var(--disp);font-size:11px}
