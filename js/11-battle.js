@@ -135,7 +135,14 @@ function setBattleBg(si){
 function dressBattle(st){
   setBattleBg(B?B.si:0);
   $('#eName').textContent=st.n.toUpperCase();
-  $('#eIc').innerHTML=svgWrap(EMB[st.ic]||EMB.skull);
+  /* Лицо, если оно есть; иначе эмблема, как было. Соперника узнаём по
+     переписке: `foe` у CHATS — тот же ключ, что у портретов. */
+  { const c=(typeof CHATS!=='undefined'&&B)?CHATS[B.si]:null;
+    const лицо=c&&typeof ЛИЦА!=='undefined'?ЛИЦА[c.foe]:null;
+    const ic=$('#eIc');
+    ic.classList.toggle('face',!!лицо);
+    ic.innerHTML=лицо?`<img src="${лицо}" alt="" draggable="false">`
+                     :svgWrap(EMB[st.ic]||EMB.skull); }
   $('#eIc').style.borderColor=st.boss?'#ff3355':'#2c2c38';
   $('#silP').innerHTML=SIL.aya;
   { const n=$('#pName'); if(n)n.textContent=(S.name||'ТЫ').toUpperCase(); }
