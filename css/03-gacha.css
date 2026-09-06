@@ -54,6 +54,13 @@
    две против трёх — так что браузер даже не мог их интерполировать и
    пересобирал цепочку с нуля. Статичный filter растрируется один раз, а
    анимация opacity целиком уезжает на видеоускоритель и не стоит ничего. */
+/* Наклейка с ценой. Кегль в clamp, а не в процентах: font-size в процентах
+   считается от РОДИТЕЛЬСКОГО кегля, а не от ширины коробки, и подписи бы не
+   выросли вместе с пачкой. Диапазон подобран под её размеры: min(320px,82vw). */
+.pack .pPrice{position:absolute;left:32.97%;right:35.31%;top:73.05%;height:8.39%;
+  z-index:2;background:#f0c419;border-radius:7px;display:grid;place-items:center;
+  font-family:var(--disp);font-size:clamp(17px,6.2vw,26px);color:#1a1405;
+  letter-spacing:.02em;white-space:nowrap}
 .pack::after{content:'';position:absolute;inset:0;
   background:url(../art/pack.webp) 0 0/100% 100% no-repeat;
   filter:drop-shadow(7px 9px 0 rgba(255,213,46,.16)) drop-shadow(0 22px 34px rgba(0,0,0,.6))}

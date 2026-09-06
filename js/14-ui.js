@@ -104,7 +104,7 @@ function openInfo(tab){
     </ul>
     <h3>ПЛАН НА ПЕРВЫЕ ХОДЫ</h3>
     <p>Ход 1: «Перезарядка» + дешёвый юнит. Ход 2-3: занимай поле, ставь таунта. Ход 4-5: усиления и РАШ. Дальше — считай летал каждый ход.</p>`,
-   gacha:`<h3>ПАК = 5 КАРТ ЗА 100 ИСКР</h3>
+   gacha:`<h3>ПАК = 5 КАРТ ЗА ${PACK} ИСКР</h3>
     <p>Крышку можно <b>буквально стянуть</b>: тяни язычок «ТЯНИ!» — или просто кликни по паку. Тап по закрытой карте — вскрыть.</p>
     <h3>ЧТО ДАЛЬШЕ</h3>
     <ul>
@@ -208,6 +208,14 @@ function renderSettings(){
     <div class="setRow"><div><div class="sT">СПРАВКА</div>
       <div class="sS">правила · все карты · стратегии · шансы</div></div>
       <button class="btn" data-info="battle">ОТКРЫТЬ</button></div>
+    ${/* Жалоба на то, что НЕ упало. Красная плашка ловит только падения, а
+        добрая половина найденного игроком — «странно себя ведёт»: заморозка без
+        метки, пустой ход врага, плакат не в ту сторону. Про такое сказать было
+        нечем, кроме скриншота, а скриншот не говорит ни версии сборки, ни
+        экрана, ни того, что было секунду назад. */''}
+    <div class="setRow"><div><div class="sT">СООБЩИТЬ О ПРОБЛЕМЕ</div>
+      <div class="sS">соберёт версию, экран и журнал — и положит в буфер</div></div>
+      <button class="btn" id="setBug">СОБРАТЬ</button></div>
     <div class="setRow" style="border-color:#4a2230"><div><div class="sT" style="color:var(--red)">СБРОС ПРОГРЕССА</div>
       <div class="sS">коллекция, колода, искры, рейды — всё в ноль</div></div>
       <button class="btn danger" id="setReset">СБРОСИТЬ</button></div>
@@ -225,6 +233,30 @@ function renderSettings(){
   }
   wireGfx();
   let armed=false;
+  /* Собираем ОДНОЙ строкой, готовой к отправке. Ничего никуда не шлём сами:
+     отправка — это чужой сервер, согласие и вся возня с приватностью ради
+     ранней сборки. Игрок копирует и присылает сам, как и с падением. */
+  const bug=$('#setBug');
+  if(bug)bug.onclick=()=>{
+    let падения=[];
+    try{падения=JSON.parse(localStorage.getItem('bbduel_err')||'[]').slice(-3)}catch(e){}
+    const версия=(()=>{const s=document.querySelector('script[src*="15-boot"]');
+      return s?(s.getAttribute('src').split('?v=')[1]||'?'):'?'})();
+    const текст=[
+      'БАМ-БАМ · отчёт о проблеме',
+      'сборка: v'+версия,
+      'экран: '+(typeof CUR!=='undefined'?CUR:'?')+(typeof B!=='undefined'&&B?(' · бой: '+B.st.n+', ход '+(B.turnNo||1)+', фаза '+B.phase):''),
+      'герой: '+(S.hero||'—')+' · этап '+S.stage+' · искр '+S.sparks,
+      'колода '+((S.deck||[]).length)+'/20 · коллекция '+Object.keys(S.inv||{}).length,
+      'экран устройства: '+innerWidth+'×'+innerHeight+' · '+(navigator.userAgent||'').slice(0,120),
+      падения.length?('последние падения: '+падения.map(з=>(з.msg||з.m||'?')).join(' | ')):'падений не записано',
+      '',
+      'ЧТО ПРОИЗОШЛО (допиши сам): '
+    ].join(String.fromCharCode(10));
+    const готово=()=>{sfx.ui();toast('Скопировано — вставь в сообщение и допиши, что случилось')};
+    try{navigator.clipboard.writeText(текст).then(готово,()=>{prompt('Скопируй вручную:',текст)})}
+    catch(e){prompt('Скопируй вручную:',текст)}
+  };
   $('#setReset').onclick=e=>{
     if(!armed){armed=1;e.target.textContent='ТОЧНО? ЖМИ ЕЩЁ';return}
     S=clone(DEF);for(const c of CARDS.filter(c=>c.t===0&&!c.noColl))S.inv[c.id]=2;

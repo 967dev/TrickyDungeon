@@ -28,7 +28,7 @@ function renderMenu(){
   <button class="mTile" data-go="gacha">
     <span class="tIc">${svgWrap('<path d="M13 2 L4 14 H11 L10 22 L20 9 H13 Z" fill="currentColor"/>')}</span>
     <span class="tT">КАРТОЧНЫЙ ЛАРЁК</span><span class="tS">сегодня повезёт</span>
-    ${S.sparks>=100?'<span class="tBadge">ЕСТЬ!</span>':''}
+    ${S.sparks>=PACK?'<span class="tBadge">ЕСТЬ!</span>':''}
   </button>
   <button class="mTile" data-go="deck">
     <span class="tIc">${svgWrap(EMB.card)}</span>
@@ -41,7 +41,7 @@ function renderMenu(){
     <span class="tIc">${svgWrap('<path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="none" stroke="currentColor" stroke-width="2"/>')}</span>
     <span class="tT">БАМбилово</span>
     <span class="tS">${аркадаОткрыта()
-      ? 'бесконечно · рекорд '+((S.arc&&S.arc.рек)||0)+((S.arc&&S.arc.стрик)?' · серия '+S.arc.стрик:'')
+      ? '+'+АРКАДА_НАГРАДА+' искр за бой · рекорд '+((S.arc&&S.arc.рек)||0)+((S.arc&&S.arc.стрик)?' · серия '+S.arc.стрик:'')
       : 'откроется после первого акта'}</span>
     ${аркадаОткрыта()&&S.arc&&S.arc.стрик?'<span class="tBadge">СЕРИЯ!</span>':''}
   </button>

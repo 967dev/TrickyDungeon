@@ -1794,7 +1794,8 @@ function updateUnit(el,u,side,targetable){
     h.classList.toggle('hurt',здор<u.maxhp);
   }
   const kw=el.querySelector('.uKw');
-  const want=(u.taunt?'<i>ТАУНТ</i>':'')+(u.rush&&u.sick?'<i class="r">РАШ</i>':'');
+  const want=(u.taunt?'<i>ТАУНТ</i>':'')+(u.rush&&u.sick?'<i class="r">РАШ</i>':'')
+    +(ужеМёрзнет(u)?'<i class="fz">МОРОЗ</i>':'');
   if(kw&&kw.innerHTML!==want)kw.innerHTML=want;
 }
 /* Одно место, где решается, двигаться ли вообще. Системную настройку
@@ -1821,7 +1822,7 @@ function unitHTML(u,side,targetable){
   return `<div class="unit ${sel?'sel':''} ${targetable?'target':''} ${tired?'tired':''} ${u.buffed?'buffed':''} ${ужеМёрзнет(u)?'chilled':''} ${имм?'imm':''}"
     data-uid="${u.uid}" style="--tc:${hex}">
     <span class="uName">${u.card.n}</span>
-    <span class="uKw">${u.taunt?'<i>ТАУНТ</i>':''}${u.rush&&u.sick?'<i class="r">РАШ</i>':''}</span>
+    <span class="uKw">${u.taunt?'<i>ТАУНТ</i>':''}${u.rush&&u.sick?'<i class="r">РАШ</i>':''}${ужеМёрзнет(u)?'<i class="fz">МОРОЗ</i>':''}</span>
     ${/* Только uArtImg, без uArt. Оба класса на одной картинке — ловушка:
           .unit .uArt и .unit .uArtImg равны по весу, поэтому решает порядок в
           файле, а в телефонной медиа-секции .uArt переопределён ниже и
@@ -1865,6 +1866,10 @@ function finish(win,forfeit){
     const серия=a.стрик;
     if(win){a.стрик++;if(a.стрик>a.рек)a.рек=a.стрик}
     else a.стрик=0;
+    /* Платим только за ПОБЕДУ. За попытку платить нельзя: сдаться на первом
+       ходу — три секунды, и это был бы бесконечный кран. */
+    const награда=win?АРКАДА_НАГРАДА:0;
+    if(награда)S.sparks+=награда;
     save();
     if(win){sfx.win();PF.notify('success');setMood('joy',3200);
       burst(innerWidth/2,innerHeight/2,['#ffd52e','#fff','#ff4fd8','#35f0ff'],70,1.8);
@@ -1874,7 +1879,7 @@ function finish(win,forfeit){
       const box=document.createElement('div');box.className='bResult';
       box.innerHTML=`<div class="bResBox">
         <div class="bResT ${win?'win':'lose'}">${win?'ПОБЕДА!!':'СЕРИЯ ОБОРВАЛАСЬ'}</div>
-        <div class="bResS">${win?'серия <b>'+(серия+1)+'</b>':'дошёл до <b>'+серия+'</b>'} · рекорд: <b>${a.рек}</b></div>
+        <div class="bResS">${win?'серия <b>'+(серия+1)+'</b>':'дошёл до <b>'+серия+'</b>'} · рекорд: <b>${a.рек}</b>${награда?' · <b>+'+fmtN(награда)+' искр</b>':''}</div>
         <div class="bResB">
           ${win?'<button class="btn pri" id="aNext">СЛЕДУЮЩИЙ ►</button>'
                :'<button class="btn pri" id="aAgain">НАЧАТЬ ЗАНОВО</button>'}
