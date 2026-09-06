@@ -105,6 +105,11 @@
 @keyframes tileIn{from{transform:translateY(36px) rotate(-2deg);opacity:0}}
 .mTile::after{content:'';position:absolute;right:-18px;bottom:-18px;width:74px;height:74px;border-radius:50%;
   background:radial-gradient(circle,rgba(255,213,46,.13),transparent 70%)}
+/* Закрытый режим: приглушён, но НЕ спрятан и НЕ выключен — по нему нажимают,
+   и он отвечает, чего не хватает. Выключенная кнопка (disabled) молчит, а
+   молчание читается как поломка. */
+.mTile.locked{opacity:.45;filter:grayscale(.6)}
+.mTile.locked .tT::after{content:' 🔒';font-size:.8em;opacity:.8}
 .mTile:hover{transform:translate(-3px,-3px) rotate(-.6deg);border-color:var(--yel);box-shadow:9px 11px 0 rgba(0,0,0,.5)}
 .mTile:active{transform:translate(2px,2px)}
 .mTile .tIc{display:block;width:34px;height:34px;margin-bottom:14px;color:var(--yel)}

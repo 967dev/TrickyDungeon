@@ -64,7 +64,10 @@ function restoreBattle(){
   let d=null;
   try{d=JSON.parse(store.get(BSNAP)||'null')}catch(e){}
   if(!d||d.v!==1)return false;
-  const st=STAGES[d.si];
+  /* Соперник БАМбилова придуман на лету и в STAGES не лежит — в снимке он
+     сохранён целиком. Без этой ветки прерванный аркадный бой выбрасывался, а
+     в Телеграме webview выгружается от любого звонка. */
+  const st=(d.si&&typeof d.si==='object')?d.si:STAGES[d.si];
   /* Снимок из другой версии игры: этап исчез или карты переименовали.
      Молча выкидываем — лучше начать бой заново, чем упасть на рендере. */
   if(!st){dropBattleSnap();return false}
@@ -133,7 +136,11 @@ function setBattleBg(si){
   else{bg.style.backgroundImage='';field.classList.remove('hasBg')}
 }
 function dressBattle(st){
-  setBattleBg(B?B.si:0);
+  /* Задник нужен всем, кроме тренировки. Раньше сюда шёл номер этапа и
+     проверялось si>0 — у БАМбилова номера нет вовсе, соперник придуман на
+     лету, и бой оставался без задника. Спрашиваем то, что есть на самом деле:
+     это тренировка или нет. */
+  setBattleBg(st&&st.tutorial?0:1);
   $('#eName').textContent=st.n.toUpperCase();
   /* Лицо, если оно есть; иначе эмблема, как было. Соперника узнаём по
      переписке: `foe` у CHATS — тот же ключ, что у портретов. */
@@ -152,6 +159,18 @@ function dressBattle(st){
   $('#silEO').classList.toggle('boss',!!st.boss);
   const cry=$('#bCry');cry.innerHTML='';
   sprinkleCrystals(cry,5,['#ffd52e','#35f0ff','#ff4fd8']);
+}
+
+/* ================= БАМбилово =================
+   Бесконечная череда случайных соперников. Награды нет — только рекорд серии.
+   Отдельного экрана у режима нет и не нужно: это те же бои, просто соперник
+   собирается на лету, а не берётся из STAGES. */
+function аркадаОткрыта(){ return мВсёПройдено&&мВсёПройдено() }
+function startArcade(снова){
+  if(!S.arc)S.arc={рек:0,стрик:0};
+  if(снова)S.arc.стрик=0;
+  save();
+  startBattle(аркадныйСоперник(S.arc.стрик));
 }
 
 /* Заводка боя: состояние собирают правила, здесь — экран и обработчики. */
@@ -1836,6 +1855,39 @@ function finish(win,forfeit){
   if(typeof TR!=='undefined'&&TR)stopTraining();
   closeInspector();
   S.stats.battles++;
+  /* БАМбилово — своей веткой, а не условиями внутри общей. Тут нет ни награды,
+     ни отметки о зачистке, ни продвижения по этапам, ни чатов, ни катсцен:
+     половина общего кода к аркаде просто не относится, и вплетать её туда
+     значило бы сделать оба пути хрупкими. */
+  if(B.st.аркада){
+    if(win)S.stats.wins++;
+    const a=S.arc||(S.arc={рек:0,стрик:0});
+    const серия=a.стрик;
+    if(win){a.стрик++;if(a.стрик>a.рек)a.рек=a.стрик}
+    else a.стрик=0;
+    save();
+    if(win){sfx.win();PF.notify('success');setMood('joy',3200);
+      burst(innerWidth/2,innerHeight/2,['#ffd52e','#fff','#ff4fd8','#35f0ff'],70,1.8);
+      bang(a.стрик===a.рек&&a.стрик>1?'РЕКОРД!!':'ПОБЕДА!!',50,30);
+    }else{sfx.lose();PF.notify('error');setMood('sad',3200);bang('СЕРИЯ ОБОРВАЛАСЬ',50,30)}
+    позже(()=>{
+      const box=document.createElement('div');box.className='bResult';
+      box.innerHTML=`<div class="bResBox">
+        <div class="bResT ${win?'win':'lose'}">${win?'ПОБЕДА!!':'СЕРИЯ ОБОРВАЛАСЬ'}</div>
+        <div class="bResS">${win?'серия <b>'+(серия+1)+'</b>':'дошёл до <b>'+серия+'</b>'} · рекорд: <b>${a.рек}</b></div>
+        <div class="bResB">
+          ${win?'<button class="btn pri" id="aNext">СЛЕДУЮЩИЙ ►</button>'
+               :'<button class="btn pri" id="aAgain">НАЧАТЬ ЗАНОВО</button>'}
+          <button class="btn" id="aMenu">В МЕНЮ</button>
+        </div></div>`;
+      document.body.appendChild(box);
+      const уйти=()=>box.remove();
+      const n=$('#aNext');if(n)n.onclick=()=>{уйти();startArcade(false)};
+      const g=$('#aAgain');if(g)g.onclick=()=>{уйти();startArcade(true)};
+      $('#aMenu').onclick=()=>{уйти();go('menu')};
+    });
+    return;
+  }
   let gained=0;
   if(win){
     S.stats.wins++;

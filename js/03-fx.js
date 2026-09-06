@@ -117,7 +117,16 @@ function bang(text,x,y){
   const b=document.createElement('div');b.className='bang';b.textContent=text;
   b.style.left=(x||50)+'%';b.style.top=(y||42)+'%';document.body.appendChild(b);
   setTimeout(()=>b.remove(),950)}
+/* Больше трёх плашек разом не показываем. Пак из пяти дублей выдаёт пять
+   сообщений «лишняя, распыли» одной очередью — столбиком сверху они съедали
+   пол-экрана телефона. Пока плашки лежали внизу друг на друге, этого не было
+   видно: читалась всё равно только верхняя. Лишнюю убираем СРАЗУ, а не
+   дожидаемся её срока: очередь должна двигаться, а не копиться. */
+const ПЛАШЕК_МАКС=3;
 function toast(msg,red){
+  const кор=$('#toasts');if(!кор)return;
   const t=document.createElement('div');t.className='toast'+(red?' red':'');t.textContent=msg;
-  $('#toasts').appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},3200)}
+  кор.appendChild(t);
+  while(кор.children.length>ПЛАШЕК_МАКС)кор.firstElementChild.remove();
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},3200)}
 function shake(el){if(!S.shk)return;el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake')}

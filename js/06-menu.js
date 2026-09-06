@@ -34,10 +34,30 @@ function renderMenu(){
     <span class="tIc">${svgWrap(EMB.card)}</span>
     <span class="tT">КОЛОДА</span><span class="tS">${S.deck.length}/20 · коллекция ${Object.keys(S.inv).length}/${COLLECTIBLE.length}</span>
   </button>
+  ${/* БАМбилово. Кнопка стоит ВСЕГДА, даже когда режим закрыт: спрятанная
+        кнопка не обещает ничего, а видимая с замком говорит «тут будет, доиграй
+        сюжет». Это разница между «в игре нет режима» и «ты до него не дошёл». */''}
+  <button class="mTile ${аркадаОткрыта()?'':'locked'}" id="mArc">
+    <span class="tIc">${svgWrap('<path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="none" stroke="currentColor" stroke-width="2"/>')}</span>
+    <span class="tT">БАМбилово</span>
+    <span class="tS">${аркадаОткрыта()
+      ? 'бесконечно · рекорд '+((S.arc&&S.arc.рек)||0)+((S.arc&&S.arc.стрик)?' · серия '+S.arc.стрик:'')
+      : 'откроется после первого акта'}</span>
+    ${аркадаОткрыта()&&S.arc&&S.arc.стрик?'<span class="tBadge">СЕРИЯ!</span>':''}
+  </button>
   <button class="mTile" data-go="settings">
     <span class="tIc">${svgWrap('<g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5 V5.5 M12 18.5 V21.5 M2.5 12 H5.5 M18.5 12 H21.5 M5 5 L7 7 M17 17 L19 19 M19 5 L17 7 M7 17 L5 19"/></g>')}</span>
     <span class="tT">НАСТРОЙКИ</span><span class="tS">звук · эффекты · сброс</span>
   </button>`;
+  /* Нажатие по закрытому режиму не молчит: тишина в ответ читается как
+     сломанная кнопка. Говорим, чего не хватает. */
+  const arc=$('#mArc');
+  if(arc)arc.onclick=()=>{
+    sfx.ui();
+    if(аркадаОткрыта()){startArcade(!(S.arc&&S.arc.стрик));return}
+    toast('БАМбилово откроется, когда пройдёшь первый акт',1);
+    PF.notify&&PF.notify('warning');
+  };
 }
 
 /* ================= тикер ================= */
