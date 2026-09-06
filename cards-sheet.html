@@ -89,6 +89,17 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
 <link rel="stylesheet" href="css/01-base.css">
 <link rel="stylesheet" href="css/04-cards.css">
 <style>
+/* ОТМЕНЯЕМ то, что 01-base.css делает с документом. Он нужен нам ради
+   переменных (цвета, шрифты), но он же превращает страницу в приложение на
+   весь экран: `html,body{height:var(--app-h)}` и `body{overflow:hidden}`.
+   Лист карт — длинная страница, и от этого она просто переставала листаться.
+   Заодно возвращаем выделение текста: с него тут копируют описания. */
+html,body{height:auto;min-height:100%;overflow:visible}
+body{user-select:text;-webkit-user-select:text}
+/* Точечная сетка 01-base прибита к экрану (position:fixed) и при прокрутке
+   стояла бы на месте поверх карт. Странице она не нужна. */
+body::before{display:none}
+
 /* Карта слева от текста; на узком экране — сверху. Ширина в пикселях, а не в
    процентах: карта свёрстана в пикселях, и в резиновой коробке её значки
    поплыли бы — ровно та беда, что была с плакатом на щите. */

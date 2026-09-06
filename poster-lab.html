@@ -31,7 +31,14 @@
 <link rel="stylesheet" href="css/04-cards.css">
 
 <style>
-body{margin:0;background:#15151c;color:#e9e9f0;font-family:'Segoe UI',Helvetica,Arial,sans-serif}
+/* Отменяем то, что 01-base.css делает с документом: он нужен ради переменных
+   и стилей карты, но превращает страницу в приложение на весь экран
+   (`html,body{height:var(--app-h)}`, `body{overflow:hidden}`). Стенд длиннее
+   окна — и просто переставал листаться. */
+html,body{height:auto;min-height:100%;overflow:visible}
+body{margin:0;background:#15151c;color:#e9e9f0;font-family:'Segoe UI',Helvetica,Arial,sans-serif;
+  user-select:text;-webkit-user-select:text}
+body::before{display:none}
 *{box-sizing:border-box}
 #верх{display:flex;gap:28px;align-items:flex-start;padding:18px;flex-wrap:wrap}
 
