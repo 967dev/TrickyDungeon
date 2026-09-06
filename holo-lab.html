@@ -221,6 +221,44 @@
   .bar{display:flex;gap:8px;justify-content:center;margin:16px 0 0;flex-wrap:wrap}
   .hint{text-align:center;color:#8d8da0;font:12px ui-monospace,Consolas,monospace;margin:12px 0 0}
 </style>
+<!-- ================= ПЕРЕХОДЫ МЕЖДУ СТЕНДАМИ =================
+     Одна и та же полоса на всех рабочих страницах: с любой можно прыгнуть на
+     любую. Собирается кодом из одного списка, а не переписывается руками в
+     семи файлах — иначе они разъезжаются, и это уже было: dev.html звала три
+     страницы из семи, а про остальные знал только тот, кто их делал.
+     story.html помечена: она НЕ в репозитории (спойлеры), и с GitHub Pages её
+     нет — ссылка честно об этом говорит, а не ведёт в 404 молча. -->
+<style>
+#дк{position:sticky;top:0;z-index:9999;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  padding:6px 10px;background:#0a0a0f;border-bottom:2px solid #2c2c38;
+  font:600 11px/1 ui-monospace,Consolas,monospace}
+#дк b{color:#ffd52e;font:900 11px/1 'Arial Black',Impact,sans-serif;letter-spacing:.04em;margin-right:4px}
+#дк a{color:#cfccdd;text-decoration:none;padding:5px 9px;border:1px solid #2c2c38;background:#14141c}
+#дк a:hover{border-color:#ffd52e;color:#ffd52e}
+#дк a.тут{background:#ffd52e;color:#0a0a0f;border-color:#000}
+#дк a.нет{opacity:.5}
+#дк .прим{color:#5a5a6e;margin-left:auto;font-size:10px}
+</style>
+<nav id="дк"></nav>
+<script>
+(function(){
+  var С=[["index.html","игра",1],["dev.html","дев-панель",1],["scene-lab.html","катсцены",1],
+         ["map-lab.html","карта",1],["poster-lab.html","плакат",1],["holo-lab.html","голография",1],
+         ["cards-sheet.html","лист карт",1],["story.html","тексты",0]];
+  var тут=(location.pathname.split("/").pop()||"index.html");
+  var n=document.getElementById("дк"), h='<b>СТЕНДЫ</b>';
+  for(var i=0;i<С.length;i++){
+    var f=С[i][0], имя=С[i][1], вПаблике=С[i][2];
+    var кл=(f===тут?"тут":(вПаблике?"":"нет"));
+    var зач=вПаблике?"":" title=\"нет на GitHub Pages — только локально\"";
+    h+='<a class="'+кл+'" href="'+f+'"'+зач+'>'+имя+(вПаблике?"":" ·лок")+'</a>';
+  }
+  h+='<span class="прим">сейв общий на весь адрес</span>';
+  n.innerHTML=h;
+})();
+</script>
+<!-- ================= /ПЕРЕХОДЫ ================= -->
+
 </head>
 <body>
 <div class="wrap">

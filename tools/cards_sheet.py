@@ -56,7 +56,11 @@ def собрать_js():
     CLAUDE.md). Склеиваем их в том же порядке — для вырезания кусков это ровно
     тот же текст, что был когда-то одним файлом."""
     html = io.open(ИСХОДНИК, encoding='utf-8').read()
-    имена = re.findall(r'<script src="(js/[^"]+)"></script>', html)
+    # [^"?]+ — метку сборки (?v=N) отрезаем прямо здесь. Без этого скрипт
+    # пытался открыть файл с именем «js/01-core.js?v=60» и падал на OSError,
+    # то есть лист карт молча отставал от игры: перегенерация не проходила, а
+    # старый файл продолжал лежать рядом и выглядеть свежим.
+    имена = re.findall(r'<script src="(js/[^"?]+)[^"]*"></script>', html)
     if not имена:
         raise SystemExit('в index.html нет ни одного <script src="js/...">')
     return '\n'.join(io.open(os.path.join(КОРЕНЬ, н), encoding='utf-8').read()
@@ -102,7 +106,7 @@ process.stdout.write(JSON.stringify(вывод));
     КЛ = {'taunt': 'ТАУНТ', 'rush': 'РАШ'}
 
     def карточка(c):
-        статы = ('<span class="st"><b class="a">%s</b><i>УРОН</i></span>'
+        статы = ('<span class="st"><b class="a">%s</b><i>АТАКА</i></span>'
                  '<span class="st"><b class="h">%s</b><i>ЖИЗНИ</i></span>'
                  % (c['a'], c['h'])) if c['ty'] == 'u' else \
                 '<span class="echo">ЭХО-ЗАКЛЯТИЕ</span>'
@@ -194,6 +198,37 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
 .tag.sec{color:var(--red);border-color:var(--red)}
 @media print{body{background:#fff;color:#000}.c{break-inside:avoid}}
 </style>
+<!-- Полоса переходов между стендами. Стоит В ГЕНЕРАТОРЕ, а не в готовом
+     файле: cards-sheet.html собирается целиком, и вставка руками стиралась бы
+     при каждой пересборке. Ровно это и случилось при первой попытке. -->
+<style>
+#дк{position:sticky;top:0;z-index:9999;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  padding:6px 10px;background:#0a0a0f;border-bottom:2px solid #2c2c38;
+  font:600 11px/1 ui-monospace,Consolas,monospace}
+#дк b{color:#ffd52e;font:900 11px/1 'Arial Black',Impact,sans-serif;letter-spacing:.04em;margin-right:4px}
+#дк a{color:#cfccdd;text-decoration:none;padding:5px 9px;border:1px solid #2c2c38;background:#14141c}
+#дк a:hover{border-color:#ffd52e;color:#ffd52e}
+#дк a.тут{background:#ffd52e;color:#0a0a0f;border-color:#000}
+#дк a.нет{opacity:.5}
+#дк .прим{color:#5a5a6e;margin-left:auto;font-size:10px}
+</style>
+<nav id="дк"></nav>
+<script>
+(function(){
+  var С=[["index.html","игра",1],["dev.html","дев-панель",1],["scene-lab.html","катсцены",1],
+         ["map-lab.html","карта",1],["poster-lab.html","плакат",1],["holo-lab.html","голография",1],
+         ["cards-sheet.html","лист карт",1],["story.html","тексты",0]];
+  var тут=(location.pathname.split("/").pop()||"index.html");
+  var n=document.getElementById("дк"), h='<b>СТЕНДЫ</b>';
+  for(var i=0;i<С.length;i++){
+    var f=С[i][0], имя=С[i][1], публ=С[i][2];
+    h+='<a class="'+(f===тут?"тут":(публ?"":"нет"))+'" href="'+f+'"'+
+       (публ?"":' title="нет на GitHub Pages — только локально"')+'>'+имя+(публ?"":" ·лок")+'</a>';
+  }
+  h+='<span class="прим">сейв общий на весь адрес</span>';
+  n.innerHTML=h;
+})();
+</script>
 <h1>БАМ-БАМ: КАСКАД — все карты</h1>
 <div class="sub">%d карт · без арта: %d · тексты посчитаны кодом игры · tools/cards_sheet.py</div>
 %s

@@ -51,15 +51,46 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
 .tag.sec{color:var(--red);border-color:var(--red)}
 @media print{body{background:#fff;color:#000}.c{break-inside:avoid}}
 </style>
+<!-- Полоса переходов между стендами. Стоит В ГЕНЕРАТОРЕ, а не в готовом
+     файле: cards-sheet.html собирается целиком, и вставка руками стиралась бы
+     при каждой пересборке. Ровно это и случилось при первой попытке. -->
+<style>
+#дк{position:sticky;top:0;z-index:9999;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  padding:6px 10px;background:#0a0a0f;border-bottom:2px solid #2c2c38;
+  font:600 11px/1 ui-monospace,Consolas,monospace}
+#дк b{color:#ffd52e;font:900 11px/1 'Arial Black',Impact,sans-serif;letter-spacing:.04em;margin-right:4px}
+#дк a{color:#cfccdd;text-decoration:none;padding:5px 9px;border:1px solid #2c2c38;background:#14141c}
+#дк a:hover{border-color:#ffd52e;color:#ffd52e}
+#дк a.тут{background:#ffd52e;color:#0a0a0f;border-color:#000}
+#дк a.нет{opacity:.5}
+#дк .прим{color:#5a5a6e;margin-left:auto;font-size:10px}
+</style>
+<nav id="дк"></nav>
+<script>
+(function(){
+  var С=[["index.html","игра",1],["dev.html","дев-панель",1],["scene-lab.html","катсцены",1],
+         ["map-lab.html","карта",1],["poster-lab.html","плакат",1],["holo-lab.html","голография",1],
+         ["cards-sheet.html","лист карт",1],["story.html","тексты",0]];
+  var тут=(location.pathname.split("/").pop()||"index.html");
+  var n=document.getElementById("дк"), h='<b>СТЕНДЫ</b>';
+  for(var i=0;i<С.length;i++){
+    var f=С[i][0], имя=С[i][1], публ=С[i][2];
+    h+='<a class="'+(f===тут?"тут":(публ?"":"нет"))+'" href="'+f+'"'+
+       (публ?"":' title="нет на GitHub Pages — только локально"')+'>'+имя+(публ?"":" ·лок")+'</a>';
+  }
+  h+='<span class="прим">сейв общий на весь адрес</span>';
+  n.innerHTML=h;
+})();
+</script>
 <h1>БАМ-БАМ: КАСКАД — все карты</h1>
-<div class="sub">38 карт · без арта: 10 · тексты посчитаны кодом игры · tools/cards_sheet.py</div>
+<div class="sub">38 карт · без арта: 1 · тексты посчитаны кодом игры · tools/cards_sheet.py</div>
 <h2>РЕКРУТ <span>★ · 11 карт · без арта: 1</span></h2>
 <div class="grid"><article class="c t0" style="--el:#c9d4dc">
   <header><span class="cost">1</span>
     <h3>Гончая Террас</h3>
     <span class="id">r01</span></header>
   <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">РЕКРУТ ★</b></div>
-  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">1</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>АТАКА</i></span><span class="st"><b class="h">1</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Осторожно — злые собаки.»</p>
@@ -70,7 +101,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Патрульный ГРАНИ</h3>
     <span class="id">r02</span></header>
   <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">РЕКРУТ ★</b><b class="kw">ТАУНТ</b></div>
-  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>АТАКА</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Патрулирует. Что ему ещё делать?»</p>
@@ -81,18 +112,18 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Санитар Дома</h3>
     <span class="id">r03</span></header>
   <div class="meta"><b class="el">ЛЁД</b><b class="tier">РЕКРУТ ★</b></div>
-  <div class="stats"><span class="st"><b class="a">1</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">1</b><i>АТАКА</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> <b>+3 здоровья ТВОЕМУ герою</b>, но не выше его максимума. Юнитов не лечит.</p>
   <p class="fl">«Мед.работница из компании У.К.О.Л.»</p>
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
-<article class="c t0" style="--el:#c9d4dc">
+<article class="c t0" style="--el:#ff6a1f">
   <header><span class="cost">3</span>
     <h3>Курсант Аркадия</h3>
     <span class="id">r04</span></header>
-  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">РЕКРУТ ★</b></div>
-  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>АТАКА</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Ищет брата. Третий курс Полицейской Академии.»</p>
@@ -103,7 +134,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Огнемётчик</h3>
     <span class="id">r05</span></header>
   <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">РЕКРУТ ★</b></div>
-  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>АТАКА</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> <b>1 урон</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
   <p class="fl">«Огонь в глазах. Огонь в душе.»</p>
@@ -114,29 +145,29 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Стрелок Сирен</h3>
     <span class="id">r06</span></header>
   <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">РЕКРУТ ★</b><b class="kw">РАШ</b></div>
-  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">1</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>АТАКА</i></span><span class="st"><b class="h">1</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Не ясно, как именно он целится, но в целом попадает.»</p>
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
-<article class="c t0" style="--el:#c9d4dc">
+<article class="c t0" style="--el:#35f0ff">
   <header><span class="cost">4</span>
     <h3>Дежурный</h3>
     <span class="id">r07</span></header>
-  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">РЕКРУТ ★</b><b class="kw">ТАУНТ</b></div>
-  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  <div class="meta"><b class="el">ЛЁД</b><b class="tier">РЕКРУТ ★</b><b class="kw">ТАУНТ</b></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>АТАКА</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Пост сдал — пост принял…»</p>
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
-<article class="c t0" style="--el:#ffd52e">
+<article class="c t0" style="--el:#ff4fd8">
   <header><span class="cost">3</span>
     <h3>Связист</h3>
     <span class="id">r08</span></header>
-  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">РЕКРУТ ★</b></div>
-  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">2</b><i>ЖИЗНИ</i></span></div>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>АТАКА</i></span><span class="st"><b class="h">2</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишнее сгорает.</p>
   <p class="fl">«Цифры знаешь — наберёшь!»</p>
@@ -153,11 +184,11 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <p class="fl">«Не 220 вольт, но жахнет как надо!»</p>
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
-<article class="c t0" style="--el:#ffd52e">
+<article class="c t0" style="--el:#ff4fd8">
   <header><span class="cost">2</span>
     <h3>Подзарядка</h3>
     <span class="id">s02</span></header>
-  <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">РЕКРУТ ★</b></div>
+  <div class="meta"><b class="el">ЭФИР</b><b class="tier">РЕКРУТ ★</b></div>
   <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
   
   <p class="desc"><b>Эхо-заклятие:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишнее сгорает.</p>
@@ -181,18 +212,18 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Дизель</h3>
     <span class="id">c01</span></header>
   <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">ГОРОД ★★</b><b class="kw">РАШ</b></div>
-  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>АТАКА</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«АИ-95? Не смеши, дорого же…»</p>
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
-<article class="c t1" style="--el:#ff4fd8">
+<article class="c t1" style="--el:#ff6a1f">
   <header><span class="cost">3</span>
     <h3>Румба</h3>
     <span class="id">c02</span></header>
-  <div class="meta"><b class="el">ЭФИР</b><b class="tier">ГОРОД ★★</b></div>
-  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ГОРОД ★★</b></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>АТАКА</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> <b>+1 к урону и +1 к жизням</b> каждому <b>твоему</b> юниту на поле. Навсегда. Цель не выбирается.</p>
   <p class="fl">«Чувствуй ритм! Иии… раз… раз… раз, два, три!»</p>
@@ -203,7 +234,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Сэр Каштан</h3>
     <span class="id">c03</span></header>
   <div class="meta"><b class="el">ЛЁД</b><b class="tier">ГОРОД ★★</b><b class="kw">ТАУНТ</b></div>
-  <div class="stats"><span class="st"><b class="a">1</b><i>УРОН</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">1</b><i>АТАКА</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
   <p class="desc"><b>Боевой клич:</b> <b>1 урон</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
   <p class="fl">«Щелкунчик? Не читал…»</p>
@@ -214,7 +245,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Гоша «Клещ»</h3>
     <span class="id">c05</span></header>
   <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ГОРОД ★★</b></div>
-  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>АТАКА</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> <b>2 урона</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
   <p class="fl">«Кусь!»</p>
@@ -225,7 +256,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Ноа «Прибой»</h3>
     <span class="id">c08</span></header>
   <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">ГОРОД ★★</b></div>
-  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>АТАКА</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Я волна… ударная волна!»</p>
@@ -236,7 +267,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Меднес «Пилюля»</h3>
     <span class="id">c09</span></header>
   <div class="meta"><b class="el">ЛЁД</b><b class="tier">ГОРОД ★★</b></div>
-  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>АТАКА</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> <b>+4 здоровья ТВОЕМУ герою</b>, но не выше его максимума. Юнитов не лечит.</p>
   <p class="fl">«О, увеличенная… печень, печень… увеличенная… селезёночка… Аритмия… Замечательно! Какая прелесть!»</p>
@@ -247,17 +278,17 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Профессор Моль</h3>
     <span class="id">c11</span></header>
   <div class="meta"><b class="el">ЭФИР</b><b class="tier">ГОРОД ★★</b></div>
-  <div class="stats"><span class="st"><b class="a">1</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">1</b><i>АТАКА</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишнее сгорает.</p>
   <p class="fl">«Задержитесь после лекции…»</p>
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
-<article class="c t1" style="--el:#35f0ff">
+<article class="c t1" style="--el:#c9d4dc">
   <header><span class="cost">3</span>
     <h3>Ночной Чайник</h3>
     <span class="id">s03</span></header>
-  <div class="meta"><b class="el">ЛЁД</b><b class="tier">ГОРОД ★★</b></div>
+  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">ГОРОД ★★</b></div>
   <div class="stats"><span class="echo">ЭХО-ЗАКЛЯТИЕ</span></div>
   
   <p class="desc"><b>Эхо-заклятие:</b> берёшь <b>2 карты</b> из своей колоды в руку. Если в руке уже 7 — лишнее сгорает.</p>
@@ -281,7 +312,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Демен Ция</h3>
     <span class="id">c04</span></header>
   <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">ФРАКЦИЯ ★★★</b><b class="kw">ТАУНТ</b></div>
-  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>АТАКА</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
   <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишнее сгорает.</p>
   <p class="fl">«Забыла забыть…»</p>
@@ -292,7 +323,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Хошилиса</h3>
     <span class="id">c06</span></header>
   <div class="meta"><b class="el">ЭФИР</b><b class="tier">ФРАКЦИЯ ★★★</b></div>
-  <div class="stats"><span class="st"><b class="a">2</b><i>УРОН</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">2</b><i>АТАКА</i></span><span class="st"><b class="h">3</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишнее сгорает.</p>
   <p class="fl">«Сыр выпал — с ним была плутовка такова.»</p>
@@ -303,7 +334,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Рэн</h3>
     <span class="id">c07</span></header>
   <div class="meta"><b class="el">ЛЁД</b><b class="tier">ФРАКЦИЯ ★★★</b><b class="kw">РАШ</b></div>
-  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">1</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>АТАКА</i></span><span class="st"><b class="h">1</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Холоден, как лезвие его клинка.»</p>
@@ -314,7 +345,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Бит и Байт</h3>
     <span class="id">c10</span></header>
   <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">ФРАКЦИЯ ★★★</b></div>
-  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>АТАКА</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> <b>1 урон КАЖДОМУ юниту врага</b> разом. Героя не задевает, цель не выбирается.</p>
   <p class="fl">«Их часто путают, к сожалению.»</p>
@@ -325,7 +356,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Барон Бублик</h3>
     <span class="id">c12</span></header>
   <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">ФРАКЦИЯ ★★★</b><b class="kw">ТАУНТ</b></div>
-  <div class="stats"><span class="st"><b class="a">3</b><i>УРОН</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">3</b><i>АТАКА</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Не толстый, просто кость широкая.»</p>
@@ -336,7 +367,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
     <h3>Тихон</h3>
     <span class="id">c13</span></header>
   <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ФРАКЦИЯ ★★★</b></div>
-  <div class="stats"><span class="st"><b class="a">5</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">5</b><i>АТАКА</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Если он подмёл — улик не будет.»</p>
@@ -375,72 +406,72 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   <p class="fl">«untitled.mp3»</p>
   <div class="tags"><b class="tag ok">арт есть</b></div>
 </article></div>
-<h2>ЛЕГЕНДА <span>★★★★ · 8 карт · без арта: 8</span></h2>
+<h2>ЛЕГЕНДА <span>★★★★ · 8 карт · без арта: 0</span></h2>
 <div class="grid"><article class="c t3" style="--el:#ff4fd8">
   <header><span class="cost">5</span>
     <h3>Нелл «Стоп-кадр»</h3>
     <span class="id">L01</span></header>
   <div class="meta"><b class="el">ЭФИР</b><b class="tier">ЛЕГЕНДА ★★★★</b><b class="kw">РАШ</b></div>
-  <div class="stats"><span class="st"><b class="a">5</b><i>УРОН</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">5</b><i>АТАКА</i></span><span class="st"><b class="h">4</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
   <p class="desc"><b>Боевой клич:</b> <b>2 урона</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
   <p class="fl">«Щёлк! Ищи себя в топах БАМ-БАМа!»</p>
-  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#ffd52e">
   <header><span class="cost">6</span>
     <h3>АрррКАША</h3>
     <span class="id">L02</span></header>
   <div class="meta"><b class="el">ВОЛЬТА</b><b class="tier">ЛЕГЕНДА ★★★★</b><b class="kw">ТАУНТ</b></div>
-  <div class="stats"><span class="st"><b class="a">4</b><i>УРОН</i></span><span class="st"><b class="h">9</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">4</b><i>АТАКА</i></span><span class="st"><b class="h">9</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">ТАУНТ</span> пока он жив, вражеские юниты обязаны бить его, а не героя. <b>Заклятия и боевые кличи он НЕ останавливает</b> — по герою из них попасть можно</p>
   <p class="desc"><b>Боевой клич:</b> <b>+5 здоровья ТВОЕМУ герою</b>, но не выше его максимума. Юнитов не лечит.</p>
   <p class="fl">«Наелся и спит!»</p>
-  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#ff4fd8">
   <header><span class="cost">5</span>
     <h3>Смокинг Смокинг</h3>
     <span class="id">L03</span></header>
   <div class="meta"><b class="el">ЭФИР</b><b class="tier">ЛЕГЕНДА ★★★★</b></div>
-  <div class="stats"><span class="st"><b class="a">4</b><i>УРОН</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">4</b><i>АТАКА</i></span><span class="st"><b class="h">5</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> <b>4 урона</b> одной цели на выбор: любому <b>вражескому юниту</b> или <b>вражескому герою</b>. Таунт этому не мешает — он держит только атаки.</p>
   <p class="fl">«Из-за того, что на нём смокинг и он курит!»</p>
-  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#35f0ff">
   <header><span class="cost">6</span>
     <h3>Люмень</h3>
     <span class="id">L04</span></header>
   <div class="meta"><b class="el">ЛЁД</b><b class="tier">ЛЕГЕНДА ★★★★</b></div>
-  <div class="stats"><span class="st"><b class="a">5</b><i>УРОН</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">5</b><i>АТАКА</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> каждый юнит врага теряет <b>1 урон</b> (не ниже нуля). Жизни не трогает, цель не выбирается.</p>
   <p class="fl">«Уходя, гасите свет. И в темноте гасите…»</p>
-  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#ff6a1f">
   <header><span class="cost">7</span>
     <h3>Ая Курона</h3>
     <span class="id">L05</span></header>
   <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ЛЕГЕНДА ★★★★</b><b class="kw">РАШ</b></div>
-  <div class="stats"><span class="st"><b class="a">7</b><i>УРОН</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">7</b><i>АТАКА</i></span><span class="st"><b class="h">6</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
   <p class="desc">Без эффекта — честный боец: ставь на поле, со следующего хода атакует. Хорошие статы за свои деньги.</p>
   <p class="fl">«Кто сказал, что хрупкая девочка не может носить катану?»</p>
-  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
-<article class="c t3" style="--el:#ff6a1f">
+<article class="c t3" style="--el:#c9d4dc">
   <header><span class="cost">5</span>
     <h3>Веста</h3>
     <span class="id">L06</span></header>
-  <div class="meta"><b class="el">ОГОНЬ</b><b class="tier">ЛЕГЕНДА ★★★★</b></div>
-  <div class="stats"><span class="st"><b class="a">4</b><i>УРОН</i></span><span class="st"><b class="h">7</b><i>ЖИЗНИ</i></span></div>
+  <div class="meta"><b class="el">СТАЛЬ</b><b class="tier">ЛЕГЕНДА ★★★★</b></div>
+  <div class="stats"><span class="st"><b class="a">4</b><i>АТАКА</i></span><span class="st"><b class="h">7</b><i>ЖИЗНИ</i></span></div>
   
   <p class="desc"><b>Боевой клич:</b> <b>+4 здоровья</b> твоему герою <b>и каждому твоему юниту</b> на поле. Цель не выбирается.</p>
   <p class="fl">«И согреть, и испепелить может — поаккуратнее с ней…»</p>
-  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#ff4fd8">
   <header><span class="cost">5</span>
@@ -451,7 +482,7 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   
   <p class="desc"><b>Эхо-заклятие:</b> <b>4 урона КАЖДОМУ юниту врага</b> разом. Героя не задевает, цель не выбирается.</p>
   <p class="fl">«Неосязаемая субстанция, и жуткая…»</p>
-  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
 </article>
 <article class="c t3" style="--el:#35f0ff">
   <header><span class="cost">4</span>
@@ -462,17 +493,17 @@ h2 span{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--dim
   
   <p class="desc"><b>Эхо-заклятие:</b> <b>6 урона вражескому ГЕРОЮ</b> и <b>+6 здоровья твоему</b>. Бьёт только в героя — цель не выбирается.</p>
   <p class="fl">«Спрятался за красотой цветов.»</p>
-  <div class="tags"><b class="tag no">АРТА НЕТ</b></div>
+  <div class="tags"><b class="tag ok">арт есть</b></div>
 </article></div>
-<h2>СЕКРЕТ <span>★★★★★ · 1 карт · без арта: 1</span></h2>
+<h2>СЕКРЕТ <span>★★★★★ · 1 карт · без арта: 0</span></h2>
 <div class="grid"><article class="c t4" style="--el:#ff4fd8">
   <header><span class="cost">9</span>
     <h3>Билет в Один Конец</h3>
     <span class="id">X01</span></header>
   <div class="meta"><b class="el">ЭФИР</b><b class="tier">СЕКРЕТ ★★★★★</b><b class="kw">РАШ</b></div>
-  <div class="stats"><span class="st"><b class="a">10</b><i>УРОН</i></span><span class="st"><b class="h">10</b><i>ЖИЗНИ</i></span></div>
+  <div class="stats"><span class="st"><b class="a">10</b><i>АТАКА</i></span><span class="st"><b class="h">10</b><i>ЖИЗНИ</i></span></div>
   <p><span class="kw">РАШ</span> атакует в тот же ход, когда вышел — не ждёт</p>
   <p class="desc"><b>Боевой клич:</b> берёшь <b>1 карту</b> из своей колоды в руку. Если в руке уже 7 — лишнее сгорает.</p>
   <p class="fl">«Счастливый ли это билет? Разве что для его владельца…»</p>
-  <div class="tags"><b class="tag sec">СЕКРЕТ</b><b class="tag no">АРТА НЕТ</b></div>
+  <div class="tags"><b class="tag sec">СЕКРЕТ</b><b class="tag ok">арт есть</b></div>
 </article></div>
