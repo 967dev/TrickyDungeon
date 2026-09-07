@@ -218,6 +218,11 @@ function openMulligan(after){
      ход прямо за спиной у экрана — игрок дочитывает, а ему уже сдали карту.
      Двадцать секунд на чтение нового экрана человек тратит легко. */
   B.mull=1;
+  /* Свой прошлый экран сносим, а не накладываем. Накладка живёт на body, не
+     внутри экрана, и уйти с неё можно только кнопкой — значит бой, брошенный
+     с открытой заменой (сторож, падение, уход в меню), оставлял её висеть, а
+     следующий бой рисовал ВТОРУЮ поверх. Тот же приём, что у панели залпа. */
+  document.querySelectorAll('.mullWrap').forEach(n=>n.remove());
   const выбор=new Set();
   const box=document.createElement('div');box.className='mullWrap';
   document.body.appendChild(box);
@@ -986,7 +991,12 @@ const элЦвет=el=>(EL_COLS[el]||EL_COLS.steel)[0];
    у пяти стихий пять разных последствий, и «−2» про ману и «−2» про урон —
    это разные вещи, которые нельзя рисовать одинаково. Поэтому СЛОВО. */
 function chainTag(el,текст,цвет){
-  if(!el)return;
+  /* На нулевом темпе не строим ничего. ТЕМП=0 — это «рассказа нет, состояние
+     сразу конечное»: так гоняются тесты и так работала бы настройка «ускорить
+     бои». Метка живёт по таймеру в 1,25 секунды, а событий за эту секунду
+     проходят сотни — значит на экране копились бы сотни анимированных узлов,
+     которых никто не смотрит, и каждый со своим таймером на удаление. */
+  if(!el||ТЕМП<=0)return;
   const r=el.getBoundingClientRect();
   if(!r.width)return;
   const d=document.createElement('div');
@@ -1012,7 +1022,7 @@ function chainTag(el,текст,цвет){
    цели, и пятая анимация вытеснила бы одну из них молча. Свечение идёт по
    готовому слою .uHit, который для вспышек на цели и заведён. */
 function chainLit(el,цвет){
-  if(!el)return;
+  if(!el||ТЕМП<=0)return;
   el.style.setProperty('--chc',цвет||'#ffd52e');
   el.classList.remove('chLit');void el.offsetWidth;el.classList.add('chLit');
   setTimeout(()=>{if(el.isConnected){el.classList.remove('chLit');el.style.removeProperty('--chc')}},900);
@@ -1021,7 +1031,7 @@ function chainLit(el,цвет){
    чтобы не спорить с доской, и значит сама она внимание не привлечёт. */
 function chainPulse(who){
   const box=who==='p'?$('#pChain'):$('#eChain');
-  if(!box||box.hidden)return null;
+  if(!box||box.hidden||ТЕМП<=0)return null;
   box.classList.remove('tick');void box.offsetWidth;box.classList.add('tick');
   setTimeout(()=>box.classList.remove('tick'),640);
   return box;
