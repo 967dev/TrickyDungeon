@@ -50,6 +50,30 @@ function catalogHTML(){
       +(!cards.length&&!закрыто?'':'');
   }).join('');
 }
+/* ================= «ЧТО НОВОГО» =================
+   Игрок узнавал об изменениях никак: карта меняла стихию, соперник крепчал —
+   и всё молча. Список живёт в НОВОСТИ (js/02-data.js), прочитанное помнит
+   сейв (S.news).
+
+   Значок висит на ВСЕХ кнопках справки, а их шесть на разных экранах: игрок
+   не должен искать, где именно посмотреть. Ищем по data-info — так же, как их
+   находит общий обработчик нажатий. */
+function естьНовое(){ return !!(typeof НОВОСТИ!=='undefined'&&НОВОСТИ[0]&&S.news!==НОВОСТИ[0].id) }
+function обновитьЗначокНовостей(){
+  const есть=естьНовое();
+  document.querySelectorAll('[data-info]').forEach(b=>b.classList.toggle('новое',есть));
+}
+function прочитаноНовое(){
+  if(typeof НОВОСТИ==='undefined'||!НОВОСТИ[0])return;
+  if(S.news===НОВОСТИ[0].id)return;
+  S.news=НОВОСТИ[0].id;save();обновитьЗначокНовостей();
+}
+function новостиHTML(){
+  if(typeof НОВОСТИ==='undefined'||!НОВОСТИ.length)return '<p>Пока ничего.</p>';
+  return НОВОСТИ.map((з,i)=>`<h3>${esc(з.д)}${i?'':' · СВЕЖЕЕ'}</h3><ul>`
+    +з.п.map(т=>`<li>${esc(т)}</li>`).join('')+'</ul>').join('');
+}
+
 function openInfo(tab){
   sfx.ui();
   const C={
@@ -161,8 +185,14 @@ function openInfo(tab){
          секрет коллекции тому, кто просто открыл вкладку «шансы». */''}
     <p>${(S.inv&&S.inv['X01'])?'«Билет в Один Конец»':'<b>Секретная карта</b>'} — 10% внутри ПРИЗМЫ = <b>точные 1 из 3 846 карт</b>. Одна карта — один бросок, сумма всегда 100%.</p>`
   };
-  const TABS=[['battle','БОЙ'],['cards','КАРТЫ'],['strat','СТРАТЕГИИ'],['gacha','ЛАРЁК'],['deck','КОЛОДА'],['raid','РЕЙДЫ'],['odds','ШАНСЫ']];
-  tab=C[tab]?tab:'battle';
+  C.news=`<h3>ЧТО НОВОГО</h3>
+    <p>Что поменялось в игре за последние заходы. Свежее — сверху.</p>
+    ${новостиHTML()}`;
+  const TABS=[['news','ЧТО НОВОГО'],['battle','БОЙ'],['cards','КАРТЫ'],['strat','СТРАТЕГИИ'],['gacha','ЛАРЁК'],['deck','КОЛОДА'],['raid','РЕЙДЫ'],['odds','ШАНСЫ']];
+  /* Есть непрочитанное — открываем сразу его, что бы ни нажали. Игрок ткнул в
+     светящуюся кнопку, и показать ему надо именно то, из-за чего она светится.
+     Один раз: дальше значок гаснет, и справка открывается там, где просили. */
+  tab=естьНовое()?'news':(C[tab]?tab:'battle');
   const w=document.createElement('div');w.className='iWrap';
   w.innerHTML=`<div class="iBox">
     <div class="iHead"><h2>СПРАВКА</h2>
@@ -170,12 +200,14 @@ function openInfo(tab){
     <div class="iTabs">${TABS.map(t=>`<button class="chip ${t[0]===tab?'on':''}" data-t="${t[0]}">${t[1]}</button>`).join('')}</div>
     <div class="inf">${C[tab]}</div></div>`;
   document.body.appendChild(w);
+  if(tab==='news')прочитаноНовое();
   w.addEventListener('click',e=>{if(e.target===w)w.remove()});
   w.querySelector('.xbtn').onclick=()=>w.remove();
   w.querySelectorAll('.iTabs .chip').forEach(ch=>ch.onclick=()=>{
     w.querySelectorAll('.iTabs .chip').forEach(x=>x.classList.toggle('on',x===ch));
     w.querySelector('.inf').innerHTML=C[ch.dataset.t];
     w.querySelector('.iBox').scrollTop=0;sfx.ui();
+    if(ch.dataset.t==='news')прочитаноНовое();
   });
 }
 

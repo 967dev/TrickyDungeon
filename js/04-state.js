@@ -90,10 +90,11 @@ const DEF={v:SCHEMA,sparks:600,inv:{},deck:null,stage:0,done:{},hero:null,name:'
      быстро превращается из события в помеху. */
   theEnd:0,
   promo:{},   /* какие промокоды уже активированы — чтобы не вводить дважды */
+  news:'',    /* id последней ПРОЧИТАННОЙ записи в «ЧТО НОВОГО», см. fixS */
   stats:{packs:0,wins:0,battles:0}};
 let S=load();
 function defaultDeck(){return CARDS.filter(c=>c.t===0&&!c.noColl).flatMap(c=>[c.id,c.id]).slice(0,20)}
-function fixS(s){
+function fixS(s,новыйИгрок){
   for(const c of CARDS){if(Number.isFinite(s.inv[c.id]))s.inv[c.id]=clamp(s.inv[c.id]|0,0,INV_CAP)}
   if(!Array.isArray(s.deck)||s.deck.length!==20)s.deck=defaultDeck();
   /* Сейвы до появления катсцен приходят без scenes. Дополняем пустым: «не
@@ -103,6 +104,15 @@ function fixS(s){
   /* Сейвы, сделанные до появления блока графики, приходят без gfx. Дополняем
      по ключам, а не подменяем объект целиком: иначе будущий новый флаг
      затирал бы уже выбранное игроком. */
+  /* Значок «новое» на справке. НОВИЧКУ ЕГО ПОКАЗЫВАТЬ НЕЧЕГО: ему новая вся
+     игра, и первым, что он увидит, будет список правок вместо самой игры.
+     Поэтому чистому сейву свежую запись сразу помечаем прочитанной.
+
+     Признак новичка передаёт ЗАГРУЗЧИК — он единственный знает правду. По
+     самому полю отличить нельзя: `news` есть в DEF, и Object.assign
+     подставляет его и новому сейву, и старому, где поля не было. Первый заход
+     этой проверки так и стоял мёртвым — ловилось только живым запуском. */
+  if(новыйИгрок&&typeof НОВОСТИ!=='undefined'&&НОВОСТИ[0])s.news=НОВОСТИ[0].id;
   if(!s.chats||typeof s.chats!=='object')s.chats={};
   if(!s.gifts||typeof s.gifts!=='object')s.gifts={};
   if(!Number.isFinite(s.mapAct)||s.mapAct<1)s.mapAct=1;
@@ -117,10 +127,10 @@ function load(){
      возвращал заведомо нерабочее состояние, а доводил его до ума лишь
      стартовый блок ниже по файлу. Любой вызов load() мимо него — например
      при сбросе прогресса — получал колоду null и ронял отрисовку меню. */
-  if(!raw)return fixS(clone(DEF));            /* сейва нет — честно новый игрок */
+  if(!raw)return fixS(clone(DEF),1);          /* сейва нет — честно новый игрок */
   let d=null;
   try{d=JSON.parse(raw)}catch(e){d=null}
-  if(!d||typeof d!=='object')return fixS(clone(DEF));   /* мусор вместо сейва */
+  if(!d||typeof d!=='object')return fixS(clone(DEF),1); /* мусор вместо сейва */
   try{
     const s=Object.assign(clone(DEF),d);
     s.gacha=Object.assign({pity:0,packs:0},d.gacha||{});s.stats=Object.assign({},DEF.stats,d.stats||{});
