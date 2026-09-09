@@ -436,7 +436,7 @@ async function aiTurn(){
 function aiSpellAim(c,tgt){
   const e=c&&c.eff;if(!e)return $('#rowP');
   const un=u=>u?$(`#rowE .unit[data-uid="${u.uid}"],#rowP .unit[data-uid="${u.uid}"]`):null;
-  if(e.k==='dmg'||e.k==='drain')return (tgt&&un(tgt))||$('#pHp');
+  if(e.k==='dmg'||e.k==='drain'||e.k==='reflect')return (tgt&&un(tgt))||$('#pHp');
   if(e.k==='healHero')return $('#eHp');
   if(e.k==='draw')return $('#eHandN');
   if(e.k==='mana')return $('#eMana');
@@ -1246,7 +1246,7 @@ function unitRect(el){
    вражеское, только стороны зеркальны. */
 function spellAimP(c){
   const e=c.eff;if(!e)return $('#rowE');
-  if(e.k==='dmg'||e.k==='drain')return $('#eHp');
+  if(e.k==='dmg'||e.k==='drain'||e.k==='reflect')return $('#eHp');
   if(e.k==='healHero'||e.k==='healAll')return $('#pHp');
   if(e.k==='mana')return $('#pMana');
   if(e.k==='draw')return $('#bHand');
