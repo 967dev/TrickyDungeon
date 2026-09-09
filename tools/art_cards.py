@@ -13,7 +13,7 @@
 
 Новый арт: положить PNG в art/_raw, дописать строку в MAP, запустить
     python tools/art_cards.py
-и добавить id в CARD_ART (js/02-data.js).
+и добавить id в CARD_ART (js/07-cards.js — не в 02-data.js, там только сами карты).
 
 Ни пропорции оригинала, ни цвет его подложки значения не имеют:
   — неквадратный кадр вписывается в квадрат по сюжету, см. в_квадрат();
@@ -58,6 +58,12 @@ MAP = {
     'L06': 'VESTA.png',
     's08': 'HEARTOFABYSS.png',
     's09': 'STING.png',
+    # пятая партия, 9 сентября 2026 — первая партия стальных карт
+    'c14': 'barry.png',
+    'c15': 'liquidmetal.png',
+    's10': 'alumen.png',
+    's11': 'mirror shield.png',
+    'L07': 'Armory.png',
     'X01': '1WAYTICKET.png',
 }
 
