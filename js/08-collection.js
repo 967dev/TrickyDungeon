@@ -135,6 +135,17 @@ function renderDeckSide(){
       <span class="rA">${cnt[id]}× · ${c.ty==='u'?c.a+'/'+c.h:'эхо'}</span></div>`}).join('')||
     '<div style="text-align:center;color:#55556a;font-size:11px;font-style:italic;padding:14px">пусто</div>';
   $$('#dDeck .dRow').forEach(el=>el.onclick=()=>{S.deck.splice(S.deck.indexOf(el.dataset.id),1);save();renderDeck();sfx.ui()});
+  /* Кнопка «НАБОР» живёт только на телефоне — на широком экране её прячет
+     стиль. Обработчик вешаем всегда: проверять ширину ещё и в коде значило бы
+     держать один порог в двух местах, и они разошлись бы. */
+  { const кн=$('#dСписок'), бок=$('.dSide');
+    if(кн&&бок)кн.onclick=()=>{
+      const открыт=бок.classList.toggle('открыт');
+      кн.textContent=открыт?'НАБОР ▼':'НАБОР ▲';
+      кн.setAttribute('aria-expanded',открыт?'true':'false');
+      sfx.ui();
+    };
+  }
   $('#dAuto').onclick=()=>{S.deck=autoDeck();save();renderDeck();sfx.sparks();toast('Авто-набор собран!')};
   $('#dToBattle').onclick=()=>{
     if(S.deck.length!==20){toast('Нужно ровно 20 карт!',1);return}

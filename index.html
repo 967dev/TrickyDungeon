@@ -29,18 +29,18 @@
 
      Стили разрезаны по темам. ПОРЯДОК ССЫЛОК ЗНАЧИМ: правила одной силы
      разрешаются по нему. Адаптив идёт последним, чтобы выигрывать всегда. -->
-<link rel="stylesheet" href="css/01-base.css?v=78">
-  <link rel="stylesheet" href="css/02-menu.css?v=78">
-  <link rel="stylesheet" href="css/03-gacha.css?v=78">
-  <link rel="stylesheet" href="css/04-cards.css?v=78">
-  <link rel="stylesheet" href="css/05-deck.css?v=78">
-  <link rel="stylesheet" href="css/06-battle.css?v=78">
-  <link rel="stylesheet" href="css/07-story.css?v=78">
-  <link rel="stylesheet" href="css/08-overlays.css?v=78">
-  <link rel="stylesheet" href="css/09-chat.css?v=78">
-  <link rel="stylesheet" href="css/10-settings.css?v=78">
-  <link rel="stylesheet" href="css/11-map.css?v=78">
-  <link rel="stylesheet" href="css/12-responsive.css?v=78">
+<link rel="stylesheet" href="css/01-base.css?v=81">
+  <link rel="stylesheet" href="css/02-menu.css?v=81">
+  <link rel="stylesheet" href="css/03-gacha.css?v=81">
+  <link rel="stylesheet" href="css/04-cards.css?v=81">
+  <link rel="stylesheet" href="css/05-deck.css?v=81">
+  <link rel="stylesheet" href="css/06-battle.css?v=81">
+  <link rel="stylesheet" href="css/07-story.css?v=81">
+  <link rel="stylesheet" href="css/08-overlays.css?v=81">
+  <link rel="stylesheet" href="css/09-chat.css?v=81">
+  <link rel="stylesheet" href="css/10-settings.css?v=81">
+  <link rel="stylesheet" href="css/11-map.css?v=81">
+  <link rel="stylesheet" href="css/12-responsive.css?v=81">
 </head>
 <body>
 
@@ -151,6 +151,10 @@
       <div class="dSideS" id="dSideS">0 / 20</div>
       <div class="dDeck" id="dDeck"></div>
       <div class="dSideB">
+        <!-- Кнопка нужна ТОЛЬКО на телефоне: там боковая панель свёрнута в
+             нижнюю полосу, и список набранного открывается по ней. На широком
+             экране список и так виден, поэтому кнопка спрятана стилем. -->
+        <button class="btn dСписок" id="dСписок" aria-expanded="false">НАБОР ▲</button>
         <div class="dCount" id="dCount">0 / 20</div>
         <button class="btn pri" id="dAuto">АВТО-НАБОР</button>
         <button class="btn" id="dToBattle">В БОЙ ►</button>
@@ -319,20 +323,20 @@
 <!-- Скрипт разрезан по темам. ПОРЯДОК ЗНАЧИМ: обычные скрипты выполняются
      подряд и вместе дают ровно тот порядок, что был в одном файле.
      Запуск идёт последним. -->
-<script src="js/01-core.js?v=78"></script>
-<script src="js/02-data.js?v=78"></script>
-<script src="js/03-fx.js?v=78"></script>
-<script src="js/04-state.js?v=78"></script>
-<script src="js/05-story.js?v=78"></script>
-<script src="js/06-menu.js?v=78"></script>
-<script src="js/07-cards.js?v=78"></script>
-<script src="js/08-collection.js?v=78"></script>
-<script src="js/09-chat.js?v=78"></script>
-<script src="js/10-rules.js?v=78"></script>
-<script src="js/11-battle.js?v=78"></script>
-<script src="js/12-training.js?v=78"></script>
-<script src="js/13-map.js?v=78"></script>
-<script src="js/14-ui.js?v=78"></script>
-<script src="js/15-boot.js?v=78"></script>
+<script src="js/01-core.js?v=81"></script>
+<script src="js/02-data.js?v=81"></script>
+<script src="js/03-fx.js?v=81"></script>
+<script src="js/04-state.js?v=81"></script>
+<script src="js/05-story.js?v=81"></script>
+<script src="js/06-menu.js?v=81"></script>
+<script src="js/07-cards.js?v=81"></script>
+<script src="js/08-collection.js?v=81"></script>
+<script src="js/09-chat.js?v=81"></script>
+<script src="js/10-rules.js?v=81"></script>
+<script src="js/11-battle.js?v=81"></script>
+<script src="js/12-training.js?v=81"></script>
+<script src="js/13-map.js?v=81"></script>
+<script src="js/14-ui.js?v=81"></script>
+<script src="js/15-boot.js?v=81"></script>
 </body>
 </html>
