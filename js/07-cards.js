@@ -101,7 +101,7 @@ const CARD_ART=new Set([
      вовсе (noColl), и рисовать её незачем. */
   'L01','L02','L03','L04','L05','L06','s08','s09','X01',
 ]);
-function spellIcon(c){return{dmg:'boom',healHero:'heal',healAll:'heal',draw:'card',buff:'up',buffAll:'up',aoe:'boom',weaken:'skull',drain:'skull',mana:'up'}[c.eff.k]||'boom'}
+function spellIcon(c){return{dmg:'boom',reflect:'boom',healHero:'heal',healAll:'heal',draw:'card',buff:'up',buffAll:'up',aoe:'boom',weaken:'skull',drain:'skull',mana:'up'}[c.eff.k]||'boom'}
 
 /* ================= гача ================= */
 const BASE=[.7992,.1598,.0320,.0064,.0026];

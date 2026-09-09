@@ -246,9 +246,9 @@ function newBattle(si,колодаИгрока){
        смягчается честнее, чем растягиванием пула, и не переносит стену вперёд. */
     p:{hp:геройHp,max:геройHp,mana:0,mmax:0,
        deck:st.tutorial?[...TRAIN.deck].reverse():shuffle([...(колодаИгрока||[])]),
-       hand:[],board:[],fatigue:0,chain:{el:null,n:0},ward:0,manaPen:0},
+       hand:[],board:[],fatigue:0,chain:{el:null,n:0},ward:0,manaPen:0,зеркало:0},
     e:{hp:st.hp,max:st.hp,mana:0,mmax:0,deck:st.tutorial?[]:shuffle(aiDeck),hand:[],board:[],fatigue:0,
-       chain:{el:null,n:0},ward:0,manaPen:0},
+       chain:{el:null,n:0},ward:0,manaPen:0,зеркало:0},
     sel:null};
   if(B2.train){B2.p.hand=[...TRAIN.hand];return B2}
   /* ЧЕТЫРЕ карты из колоды, а не три. Раньше четвёртой в руке лежала
@@ -391,11 +391,25 @@ function rDraw(st,who){
   return id;
 }
 
-function rHeroDmg(st,who,v){
+/* ЗЕРКАЛО — память о последнем уроне, полученном ОТ КАРТЫ.
+   Нужна «Зеркальному щиту»: он отражает столько, сколько тебе прилетело
+   заклятием или боевым кличем. Удар существа сюда НЕ ЗАСЧИТЫВАЕТСЯ — иначе
+   зеркало всегда полно и карта перестаёт быть решением.
+
+   Пишется в самих функциях урона, а не в ветках эффектов, по одной причине:
+   веток четыре (dmg, aoe, drain и залп огня), и любая пятая, добавленная
+   позже, про зеркало забудет. Здесь же мимо не пройдёт ничего.
+
+   Ставится ПОСЛЕ проверок щита и неуязвимости: если удар не прошёл, отражать
+   нечего — иначе зеркало копило бы урон, которого игрок не получал. */
+function запомнитьУдар(st,кому,v){ if(v>0)st[кому].зеркало=v }
+
+function rHeroDmg(st,who,v,отКарты){
   const P=st[who];
   /* Заморозка боли (цепочка льда): весь урон в лицо мимо, включая усталость.
      Щит не тратится на один удар — он держит весь ход противника. */
   if(v>0&&P.ward){выдать(st,{t:'warded',who,v});return}
+  if(отКарты)запомнитьУдар(st,who,v);
   P.hp=Math.max(0,P.hp-v);
   выдать(st,{t:'dmgHero',who,v});
   if(P.hp<=0)rOver(st,who==='e');
@@ -410,10 +424,11 @@ function rHeroHeal(st,who,v){
 /* Урон по клетке. Мёртвого убираем с доски ЗДЕСЬ же: правила не имеют права
    оставлять на поле того, кого уже нет, ради красоты падения. Подача держит
    узел на экране сама — по событию 'die' (см. СМЕРТИ_ЖДУТ в 11-battle.js). */
-function rUnitDmg(st,side,u,v){
+function rUnitDmg(st,side,u,v,отКарты){
   /* Пуленепробиваемый (цепочка стали). Покрывает и ответку тоже: такой юнит
      бьёт без размена. Это сильно, и это надо померить. */
   if(v>0&&u.imm){выдать(st,{t:'immune',side,u,v});return}
+  if(отКарты)запомнитьУдар(st,side,v);
   u.hp-=v;
   выдать(st,{t:'dmgUnit',side,u,v});
   if(u.hp<=0){
@@ -441,8 +456,23 @@ function rEffect(st,who,c,tgt){
       break;
     case 'dmg':
       выдать(st,{t:'eff',who,c,k:'dmg',v:e.v,tgt:tgt||null});
-      if(tgt)rUnitDmg(st,foe,tgt,e.v);else rHeroDmg(st,foe,e.v);
+      if(tgt)rUnitDmg(st,foe,tgt,e.v,1);else rHeroDmg(st,foe,e.v,1);
       break;
+    /* ЗЕРКАЛЬНЫЙ ЩИТ. Отражает столько, сколько последний раз прилетело
+       КАРТОЙ. Замерено, чем он будет стрелять: игрок получает урон от карты в
+       86–100% боёв, впервые примерно на третьем ходу, средний удар 2, самый
+       крупный за игру 6 (вытяжка «Шипа Тишины»). То есть мёртвой картой он не
+       будет, но и гарантией не станет.
+       Зеркало ОЧИЩАЕТСЯ после выстрела: иначе два щита подряд отражали бы одну
+       и ту же шестёрку, и за две маны выходило бы двенадцать урона.
+       Пустое зеркало карту не запрещает — она просто не делает ничего, и об
+       этом сказано и в разборе карты, и в журнале боя. */
+    case 'reflect':{
+      const v=P.зеркало|0;
+      выдать(st,{t:'eff',who,c,k:'reflect',v,tgt:tgt||null});
+      if(v>0){ if(tgt)rUnitDmg(st,foe,tgt,v,1);else rHeroDmg(st,foe,v,1) }
+      P.зеркало=0;
+      break;}
     case 'healHero':
       выдать(st,{t:'eff',who,c,k:'healHero',v:e.v});
       rHeroHeal(st,who,e.v);
@@ -468,7 +498,7 @@ function rEffect(st,who,c,tgt){
       break;
     case 'aoe':
       выдать(st,{t:'eff',who,c,k:'aoe',v:e.v});
-      for(const u of [...E.board])rUnitDmg(st,foe,u,e.v);
+      for(const u of [...E.board])rUnitDmg(st,foe,u,e.v,1);
       break;
     case 'weaken':
       выдать(st,{t:'eff',who,c,k:'weaken',v:e.v});
@@ -476,7 +506,7 @@ function rEffect(st,who,c,tgt){
       break;
     case 'drain':
       выдать(st,{t:'eff',who,c,k:'drain',v:e.v,tgt:tgt||null});
-      if(tgt)rUnitDmg(st,foe,tgt,e.v);else rHeroDmg(st,foe,e.v);
+      if(tgt)rUnitDmg(st,foe,tgt,e.v,1);else rHeroDmg(st,foe,e.v,1);
       rHeroHeal(st,who,e.v);
       break;
   }
@@ -543,7 +573,7 @@ function rChainFire(st,who,el){
       /* Двойка, а не единица: на 1 уроне залп упирался в юнитов тира ЛЕГЕНДА и
          в поздних боях давал +5% против +22% у вольты. Замерено. */
       выдать(st,{t:'roast',who,v:2});
-      for(const u of [...E.board])rUnitDmg(st,foe,u,2);
+      for(const u of [...E.board])rUnitDmg(st,foe,u,2,1);   /* залп — тоже от карт */
       break;
     case 'ether':                  /* Пустотный взрыв */
       /* Тоже двойка: когда у врага десять маны, минус одна не мешает ничему. */
@@ -671,6 +701,13 @@ function aiSpellTarget(st,c){
   const P=st.p,E=st.e;
   if(e.k==='dmg'||e.k==='drain')
     return P.board.filter(x=>x.hp<=e.v).sort((a,b)=>b.atk-a.atk)[0]||P.board[0]||null;
+  if(e.k==='reflect'){
+    /* Отражать нечем — целиться незачем: пусть уходит в лицо, там хотя бы
+       ничего не пропадёт впустую. */
+    const v=E.зеркало|0;
+    if(v<=0)return null;
+    return P.board.filter(x=>x.hp<=v).sort((a,b)=>b.atk-a.atk)[0]||P.board[0]||null;
+  }
   if(e.k==='buff')return E.board[0]||null;
   return null;
 }
