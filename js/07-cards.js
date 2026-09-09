@@ -489,23 +489,114 @@ function playPackVideo(pk,r,done){
 }
 
 /* ================= колода ================= */
-let dFilter=-1;
+/* ФИЛЬТР КОЛЛЕКЦИИ. Раньше здесь стояла одна строка кнопок по редкости — и
+   всё. Стихии не было вовсе, хотя колоду собирают как раз под неё: цепочка
+   решает поздние бои, а перебирать сорок карт и вспоминать, кто какого цвета,
+   невозможно. Карт уже 42 и будет сотня.
+
+   Списками, а не кнопками, потому что осей стало пять. Кнопками это на
+   телефоне съело бы пол-экрана, а тремя списками укладывается в строку. */
+const dФ={эл:'',тир:'',ум:'',поиск:'',мои:false,вколоде:false};
+/* Умения сведены в ГРУППЫ, а не по видам эффектов: игрок ищет «чем бить» и
+   «чем лечить», а не `drain` против `reflect`. */
+const dУМЕНИЯ=[
+  ['taunt','ТАУНТ'],['rush','РАШ'],
+  ['урон','урон'],['площадь','по площади'],['лечение','лечение'],
+  ['добор','добор карт'],['усиление','усиление'],
+];
+function dПодходит(c,умение){
+  if(umenieПусто(умение))return true;
+  const k=c.eff&&c.eff.k;
+  switch(умение){
+    case 'taunt':   return !!(c.kw&&c.kw.includes('taunt'));
+    case 'rush':    return !!(c.kw&&c.kw.includes('rush'));
+    case 'урон':    return k==='dmg'||k==='drain'||k==='reflect';
+    case 'площадь': return k==='aoe';
+    case 'лечение': return k==='healHero'||k==='healAll';
+    case 'добор':   return k==='draw';
+    case 'усиление':return k==='buff'||k==='buffAll';
+  }
+  return true;
+}
+const umenieПусто=v=>!v;
 function deckCount(id){return S.deck.filter(x=>x===id).length}
+
+/* Панель строится ОДИН РАЗ. Пересобирать её на каждую перерисовку нельзя:
+   поле поиска теряло бы фокус после каждой набранной буквы, и напечатать в
+   нём больше одного знака было бы невозможно. Меняется только сетка. */
+function строитьФильтр(){
+  const о=(зн,им,выбр)=>`<option value="${зн}"${зн===выбр?' selected':''}>${им}</option>`;
+  const эл=(typeof ЭЛ_ИМЯ!=='undefined')?ЭЛ_ИМЯ:{};
+  $('#dFilters').innerHTML=`
+    <div class="dФРяд">
+      <input id="dПоиск" class="dПоиск" type="search" placeholder="поиск по имени"
+        autocomplete="off" value="${dФ.поиск.replace(/"/g,'&quot;')}">
+    </div>
+    <div class="dФРяд">
+      <select id="dЭл" class="dСел" aria-label="Стихия">
+        ${о('','ВСЕ СТИХИИ',dФ.эл)}
+        ${Object.keys(эл).map(k=>о(k,эл[k],dФ.эл)).join('')}
+      </select>
+      <select id="dТир" class="dСел" aria-label="Редкость">
+        ${о('','ЛЮБАЯ РЕДКОСТЬ',dФ.тир)}
+        ${TIER_NAMES.map((n,i)=>о(String(i),n,dФ.тир)).join('')}
+      </select>
+      <select id="dУм" class="dСел" aria-label="Умение">
+        ${о('','ЛЮБОЕ УМЕНИЕ',dФ.ум)}
+        ${dУМЕНИЯ.map(u=>о(u[0],u[1],dФ.ум)).join('')}
+      </select>
+    </div>
+    <div class="dФРяд">
+      <label class="dГал"><input type="checkbox" id="dМои"${dФ.мои?' checked':''}> только мои</label>
+      <label class="dГал"><input type="checkbox" id="dВК"${dФ.вколоде?' checked':''}> только в колоде</label>
+      <button class="chip" id="dСброс">СБРОСИТЬ</button>
+      <span class="dПоказано" id="dПоказано"></span>
+    </div>`;
+  const перерисовать=()=>{sfx.ui();рисоватьСетку()};
+  $('#dЭл').onchange=e=>{dФ.эл=e.target.value;перерисовать()};
+  $('#dТир').onchange=e=>{dФ.тир=e.target.value;перерисовать()};
+  $('#dУм').onchange=e=>{dФ.ум=e.target.value;перерисовать()};
+  $('#dМои').onchange=e=>{dФ.мои=e.target.checked;перерисовать()};
+  $('#dВК').onchange=e=>{dФ.вколоде=e.target.checked;перерисовать()};
+  /* На ввод — БЕЗ звука: он щёлкал бы на каждую букву. */
+  $('#dПоиск').oninput=e=>{dФ.поиск=e.target.value;рисоватьСетку()};
+  $('#dСброс').onclick=()=>{
+    dФ.эл=dФ.тир=dФ.ум=dФ.поиск='';dФ.мои=dФ.вколоде=false;
+    sfx.ui();строитьФильтр();рисоватьСетку();
+  };
+}
+function видноВСетке(c){
+  const have=S.inv[c.id]||0;
+  if(dФ.мои&&!have)return false;
+  if(dФ.вколоде&&!deckCount(c.id))return false;
+  if(dФ.эл&&c.el!==dФ.эл)return false;
+  if(dФ.тир!==''&&c.t!==+dФ.тир)return false;
+  if(!dПодходит(c,dФ.ум))return false;
+  if(dФ.поиск&&c.n.toLowerCase().indexOf(dФ.поиск.trim().toLowerCase())<0)return false;
+  return true;
+}
 function renderDeck(){
   $('#dSub').textContent=`коллекция ${Object.keys(S.inv).length}/${COLLECTIBLE.length} карт`;
-  $('#dFilters').innerHTML=`<button class="chip ${dFilter===-1?'on':''}" data-f="-1">ВСЕ</button>`+
-    TIER_NAMES.map((n,i)=>`<button class="chip ${dFilter===i?'on':''}" data-f="${i}">${n}</button>`).join('');
-  $$('#dFilters .chip').forEach(ch=>ch.onclick=()=>{dFilter=+ch.dataset.f;sfx.ui();renderDeck()});
+  if(!$('#dПоиск'))строитьФильтр();
   const sp=surplus();
   $('#dDust').innerHTML=sp.cards
     ? `<button class="btn pri" id="dDustBtn">РАСПЫЛИТЬ ЛИШНИЕ · +${fmtN(sp.sparks)} ⚡</button>
        <span class="dDustT">${sp.cards} шт · сверх двух копий · искры на паки</span>`
     : `<span class="dDustT">лишних копий нет · искры дают рейды</span>`;
   if(sp.cards)$('#dDustBtn').onclick=dustSurplus;
+  рисоватьСетку();
+  renderDeckSide();
+}
+
+/* Только сетка и счётчик. Отдельно от renderDeck, потому что фильтр меняет
+   ИМЕННО ЭТО: перерисовывать заодно и панель — значит выбивать фокус из поля
+   поиска на каждой букве. */
+function рисоватьСетку(){
+  let видно=0;
   $('#dGrid').innerHTML=COLLECTIBLE.map(c=>{
     const have=S.inv[c.id]||0,inDeck=deckCount(c.id);
-    const show=dFilter<0||c.t===dFilter;
-    if(!show)return '';
+    if(!видноВСетке(c))return '';
+    видно++;
     const full=inDeck>=Math.min(have,2);
     /* open только у своих карт: без него cardHTML показывает рубашку, и чужая
        карта не выдаёт о себе вообще ничего. Отдельной заглушки рисовать не
@@ -530,7 +621,15 @@ function renderDeck(){
     e.stopPropagation();          /* иначе следом откроется просмотр */
     toggleDeck(b.dataset.add);
   });
-  renderDeckSide();
+  /* Сколько осталось после отсева. Без этой строки пустой экран читается как
+     поломка, а не как «под такой отбор ничего нет». */
+  const п=$('#dПоказано');
+  if(п)п.textContent=видно===COLLECTIBLE.length
+    ? `все ${COLLECTIBLE.length} ${plural(COLLECTIBLE.length,'карта','карты','карт')}`
+    : `показано ${видно} из ${COLLECTIBLE.length}`;
+  const сетка=$('#dGrid');
+  if(сетка&&!видно)сетка.innerHTML=`<div class="dПусто">Под такой отбор карт нет.<br>
+    Сбрось фильтр или ослабь условия.</div>`;
 }
 /* Лишние копии — всё сверх двух: третью в колоду всё равно не положить,
    поэтому она мертвый груз, пока её не распылят. Распыляем только излишек,
