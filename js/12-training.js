@@ -126,6 +126,22 @@ function trSteps(){return [
 
 function trEl(sel){return typeof sel==='function'?sel():(sel?document.querySelector(sel):null)}
 
+/* Карта руки, на которую показываем, выдвигается из веера (.trPick в CSS).
+   Иначе подсказка указывает на то, что нельзя нажать: в веере карте
+   принадлежит полоска шириной 43px, а её нарисованный центр стоит ровно на
+   правом краю этой полоски — палец, нацеленный в середину карты, попадает на
+   соседку. Мимо подсвеченного шлюз глушит касание молча, и шаг выглядит
+   сломанным: карта не отвечает вообще. Ровно это и приехало в отчёте с
+   телефона про «Перезарядку».
+   Класс снимается со ВСЕХ прочих карт, а не только с прошлой цели: руку
+   пересобирает renderBattle целиком, узлы новые, ссылку на прошлую держать
+   бесполезно. */
+function trPick(карта){
+  for(const n of document.querySelectorAll('#bHand .hCard.trPick'))
+    if(n!==карта)n.classList.remove('trPick');
+  if(карта)карта.classList.add('trPick');
+}
+
 function trBlock(e){
   /* Любая ошибка внутри должна ПРОПУСКАТЬ событие, а не глотать его. Один
      раз здесь уже был невалидный селектор, обработчик падал — и именно
@@ -189,6 +205,10 @@ function trPlace(){
   if(!TR)return;
   const st=TR.steps[TR.i];if(!st)return;
   const el=st.at?trEl(st.at):null;
+  /* Выдвигаем ЗДЕСЬ, а не в trRender: renderBattle пересобирает руку целиком
+     и класс теряется вместе со старым узлом, а сюда мы попадаем и после
+     каждой перерисовки, и каждый тик. */
+  trPick(el&&el.classList&&el.classList.contains('hCard')?el:null);
   const r=el&&el.getBoundingClientRect();
   /* Цели нет или она схлопнута (элемент пересоздан и ещё не разложен) —
      затемняем экран целиком, рамку прячем: лучше честное затемнение, чем
@@ -296,6 +316,7 @@ function stopTraining(silent){
   for(const ev of TR_GATED)document.removeEventListener(ev,trBlock,true);
   removeEventListener('resize',trPlace);
   for(const n of [TR.ov,TR.ring,TR.bot,TR.say])if(n&&n.parentNode)n.remove();
+  trPick(null);            /* иначе выдвинутая карта останется торчать из веера */
   TR=null;
   if(!silent)closeInspector();
 }
