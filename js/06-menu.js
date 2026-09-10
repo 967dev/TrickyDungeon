@@ -30,6 +30,15 @@ function renderMenu(){
     <span class="tT">КАРТОЧНЫЙ ЛАРЁК</span><span class="tS">сегодня повезёт</span>
     ${S.sparks>=PACK?'<span class="tBadge">ЕСТЬ!</span>':''}
   </button>
+  ${/* Игра вдвоём. Как и БАМбилово, кнопка стоит всегда: колода нужна и тут,
+        а «собери двадцать карт» понятнее, чем отсутствующая кнопка. */''}
+  <button class="mTile ${S.deck&&S.deck.length===20?'':'locked'}" data-go="duel">
+    <span class="tIc">${svgWrap('<path d="M4 20 L20 4 M8 4 H4 V8 M16 20 H20 V16" fill="none" stroke="currentColor" stroke-width="2"/>')}</span>
+    <span class="tT">ИГРА ВДВОЁМ</span>
+    <span class="tS">${S.deck&&S.deck.length===20
+      ? 'позови друга по ссылке'
+      : 'собери колоду из 20 карт'}</span>
+  </button>
   <button class="mTile" data-go="deck">
     <span class="tIc">${svgWrap(EMB.card)}</span>
     <span class="tT">КОЛОДА</span><span class="tS">${S.deck.length}/20 · коллекция ${Object.keys(S.inv).length}/${COLLECTIBLE.length}</span>

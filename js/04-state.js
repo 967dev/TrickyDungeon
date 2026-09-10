@@ -166,6 +166,12 @@ function go(id){
   /* Игрок сам ушёл с боя — значит рейд брошен осознанно. Снимок держим
      только для аварийных случаев (свернули приложение, упал webview). */
   if(CUR==='deck'&&id!=='deck')closeCardView(true);
+  /* Ушли с экрана матча, не начав бой — закрываем комнату. Иначе опрос
+     продолжает дёргать службу из меню, а второй ждёт того, кто уже ушёл.
+     Проверка стоит ЗДЕСЬ, пока CUR ещё хранит прежний экран: ниже по функции
+     он уже перезаписан, и «откуда ушли» там не узнать. Сам на этом и
+     споткнулся, поставив её сначала внизу. */
+  if(CUR==='duel'&&id!=='duel'&&id!=='battle'&&typeof Д!=='undefined'&&Д.вкл)дЗакрыть();
 
   if(CUR==='battle'&&id!=='battle'){
     dropBattleSnap();
@@ -191,6 +197,7 @@ function go(id){
   if(id==='deck')renderDeck();
   if(id==='stages')renderStages();
   if(id==='end')renderEnd();
+  if(id==='duel')renderDuel();
   if(id==='settings')renderSettings();
 }
 document.addEventListener('click',e=>{

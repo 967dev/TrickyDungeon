@@ -152,6 +152,20 @@ const PF=(()=>{
   const HAPTIC={light:'light',medium:'medium',heavy:'heavy',rigid:'rigid',soft:'soft'};
   return {
     get isTMA(){return inTMA()},
+    /* Как игрока зовут для показа СОПЕРНИКУ. В Телеграме берём тамошнее имя —
+       друзья и так знают друг друга по нему; вне Телеграма остаётся то, что
+       игрок придумал при первом заходе.
+       Отчество и фамилию не берём: в бою нужна подпись под портретом, а не
+       паспорт. Ник (username) предпочитаем имени — он короче и однозначен. */
+    имяДляСоперника(){
+      const tg=TG();
+      if(inTMA()&&tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user){
+        const u=tg.initDataUnsafe.user;
+        const н=(u.username||u.first_name||'').trim();
+        if(н)return н.slice(0,16);
+      }
+      return '';
+    },
     get tg(){return TG()},
     /* Тактильная отдача. Вне TMA — тишина. */
     hit(style){const tg=TG();if(!inTMA()||!tg||!tg.HapticFeedback)return;

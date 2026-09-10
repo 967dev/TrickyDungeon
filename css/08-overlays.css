@@ -62,4 +62,35 @@
 .catEl.e-volta{color:#ffd52e}
 .catEl.e-ether{color:#ff4fd8}
 .catEl.e-steel{color:#c9d4dc}
+
+/* ================= ИГРА ВДВОЁМ =================
+   Экран лобби и таймер хода. Живут здесь, а не в стилях боя: лобби к бою не
+   относится, а таймер — единственное, что дуэль добавляет на сам экран боя. */
+.duBody{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;
+  gap:14px;align-items:center}
+.duКарточка{width:min(420px,100%);background:#101017;border:2px solid #2c2c38;
+  padding:16px 18px}
+.duКарточка h3{font-family:var(--disp);font-style:italic;font-size:15px;
+  color:var(--yel);text-shadow:2px 2px 0 #000;margin:0 0 8px}
+.duКарточка p{font-family:var(--mono);font-size:11px;line-height:1.6;
+  color:var(--dim);margin:0 0 12px}
+.duРяд{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.duРяд .btn{flex:1;justify-content:center;min-width:120px}
+/* Код комнаты крупно и в моно: его диктуют голосом и перепечатывают руками. */
+.duКод{font-family:var(--mono);font-size:34px;letter-spacing:.28em;
+  text-align:center;color:#fff;background:#0a0a0f;border:2px dashed #2c2c38;
+  padding:14px 8px;margin:0 0 12px;user-select:all}
+.duВвод{flex:1;min-width:110px;background:#0a0a0f;border:2px solid #262633;
+  color:#fff;font-family:var(--mono);font-size:20px;letter-spacing:.2em;
+  text-align:center;text-transform:uppercase;padding:8px}
+.duВвод:focus{outline:none;border-color:var(--yel)}
+.duЖдём{margin:12px 0 0;text-align:center;animation:duПульс 1.6s ease-in-out infinite}
+@keyframes duПульс{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.duЖдём{animation:none}}
+/* Таймер хода. Красным на последних десяти секундах — раньше не надо, иначе
+   тревога висит всю партию и перестаёт значить что-либо. */
+.duТаймер{font-family:var(--disp);font-size:15px;color:var(--yel);
+  text-shadow:2px 2px 0 #000;min-width:46px;text-align:center}
+.duТаймер.мало{color:var(--red);animation:duПульс .8s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.duТаймер.мало{animation:none}}
 }
