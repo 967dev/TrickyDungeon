@@ -443,6 +443,13 @@
 .bResT.win{color:var(--yel)}
 .bResT.lose{color:var(--red);text-shadow:5px 5px 0 #000,10px 10px 0 rgba(0,0,0,.5)}
 .bResS{font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:.16em;margin:16px 0 22px;text-transform:uppercase}
+/* Причина исхода в дуэли. Отдельной строкой и заметнее служебной подписи:
+   «соперник сдался» — это то, что игрок пришёл сюда узнать, а «искры не
+   начисляются» он и так знает. Стоит между шапкой и подписью, поэтому свой
+   отступ сверху ей не нужен — его уже дала шапка. */
+.bResПричина{font-family:var(--disp);font-size:14px;color:var(--yel);
+  letter-spacing:.08em;text-transform:uppercase;text-shadow:2px 2px 0 #000;margin-top:10px}
+.bResПричина+.bResS{margin-top:8px}
 .bResS b{color:var(--yel)}
 .bResB{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .ghost{position:fixed;z-index:120;pointer-events:none;padding:10px 16px;background:#12121a;
