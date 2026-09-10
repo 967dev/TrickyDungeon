@@ -587,6 +587,13 @@
   max-width:460px;margin:0 auto}
 .mullBtns{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:16px;flex-wrap:wrap}
 .mullCnt{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--yel)}
+/* Часы на экране замены — только в игре вдвоём. Выглядят как часы хода
+   (#duТаймер) нарочно: это одно и то же обещание — «столько у тебя времени»,
+   — и разной внешностью оно читалось бы как два разных правила. */
+.mullЧасы{font-family:var(--disp);font-size:15px;color:var(--yel);text-shadow:2px 2px 0 #000;
+  border:2px solid #262633;padding:4px 11px;min-width:58px;text-align:center}
+.mullЧасы.мало{color:var(--red);border-color:var(--red);animation:duПульс .8s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.mullЧасы.мало{animation:none}}
 @media (max-width:520px){
   .mullS{font-size:11px}
   /* Ровно 2×2, а не «сколько влезет». Четыре карты по 88px с зазорами это

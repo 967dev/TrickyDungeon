@@ -12,7 +12,14 @@
 @layer deck {
 /* ====== колода ====== */
 #scr-deck .dBody{flex:1;display:flex;gap:0;overflow:hidden}
-.dColl{flex:1;overflow-y:auto;padding:18px;scrollbar-width:thin}
+/* z-index:0 на позиционированном элементе — СВОЙ СЛОЙ. Без него значки на
+   карточках (кнопка «+» это 7, «ЗАКРЫТО» 8) спорят по слоям с нижней полосой
+   набора и вылезают поверх неё: на телефоне полоса лежит НА коллекции, а не
+   сбоку от неё. Чинить надо было именно так, а не поднимать полосу до
+   девяти: с числом-соперником следующий же значок с большим z-index протёк
+   бы снова. Теперь у коллекции свой слой, и что внутри неё — внутри и
+   остаётся, какие бы номера там ни стояли. */
+.dColl{flex:1;overflow-y:auto;padding:18px;scrollbar-width:thin;position:relative;z-index:0}
 /* ПАНЕЛЬ ОТБОРА. Три строки: поиск, три списка, галки со счётчиком.
    Списками, а не кнопками: осей пять (стихия, редкость, умение, «только мои»,
    «только в колоде»), и кнопками это на телефоне заняло бы пол-экрана. */
@@ -64,7 +71,8 @@
   background:var(--yel);color:#0a0a0e;border:2px solid #000;padding:2px 7px;box-shadow:2px 2px 0 rgba(0,0,0,.5)}
 .dCard .dIn{position:absolute;top:-7px;left:-7px;z-index:6;font-family:var(--disp);font-size:11px;
   width:24px;height:24px;display:grid;place-items:center;background:var(--grn);color:#04140a;border:2px solid #000;box-shadow:2px 2px 0 rgba(0,0,0,.5)}
-.dSide{width:280px;flex:none;border-left:3px solid #000;background:#0d0d13;display:flex;flex-direction:column;padding:16px}
+.dSide{width:280px;flex:none;border-left:3px solid #000;background:#0d0d13;display:flex;flex-direction:column;padding:16px;
+  position:relative;z-index:1}
 .dSideH{font-family:var(--disp);font-style:italic;font-size:15px;color:var(--yel);text-shadow:2px 2px 0 #000;margin-bottom:4px}
 .dSideS{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
 .dDeck{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px;scrollbar-width:thin}
