@@ -247,7 +247,7 @@
         'scr-battle','scr-story','chWrap','toasts','fx'])
         ок(!!document.getElementById(id), 'есть узел #' + id);
       равно(document.querySelectorAll('link[rel=stylesheet]').length, 12, 'подключено 12 файлов стилей');
-      ок(document.querySelectorAll('script[src^="js/"]').length === 15, 'подключено 15 файлов скрипта',
+      ок(document.querySelectorAll('script[src^="js/"]').length === 16, 'подключено 16 файлов скрипта',
         document.querySelectorAll('script[src^="js/"]').length);
 
       /* ============ 2. данные карт ============ */

@@ -295,7 +295,12 @@ function renderSettings(){
   if(bug)bug.onclick=()=>{
     let падения=[];
     try{падения=JSON.parse(localStorage.getItem('bbduel_err')||'[]').slice(-3)}catch(e){}
-    const версия=(()=>{const s=document.querySelector('script[src*="15-boot"]');
+    /* Метку сборки берём У ЛЮБОГО своего скрипта, а не у файла с конкретным
+       именем. Стояло «15-boot», и переименование запуска в 16-boot тихо
+       сломало бы отчёт о проблеме: версия стала бы «?» ровно тогда, когда она
+       нужнее всего. Имена файлов у нас уже переезжали, переедут и ещё. */
+    const версия=(()=>{
+      const s=[...document.querySelectorAll('script[src*="?v="]')].pop();
       return s?(s.getAttribute('src').split('?v=')[1]||'?'):'?'})();
     const текст=[
       'БАМ-БАМ · отчёт о проблеме',
