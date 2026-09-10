@@ -307,7 +307,7 @@ function newBattle(si,колодаИгрока){
    растяпой, иначе правка съедет всю кривую сложности разом. */
 function rAiMulligan(st){
   if(!st||st.train)return 0;
-  if(Math.random()>=st.skill)return 0;
+  if(случ()>=st.skill)return 0;
   const E=st.e, эл=st.st&&st.st.эл;
   /* Чем карта хуже для СТАРТА: дорогую нечем сыграть первые ходы, карта не в
      цвет рвёт цепочку. Цену считаем весомее цвета — бездействие на втором ходу
@@ -844,7 +844,7 @@ function rAiTurn(st){
   /* Ранние враги мешкают. Оставлено от прежнего ИИ: на этом посчитаны первые
      этапы, и без этого новичок получает соперника, который отыгрывает руку
      до конца с первого же боя. */
-  const lazy=Math.random()<(1-sk)*.35;
+  const lazy=случ()<(1-sk)*.35;
   let guard=0,сделано=0,нечем=false;
   while(!st.over&&guard++<24){
     if(lazy&&сделано>=1)break;
@@ -852,7 +852,7 @@ function rAiTurn(st){
     const ходы=ходыВрага(st);
     if(!ходы.length){нечем=true;break}
     let выбор=null;
-    if(Math.random()<sk){
+    if(случ()<sk){
       const сейчас=оценкаВрага(st);
       let лучшая=-Infinity;
       for(const д of ходы){

@@ -39,10 +39,17 @@ const ROOT = path.resolve(__dirname, '..') + '/';
 const правила = process.argv[2] || (ROOT + 'js/10-rules.js');
 const N = parseInt(process.argv[3] || '800', 10);
 
+/* Стенд подсовывает правилам свой огрызок ядра — 01-core.js здесь не грузится.
+   Источник случая обязан быть и тут: правила с недавних пор зовут случ(). */
 const ядро = `
-const pick=a=>a[Math.floor(Math.random()*a.length)];
+let _зерно=(Date.now()^0x9e3779b9)>>>0;
+function зерно(v){if(v!==undefined)_зерно=(v>>>0)||1;return _зерно}
+function случ(){_зерно=(_зерно+0x6D2B79F5)>>>0;let t=_зерно;
+  t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);
+  return ((t^(t>>>14))>>>0)/4294967296}
+const pick=a=>a[Math.floor(случ()*a.length)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(случ()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 `;
 const данные = fs.readFileSync(ROOT + 'js/02-data.js', 'utf8');
 let rules = fs.readFileSync(правила, 'utf8');

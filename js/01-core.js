@@ -87,10 +87,42 @@ window.addEventListener('error',e=>crash(e.error||e.message));
 window.addEventListener('unhandledrejection',e=>crash(e.reason));
 /* ================= утилиты ================= */
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const pick=a=>a[Math.floor(Math.random()*a.length)];
+/* ================= СЛУЧАЙНОСТЬ С ЗЕРНОМ =================
+   Раньше и перемешивание колоды, и выбор наугад брали Math.random напрямую.
+   Для одиночной игры это ровно то, что нужно, но для игры вдвоём — нет:
+   двое обязаны получить ОДНУ И ТУ ЖЕ раздачу, иначе они играют в разные бои и
+   узнают об этом не сразу.
+
+   Поэтому весь случай проходит через один источник. По умолчанию он заведён
+   от часов — значит одиночная игра ведёт себя как прежде, каждый запуск свой.
+   Для боя вдвоём зерно назначает создавший комнату, и оба считают одинаково.
+
+   Генератор — mulberry32: тридцать строк арифметики, одинаков во всех
+   браузерах и в node. Math.random для этого не годится в принципе: его
+   последовательность не воспроизводится даже у себя. */
+let _зерно = (Date.now() ^ 0x9e3779b9) >>> 0;
+function зерно(v){
+  /* Строку тоже принимаем: код комнаты удобнее передавать словом, а не числом. */
+  if(typeof v==='string'){let h=2166136261>>>0;
+    for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)>>>0}
+    v=h}
+  if(v!==undefined)_зерно=(v>>>0)||1;
+  return _зерно;
+}
+function случ(){
+  _зерно=(_зерно+0x6D2B79F5)>>>0;
+  let t=_зерно;
+  t=Math.imul(t^(t>>>15),t|1);
+  t^=t+Math.imul(t^(t>>>7),t|61);
+  return ((t^(t>>>14))>>>0)/4294967296;
+}
+const pick=a=>a[Math.floor(случ()*a.length)];
+/* rnd остаётся на Math.random НАРОЧНО: он крутит искры, дрожь и прочую
+   мишуру. Она у двоих может и должна отличаться — на исход не влияет, а
+   тратить на неё общий поток значило бы расходиться от каждой вспышки. */
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(случ()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const fmtN=v=>Math.round(v).toLocaleString('ru-RU');
 const clone=o=>JSON.parse(JSON.stringify(o));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
