@@ -56,7 +56,7 @@ function snapBattle(){
       taunt:u.taunt?1:0,rush:u.rush?1:0,canAtk:u.canAtk?1:0,sick:u.sick?1:0,buffed:u.buffed?1:0,chilled:u.chilled?1:0,
       imm:u.imm?1:0}))});
   try{store.setLocal(BSNAP,JSON.stringify(
-    {v:1,si:B.si,skill:B.skill,uid:UID,p:side(B.p),e:side(B.e)}))}catch(e){}
+    {v:1,si:B.si,skill:B.skill,uid:B.uid|0,p:side(B.p),e:side(B.e)}))}catch(e){}
 }
 function dropBattleSnap(){store.del(BSNAP)}
 function restoreBattle(){
@@ -85,10 +85,12 @@ function restoreBattle(){
   const P=side(d.p),E=side(d.e);
   if(P.hp<=0||E.hp<=0){dropBattleSnap();return false}
   clearFeed();
-  B={si:d.si,st,phase:'p',over:false,skill:d.skill,p:P,e:E,sel:null,log:[],turnNo:0,ev:[],pend:null};
+  B={si:d.si,st,phase:'p',over:false,skill:d.skill,p:P,e:E,sel:null,log:[],turnNo:0,ev:[],pend:null,
+     /* Счётчик номеров восстанавливаем ВМЕСТЕ С БОЕМ: он теперь его поле, а не
+        общая переменная. Иначе следующий призванный юнит получит номер, уже
+        занятый кем-то на доске. */
+     uid:Math.max(d.uid|0,...P.board.concat(E.board).map(u=>u.uid|0),0)};
   blog('sys','— бой восстановлен —','turn');
-  /* Иначе следующий призванный юнит получит uid уже занятый на поле. */
-  UID=Math.max(UID,(d.uid|0)+1);
   go('battle');
   dressBattle(st);
   $('#bEnd').onclick=endTurn;
